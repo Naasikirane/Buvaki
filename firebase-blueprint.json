@@ -1,0 +1,140 @@
+{
+  "schemaVersion": "1.0",
+  "entities": {
+    "users": {
+      "title": "User Profile",
+      "description": "Registered user accounts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "handle": { "type": "string" },
+        "avatar": { "type": "string" },
+        "bio": { "type": "string" },
+        "karma": { "type": "number" },
+        "badges": { "type": "array", "items": { "type": "string" } },
+        "joinedDate": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "username", "handle"]
+    },
+    "subBuvakis": {
+      "title": "SubBuvaki Community",
+      "description": "Communities created by users",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "displayName": { "type": "string" },
+        "description": { "type": "string" },
+        "memberCount": { "type": "number" },
+        "icon": { "type": "string" },
+        "bannerColor": { "type": "string" },
+        "category": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "displayName", "description"]
+    },
+    "posts": {
+      "title": "Community Post",
+      "description": "Posts created within SubBuvakis",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "subBuvakiId": { "type": "string" },
+        "subBuvakiName": { "type": "string" },
+        "authorId": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "type": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "linkUrl": { "type": "string" },
+        "flair": { "type": "string" },
+        "score": { "type": "number" },
+        "commentCount": { "type": "number" },
+        "timestamp": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "isPinned": { "type": "boolean" },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["subBuvakiId", "authorId", "title", "content"]
+    },
+    "comments": {
+      "title": "Post Comment",
+      "description": "Comments and replies on posts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "postId": { "type": "string" },
+        "authorId": { "type": "string" },
+        "content": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "score": { "type": "number" },
+        "parentId": { "type": "string" }
+      },
+      "required": ["postId", "authorId", "content"]
+    },
+    "votes": {
+      "title": "User Vote",
+      "description": "Upvotes and downvotes on posts and comments",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "targetId": { "type": "string" },
+        "targetType": { "type": "string" },
+        "vote": { "type": "string" }
+      },
+      "required": ["userId", "targetId", "vote"]
+    },
+    "chatMessages": {
+      "title": "Chat Message",
+      "description": "Real-time channel messages",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "channelId": { "type": "string" },
+        "authorId": { "type": "string" },
+        "content": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["channelId", "authorId", "content"]
+    }
+  },
+  "securityRules": [
+    {
+      "collection": "users",
+      "read": "true",
+      "write": "request.auth != null"
+    },
+    {
+      "collection": "subBuvakis",
+      "read": "true",
+      "write": "request.auth != null"
+    },
+    {
+      "collection": "posts",
+      "read": "true",
+      "write": "request.auth != null"
+    },
+    {
+      "collection": "comments",
+      "read": "true",
+      "write": "request.auth != null"
+    },
+    {
+      "collection": "votes",
+      "read": "true",
+      "write": "request.auth != null"
+    },
+    {
+      "collection": "chatMessages",
+      "read": "true",
+      "write": "request.auth != null"
+    }
+  ]
+}

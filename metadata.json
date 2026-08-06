@@ -1,0 +1,6 @@
+{
+  "name": "Buvaki",
+  "description": "A community discussion platform featuring sub-buvakis, threads, live chat channels, voting, and a minimalistic onion-tornado logo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
