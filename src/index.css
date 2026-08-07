@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+@keyframes splashLoader {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+
+.animate-splash-loader {
+  animation: splashLoader 3s linear forwards;
+}
+
 @layer utilities {
   /* Custom scrollbar styling */
   .custom-scrollbar::-webkit-scrollbar {

@@ -33,6 +33,14 @@ export interface User {
   joinedDate: string;
   status: 'online' | 'idle' | 'dnd' | 'offline';
   statusText?: string;
+  gender?: 'male' | 'female' | 'prefer_not_to_say' | string;
+  dob?: string;
+  schooling?: string;
+  interests?: string[];
+  bestColor?: string;
+  petName?: string;
+  occupation?: string;
+  niche?: string;
 }
 
 export interface PollOption {

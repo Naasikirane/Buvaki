@@ -58,7 +58,8 @@ import {
   dbVote, 
   dbVotePoll, 
   dbSendChatMessage, 
-  dbToggleJoinSub 
+  dbToggleJoinSub,
+  dbSaveUserProfile
 } from './lib/firebase';
 
 import { Flame, Sparkles, TrendingUp, MessageSquare, Compass, Radio, ShieldCheck } from 'lucide-react';
@@ -854,7 +855,16 @@ export default function App() {
           savedPosts={userSavedPosts}
           userPosts={userPublishedPosts}
           onClose={() => setIsProfileOpen(false)}
-          onUpdateBio={(newBio) => setCurrentUser((u) => ({ ...u, bio: newBio }))}
+          onUpdateBio={(newBio) => {
+            const updated = { ...currentUser, bio: newBio };
+            setCurrentUser(updated);
+            dbSaveUserProfile(updated).catch(console.error);
+          }}
+          onUpdateAvatar={(newAvatar) => {
+            const updated = { ...currentUser, avatar: newAvatar };
+            setCurrentUser(updated);
+            dbSaveUserProfile(updated).catch(console.error);
+          }}
           onSelectPost={(p) => setSelectedPost(p)}
           onLogout={handleLogout}
         />

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { SupportedLanguage, SUPPORTED_LANGUAGES } from '../types';
 import { X, Globe, Check, Search } from 'lucide-react';
+import { FlagIcon } from './FlagIcon';
 
 interface LanguageSelectorModalProps {
   isOpen: boolean;
@@ -87,7 +88,7 @@ export const LanguageSelectorModal: React.FC<LanguageSelectorModalProps> = ({
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">{lang.flag}</span>
+                  <FlagIcon code={lang.code} size="md" />
                   <div className="flex flex-col">
                     <span className="text-xs font-bold leading-tight flex items-center gap-1.5">
                       {lang.name}

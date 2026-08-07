@@ -1,5 +1,6 @@
 import React from 'react';
 import { Logo } from './Logo';
+import { FlagIcon } from './FlagIcon';
 import { ViewMode, Theme, User, NotificationItem, SupportedLanguage } from '../types';
 import { getTranslation } from '../lib/translations';
 import { 
@@ -164,7 +165,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900/80 border border-violet-900/40 hover:border-violet-500/50 text-slate-200 text-xs font-medium transition-all"
             title={`Selected Language: ${selectedLanguage.name} (${selectedLanguage.nativeName})`}
           >
-            <span className="text-base">{selectedLanguage.flag}</span>
+            <FlagIcon code={selectedLanguage.code} size="sm" />
             <span className="hidden md:inline text-xs font-semibold">{selectedLanguage.code.toUpperCase()}</span>
           </button>
 
