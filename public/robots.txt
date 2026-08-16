@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://buvaki.com/sitemap.xml
+Sitemap: https://ais-pre-dcyhrz7c56yq3uxemjfh2l-137334716191.europe-west2.run.app/sitemap.xml
