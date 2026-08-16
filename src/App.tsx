@@ -609,8 +609,6 @@ export default function App() {
       <Navbar
         viewMode={viewMode}
         setViewMode={setViewMode}
-        theme={theme}
-        setTheme={setTheme}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         currentUser={currentUser}
@@ -618,7 +616,6 @@ export default function App() {
         onOpenCreatePost={() => setIsCreatePostOpen(true)}
         onOpenNotifications={() => setIsNotificationsOpen(true)}
         onOpenProfile={() => setIsProfileOpen(true)}
-        onOpenLanguage={() => setIsLanguageModalOpen(true)}
         onOpenAuth={() => setOnboardingStep('signin')}
         notifications={notifications}
         activeSubBuvakiName={activeSubObj?.displayName}
@@ -644,6 +641,9 @@ export default function App() {
           viewMode={viewMode}
           setViewMode={setViewMode}
           selectedLanguage={selectedLanguage}
+          onOpenLanguage={() => setIsLanguageModalOpen(true)}
+          theme={theme}
+          setTheme={setTheme}
         />
 
         {/* Center Main Stage */}
@@ -838,6 +838,9 @@ export default function App() {
         showSavedOnly={showSavedOnly}
         onToggleSavedOnly={setShowSavedOnly}
         selectedLanguage={selectedLanguage}
+        onOpenLanguage={() => setIsLanguageModalOpen(true)}
+        theme={theme}
+        setTheme={setTheme}
       />
 
       {/* Voice Channel Floating Controller Bar */}

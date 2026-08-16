@@ -1,6 +1,7 @@
 import React from 'react';
-import { ViewMode, SubBuvaki, ChatChannel, FilterSort, NotificationItem, SupportedLanguage } from '../types';
+import { ViewMode, SubBuvaki, ChatChannel, FilterSort, NotificationItem, SupportedLanguage, Theme } from '../types';
 import { getTranslation } from '../lib/translations';
+import { FlagIcon } from './FlagIcon';
 import { CommunityIcon } from './CommunityIcon';
 import { 
   Layers, 
@@ -16,7 +17,11 @@ import {
   Hash, 
   Volume2, 
   ShieldCheck,
-  Radio
+  Radio,
+  Moon,
+  Eye,
+  Sun,
+  Globe
 } from 'lucide-react';
 
 interface MobileNavProps {
@@ -37,7 +42,10 @@ interface MobileNavProps {
   onOpenCreateSub: () => void;
   showSavedOnly: boolean;
   onToggleSavedOnly: (saved: boolean) => void;
-  selectedLanguage?: SupportedLanguage;
+  selectedLanguage: SupportedLanguage;
+  onOpenLanguage: () => void;
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
 }
 
 export const MobileNav: React.FC<MobileNavProps> = ({
@@ -59,9 +67,18 @@ export const MobileNav: React.FC<MobileNavProps> = ({
   showSavedOnly,
   onToggleSavedOnly,
   selectedLanguage,
+  onOpenLanguage,
+  theme,
+  setTheme,
 }) => {
-  const t = getTranslation(selectedLanguage?.code || 'en');
+  const t = getTranslation(selectedLanguage.code);
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const toggleTheme = () => {
+    if (theme === 'dark') setTheme('stealth');
+    else if (theme === 'stealth') setTheme('light');
+    else setTheme('dark');
+  };
 
   return (
     <>
@@ -132,7 +149,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
           />
 
           {/* Drawer Content */}
-          <div className="relative w-4/5 max-w-xs bg-slate-950 border-r border-violet-900/40 p-5 flex flex-col gap-6 overflow-y-auto z-10">
+          <div className="relative w-4/5 max-w-xs bg-slate-950 border-r border-violet-900/40 p-5 flex flex-col gap-5 overflow-y-auto z-10">
             <div className="flex items-center justify-between border-b border-violet-900/30 pb-3">
               <span className="font-bold text-violet-300 text-sm flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-400" /> Navigation
@@ -142,6 +159,33 @@ export const MobileNav: React.FC<MobileNavProps> = ({
                 className="p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-900"
               >
                 <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Translation Flag and Theme Switcher - Lined Horizontally */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  onOpenLanguage();
+                  onCloseMobileSidebar();
+                }}
+                className="flex-1 flex items-center justify-between gap-1 px-3 py-2 rounded-xl bg-slate-900 border border-violet-900/40 text-slate-200 text-xs font-semibold hover:border-violet-500/50 transition-all"
+              >
+                <div className="flex items-center gap-1.5">
+                  <FlagIcon code={selectedLanguage.code} size="sm" />
+                  <span>{selectedLanguage.code.toUpperCase()}</span>
+                </div>
+                <Globe className="w-3.5 h-3.5 text-violet-400 opacity-70" />
+              </button>
+
+              <button
+                onClick={toggleTheme}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 border border-violet-900/40 text-slate-200 text-xs font-semibold hover:border-violet-500/50 transition-all"
+              >
+                {theme === 'dark' && <Moon className="w-3.5 h-3.5 text-violet-300" />}
+                {theme === 'stealth' && <Eye className="w-3.5 h-3.5 text-pink-400" />}
+                {theme === 'light' && <Sun className="w-3.5 h-3.5 text-amber-400" />}
+                <span className="capitalize">{theme}</span>
               </button>
             </div>
 

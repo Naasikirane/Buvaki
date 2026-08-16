@@ -1,7 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Logo } from './Logo';
-import { FlagIcon } from './FlagIcon';
-import { ViewMode, Theme, User, NotificationItem, SupportedLanguage } from '../types';
+import { ViewMode, User, NotificationItem, SupportedLanguage } from '../types';
 import { getTranslation } from '../lib/translations';
 import { 
   Search, 
@@ -9,23 +8,15 @@ import {
   Bell, 
   MessageSquare, 
   Layers, 
-  Eye, 
-  Sun, 
-  Moon, 
-  ShieldAlert, 
   SlidersHorizontal,
-  Flame,
   Radio,
-  Globe,
-  LogIn,
-  Sparkles
+  Sparkles,
+  X
 } from 'lucide-react';
 
 interface NavbarProps {
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   currentUser: User;
@@ -33,7 +24,6 @@ interface NavbarProps {
   onOpenCreatePost: () => void;
   onOpenNotifications: () => void;
   onOpenProfile: () => void;
-  onOpenLanguage: () => void;
   onOpenAuth: () => void;
   notifications: NotificationItem[];
   activeSubBuvakiName?: string;
@@ -43,8 +33,6 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({
   viewMode,
   setViewMode,
-  theme,
-  setTheme,
   searchQuery,
   setSearchQuery,
   currentUser,
@@ -52,7 +40,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenCreatePost,
   onOpenNotifications,
   onOpenProfile,
-  onOpenLanguage,
   onOpenAuth,
   notifications,
   activeSubBuvakiName,
@@ -60,12 +47,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const t = getTranslation(selectedLanguage.code);
   const unreadCount = notifications.filter((n) => !n.read).length;
-
-  const toggleTheme = () => {
-    if (theme === 'dark') setTheme('stealth');
-    else if (theme === 'stealth') setTheme('light');
-    else setTheme('dark');
-  };
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-violet-900/30 bg-slate-950/80 backdrop-blur-xl transition-colors duration-200">
@@ -98,29 +80,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </div>
 
-        {/* Center: Real-time Search Bar */}
-        <div className="flex-1 max-w-md mx-2">
-          <div className="relative group">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-400/70 group-focus-within:text-violet-300 transition-colors" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t.searchPlaceholder}
-              className="w-full pl-10 pr-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-full bg-slate-900/90 border border-violet-900/40 text-slate-100 placeholder-slate-400 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 transition-all shadow-inner"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Right Actions & Controls */}
+        {/* Right Actions & Controls (Search collapsed into icon on the right) */}
         <div className="flex items-center gap-1.5 sm:gap-3">
           
           {/* View Mode Switcher (Feed vs Chat vs Split) */}
@@ -160,26 +120,41 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </div>
 
-          {/* Language Selector Pill */}
-          <button
-            onClick={onOpenLanguage}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900/80 border border-violet-900/40 hover:border-violet-500/50 text-slate-200 text-xs font-medium transition-all"
-            title={`Selected Language: ${selectedLanguage.name} (${selectedLanguage.nativeName})`}
-          >
-            <FlagIcon code={selectedLanguage.code} size="sm" />
-            <span className="hidden sm:inline text-xs font-semibold">{selectedLanguage.code.toUpperCase()}</span>
-          </button>
-
-          {/* Theme Switcher */}
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-xl bg-slate-900/80 border border-violet-900/40 text-violet-300 hover:text-white hover:border-violet-500/50 transition-all relative group"
-            title={`Current Theme: ${theme.toUpperCase()} (Click to change)`}
-          >
-            {theme === 'dark' && <Moon className="w-4 h-4 text-violet-300" />}
-            {theme === 'stealth' && <Eye className="w-4 h-4 text-pink-400" />}
-            {theme === 'light' && <Sun className="w-4 h-4 text-amber-400" />}
-          </button>
+          {/* Collapsible Search Bar pushed to the Right of Top Nav */}
+          <div className="relative flex items-center">
+            {isSearchExpanded || searchQuery ? (
+              <div className="flex items-center gap-2 bg-slate-900/95 border border-violet-500/70 rounded-full px-3 py-1.5 shadow-lg w-48 sm:w-64 transition-all duration-200">
+                <Search className="w-4 h-4 text-violet-400 shrink-0" />
+                <input
+                  type="text"
+                  autoFocus
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t.searchPlaceholder}
+                  className="w-full bg-transparent text-xs sm:text-sm text-slate-100 placeholder-slate-400 focus:outline-none"
+                />
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setIsSearchExpanded(false);
+                  }}
+                  className="text-slate-400 hover:text-white p-0.5 rounded-full hover:bg-slate-800 transition-colors"
+                  title="Close search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsSearchExpanded(true)}
+                className="p-2 rounded-xl bg-slate-900/80 border border-violet-900/40 text-slate-300 hover:text-white hover:border-violet-500/50 hover:bg-slate-850 transition-all"
+                title="Search Buvaki"
+                aria-label="Search"
+              >
+                <Search className="w-4 h-4" />
+              </button>
+            )}
+          </div>
 
           {/* Create Post Button (Desktop only, as bottom bar handles mobile/tablet) */}
           <button
