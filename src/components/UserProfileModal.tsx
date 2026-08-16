@@ -94,7 +94,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
         />
 
         {/* Banner backdrop */}
-        <div className="h-28 bg-gradient-to-r from-violet-900 via-fuchsia-950 to-slate-950 relative p-4 flex items-end">
+        <div className="h-28 bg-violet-950 border-b border-violet-900/40 relative p-4 flex items-end">
           <button
             onClick={onClose}
             className="absolute top-3 right-3 p-1.5 rounded-full text-slate-300 hover:text-white bg-slate-950/60 backdrop-blur-md"
@@ -134,8 +134,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 <Upload className="w-3.5 h-3.5" />
                 <span>Change Photo</span>
               </button>
-              <span className="px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-700/60 text-emerald-400 text-xs font-mono font-bold">
-                {user.karma} 🌪️ Karma
+              <span className="px-3 py-1 rounded-full bg-violet-950/80 border border-violet-700/60 text-pink-400 text-xs font-mono font-bold flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3 text-pink-400" />
+                <span>{user.karma} Karma</span>
               </span>
               {onLogout && (
                 <button

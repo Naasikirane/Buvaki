@@ -45,7 +45,7 @@ export const LiveChatView: React.FC<LiveChatViewProps> = ({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const EMOJI_OPTIONS = ['🌪️', '🧅', '🔥', '⚡', '❤️', '🚀', '🔒', '👍'];
+  const EMOJI_OPTIONS = ['✨', '🔥', '❤️', '🚀', '💬', '🎉', '⚡', '👍'];
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -68,16 +68,18 @@ export const LiveChatView: React.FC<LiveChatViewProps> = ({
       
       {/* Channel Header Bar */}
       <div className="flex items-center justify-between px-4 sm:px-6 py-3 bg-slate-900/80 border-b border-violet-900/40">
-        <div className="flex items-center gap-2 min-w-0">
-          {channel.type === 'voice' ? (
-            <Volume2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
-          ) : (
-            <Hash className="w-5 h-5 text-violet-400 flex-shrink-0" />
-          )}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-xl bg-violet-950/80 border border-violet-800/40 flex items-center justify-center shrink-0">
+            {channel.type === 'voice' ? (
+              <Volume2 className="w-4 h-4 text-pink-400" />
+            ) : (
+              <Hash className="w-4 h-4 text-violet-400" />
+            )}
+          </div>
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-2">
               <span className="font-bold text-slate-100 text-sm sm:text-base truncate">
-                {channel.name}
+                {channel.name.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}]/gu, '').trim() || channel.name}
               </span>
               <span className="px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-700/50 text-emerald-400 text-[10px] font-mono flex items-center gap-1">
                 <Radio className="w-2.5 h-2.5 animate-pulse" /> Live
@@ -128,12 +130,12 @@ export const LiveChatView: React.FC<LiveChatViewProps> = ({
         <div className="flex-1 flex flex-col p-4 overflow-y-auto space-y-4 custom-scrollbar">
           
           {/* Welcome Banner */}
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-violet-950/50 via-slate-900 to-emerald-950/40 border border-violet-900/30 flex flex-col gap-1 my-2">
+          <div className="p-4 rounded-2xl bg-slate-900/90 border border-violet-900/40 flex flex-col gap-1 my-2">
             <div className="flex items-center gap-2 text-violet-300 font-bold text-sm">
-              <Sparkles className="w-4 h-4 text-emerald-400" /> Welcome to #{channel.name}!
+              <Sparkles className="w-4 h-4 text-violet-400" /> Welcome to #{channel.name}!
             </div>
             <p className="text-xs text-slate-400">
-              This is the start of the #{channel.name} channel. Realtime messaging powered by the Buvaki onion network protocol.
+              This is the start of the #{channel.name} channel. Realtime messaging and active discussions for the community.
             </p>
           </div>
 
@@ -265,7 +267,7 @@ export const LiveChatView: React.FC<LiveChatViewProps> = ({
           <button
             type="submit"
             disabled={!inputText.trim()}
-            className="p-2 rounded-xl bg-gradient-to-r from-violet-600 to-emerald-500 hover:opacity-90 disabled:opacity-40 text-white font-bold transition-all shadow-md"
+            className="p-2 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white font-bold transition-all shadow-md shadow-violet-600/20 active:scale-95"
           >
             <Send className="w-4 h-4" />
           </button>

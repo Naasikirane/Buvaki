@@ -13,8 +13,12 @@ import {
   Pin,
   Sparkles,
   Languages,
-  RotateCcw
+  RotateCcw,
+  Youtube,
+  Play
 } from 'lucide-react';
+import { getYouTubeEmbedUrl, isYouTubeUrl } from '../lib/mediaUtils';
+import { CommunityIcon } from './CommunityIcon';
 
 interface PostCardProps {
   post: Post;
@@ -108,9 +112,9 @@ export const PostCard: React.FC<PostCardProps> = ({
     >
       {/* Pinned Indicator */}
       {post.isPinned && (
-        <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-400 mb-2">
-          <Pin className="w-3.5 h-3.5 fill-emerald-400" />
-          <span>Pinned Announcement</span>
+        <div className="flex items-center gap-1.5 text-[11px] font-bold text-pink-400 mb-2">
+          <Pin className="w-3.5 h-3.5 fill-pink-400" />
+          <span>Pinned Post</span>
         </div>
       )}
 
@@ -125,17 +129,17 @@ export const PostCard: React.FC<PostCardProps> = ({
             onClick={() => onVote(post.id, 'up')}
             className={`p-1 rounded-lg transition-colors ${
               post.userVote === 'up'
-                ? 'text-fuchsia-400 bg-fuchsia-950/60'
-                : 'text-slate-400 hover:text-fuchsia-400 hover:bg-slate-800/50'
+                ? 'text-pink-400 bg-pink-950/60'
+                : 'text-slate-400 hover:text-pink-400 hover:bg-slate-800/50'
             }`}
             aria-label="Upvote"
           >
-            <ArrowBigUp className={`w-5 h-5 ${post.userVote === 'up' ? 'fill-fuchsia-400' : ''}`} />
+            <ArrowBigUp className={`w-5 h-5 ${post.userVote === 'up' ? 'fill-pink-400' : ''}`} />
           </button>
 
           <span className={`text-xs font-black font-mono ${
             post.userVote === 'up' 
-              ? 'text-fuchsia-400' 
+              ? 'text-pink-400' 
               : post.userVote === 'down' 
               ? 'text-rose-400' 
               : 'text-slate-200'
@@ -161,8 +165,9 @@ export const PostCard: React.FC<PostCardProps> = ({
           
           {/* Header Metadata */}
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="font-bold text-violet-300 hover:underline px-2 py-0.5 rounded-md bg-violet-950/80 border border-violet-800/40">
-              {post.subBuvakiName}
+            <span className="font-bold text-violet-300 hover:underline px-2 py-0.5 rounded-md bg-violet-950/80 border border-violet-800/40 flex items-center gap-1.5">
+              <CommunityIcon subId={post.subBuvakiId} name={post.subBuvakiName} size="xs" containerClassName="w-4 h-4 rounded-sm border-none bg-transparent" />
+              <span>{post.subBuvakiName}</span>
             </span>
             <span className="text-slate-500">•</span>
             <div className="flex items-center gap-1.5 text-slate-400">
@@ -181,7 +186,7 @@ export const PostCard: React.FC<PostCardProps> = ({
 
             {/* Flair Badge */}
             {post.flair && (
-              <span className="ml-auto px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-700/50 text-emerald-300 text-[10px] font-semibold">
+              <span className="ml-auto px-2 py-0.5 rounded-full bg-violet-950/80 border border-violet-700/50 text-pink-300 text-[10px] font-semibold">
                 {post.flair}
               </span>
             )}
@@ -210,33 +215,71 @@ export const PostCard: React.FC<PostCardProps> = ({
 
           {/* Image Type Attachment */}
           {post.type === 'image' && post.imageUrl && (
-            <div className="mt-1 rounded-xl overflow-hidden border border-violet-900/40 bg-slate-950 max-h-96">
+            <div 
+              onClick={(e) => {
+                // If user clicks image, let it open detail modal
+              }}
+              className="mt-1 rounded-2xl overflow-hidden border border-violet-900/40 bg-slate-950 max-h-[440px] flex items-center justify-center"
+            >
               <img
                 src={post.imageUrl}
                 alt={post.title}
-                className="w-full h-full object-cover group-hover:scale-[1.01] transition-transform duration-300"
+                className="w-full max-h-[440px] object-contain group-hover:scale-[1.01] transition-transform duration-300 bg-slate-950"
                 referrerPolicy="no-referrer"
+                loading="lazy"
               />
             </div>
           )}
 
-          {/* Link Type Attachment */}
+          {/* Link Type Attachment - Handles both YouTube Embeds & External URLs */}
           {post.type === 'link' && post.linkUrl && (
-            <a
-              href={post.linkUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="mt-1 flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-violet-900/40 hover:border-violet-500/60 group/link transition-colors"
-            >
-              <div className="flex flex-col min-w-0 pr-2">
-                <span className="text-xs font-semibold text-violet-300 truncate">
-                  {post.linkUrl}
-                </span>
-                <span className="text-[10px] text-slate-400">External Web Resource</span>
+            isYouTubeUrl(post.linkUrl) && getYouTubeEmbedUrl(post.linkUrl) ? (
+              <div 
+                onClick={(e) => e.stopPropagation()} 
+                className="mt-2 rounded-2xl overflow-hidden border border-violet-900/50 bg-slate-950 shadow-md"
+              >
+                <div className="aspect-video w-full bg-black">
+                  <iframe
+                    src={getYouTubeEmbedUrl(post.linkUrl)!}
+                    title={post.title}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+                <div className="p-2.5 bg-slate-900/80 border-t border-violet-900/40 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs text-pink-400 font-bold">
+                    <Youtube className="w-4 h-4 text-rose-500" />
+                    <span>YouTube Video</span>
+                  </div>
+                  <a
+                    href={post.linkUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] text-violet-300 hover:text-white flex items-center gap-1 font-semibold"
+                  >
+                    <span>Open on YouTube</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
               </div>
-              <ExternalLink className="w-4 h-4 text-violet-400 group-hover/link:text-emerald-400 transition-colors flex-shrink-0" />
-            </a>
+            ) : (
+              <a
+                href={post.linkUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="mt-1 flex items-center justify-between p-3.5 rounded-2xl bg-slate-950 border border-violet-900/40 hover:border-violet-500/60 group/link transition-colors"
+              >
+                <div className="flex flex-col min-w-0 pr-2">
+                  <span className="text-xs font-semibold text-violet-300 truncate">
+                    {post.linkUrl}
+                  </span>
+                  <span className="text-[10px] text-slate-400">External Web Resource / Article</span>
+                </div>
+                <ExternalLink className="w-4 h-4 text-violet-400 group-hover/link:text-pink-400 transition-colors flex-shrink-0" />
+              </a>
+            )
           )}
 
           {/* Poll Type Attachment */}

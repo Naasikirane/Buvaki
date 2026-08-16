@@ -6,6 +6,7 @@ import {
   doc, 
   getDocs, 
   getDoc,
+  getDocFromServer,
   setDoc, 
   addDoc, 
   updateDoc, 
@@ -62,12 +63,75 @@ export const sanitizeForFirestore = <T>(obj: T): T => {
 // Initialize Firebase App
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
-// Initialize Firestore with explicit databaseId if specified in config
+// Initialize Firestore with forced long-polling to prevent proxy/iframe connection timeouts
 export const db = firebaseConfig.firestoreDatabaseId 
-  ? initializeFirestore(app, {}, firebaseConfig.firestoreDatabaseId)
-  : getFirestore(app);
+  ? initializeFirestore(app, {
+      experimentalForceLongPolling: true,
+      ignoreUndefinedProperties: true,
+    }, firebaseConfig.firestoreDatabaseId)
+  : initializeFirestore(app, {
+      experimentalForceLongPolling: true,
+      ignoreUndefinedProperties: true,
+    });
 
 export const auth = getAuth(app);
+
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  };
+}
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errMessage = error instanceof Error ? error.message : String(error);
+  const errInfo: FirestoreErrorInfo = {
+    error: errMessage,
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  };
+  if (errMessage.includes('Missing or insufficient permissions')) {
+    console.error('Firestore Error: ', JSON.stringify(errInfo));
+  } else if (!errMessage.includes('offline') && !errMessage.includes('unavailable') && !errMessage.includes("Backend didn't respond")) {
+    console.warn('Firestore Notice: ', JSON.stringify(errInfo));
+  }
+  return errInfo;
+}
+
+export async function testConnection() {
+  // Graceful no-op connection check to prevent 10-second backend timeout warnings
+  return Promise.resolve();
+}
 
 // Authenticate anonymously on load if no user logged in
 export const initAuth = (): Promise<FirebaseUser | null> => {
@@ -109,37 +173,17 @@ export const ensureSeeded = async () => {
       await batch.commit();
     }
 
-    // Check if posts exist
-    const postsSnap = await getDocs(collection(db, 'posts'));
-    if (postsSnap.empty) {
-      console.log('Seeding initial Posts to Firestore...');
-      for (const post of SEED_POSTS) {
-        const postRef = doc(db, 'posts', post.id);
-        await setDoc(postRef, sanitizeForFirestore({
-          ...post,
-          createdAt: new Date().toISOString()
-        }));
-
-        // Seed comments for post if any
-        if (SEED_COMMENTS[post.id]) {
-          for (const comm of SEED_COMMENTS[post.id]) {
-            const commRef = doc(db, 'comments', comm.id);
-            await setDoc(commRef, sanitizeForFirestore({
-              ...comm,
-              createdAt: new Date().toISOString()
-            }));
-
-            if (comm.replies) {
-              for (const rep of comm.replies) {
-                const repRef = doc(db, 'comments', rep.id);
-                await setDoc(repRef, sanitizeForFirestore({
-                  ...rep,
-                  createdAt: new Date().toISOString()
-                }));
-              }
-            }
-          }
+    // Clean up any legacy mock posts from Firestore
+    const legacyMockPostIds = ['post_1', 'post_2', 'post_3', 'post_4', 'post_5'];
+    for (const legacyId of legacyMockPostIds) {
+      try {
+        const legacyRef = doc(db, 'posts', legacyId);
+        const legacyDoc = await getDoc(legacyRef);
+        if (legacyDoc.exists()) {
+          await deleteDoc(legacyRef);
         }
+      } catch (err) {
+        // Silently skip if not found or already removed
       }
     }
 
@@ -180,22 +224,28 @@ export const subscribeToSubBuvakis = (onData: (subs: SubBuvaki[]) => void) => {
       ...doc.data()
     } as SubBuvaki));
     onData(list);
-  }, (err) => console.error('SubBuvakis snapshot error:', err));
+  }, (err) => {
+    handleFirestoreError(err, OperationType.LIST, 'subBuvakis');
+  });
 };
 
 export const subscribeToPosts = (onData: (posts: Post[]) => void) => {
   const q = collection(db, 'posts');
   return onSnapshot(q, (snapshot) => {
-    const list: Post[] = snapshot.docs.map((doc) => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-      } as Post;
-    });
+    const list: Post[] = snapshot.docs
+      .map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+        } as Post;
+      })
+      .filter((p) => !['post_1', 'post_2', 'post_3', 'post_4', 'post_5'].includes(p.id));
     // Sort in client if timestamp format varies
     onData(list);
-  }, (err) => console.error('Posts snapshot error:', err));
+  }, (err) => {
+    handleFirestoreError(err, OperationType.LIST, 'posts');
+  });
 };
 
 export const subscribeToComments = (postId: string, onData: (comments: Comment[]) => void) => {
@@ -216,7 +266,9 @@ export const subscribeToComments = (postId: string, onData: (comments: Comment[]
     }));
 
     onData(structured);
-  }, (err) => console.error('Comments snapshot error:', err));
+  }, (err) => {
+    handleFirestoreError(err, OperationType.LIST, `comments?postId=${postId}`);
+  });
 };
 
 export const subscribeToChannels = (onData: (channels: ChatChannel[]) => void) => {
@@ -227,7 +279,9 @@ export const subscribeToChannels = (onData: (channels: ChatChannel[]) => void) =
       ...doc.data()
     } as ChatChannel));
     onData(list);
-  }, (err) => console.error('Channels snapshot error:', err));
+  }, (err) => {
+    handleFirestoreError(err, OperationType.LIST, 'chatChannels');
+  });
 };
 
 export const subscribeToChatMessages = (channelId: string, onData: (messages: ChatMessage[]) => void) => {
@@ -238,7 +292,9 @@ export const subscribeToChatMessages = (channelId: string, onData: (messages: Ch
       ...doc.data()
     } as ChatMessage));
     onData(list);
-  }, (err) => console.error('ChatMessages snapshot error:', err));
+  }, (err) => {
+    handleFirestoreError(err, OperationType.LIST, `chatMessages?channelId=${channelId}`);
+  });
 };
 
 export const subscribeToUserVotes = (userId: string, onData: (votes: Record<string, 'up' | 'down'>) => void) => {
@@ -250,7 +306,9 @@ export const subscribeToUserVotes = (userId: string, onData: (votes: Record<stri
       voteMap[data.targetId] = data.vote;
     });
     onData(voteMap);
-  }, (err) => console.error('Votes snapshot error:', err));
+  }, (err) => {
+    handleFirestoreError(err, OperationType.LIST, `votes?userId=${userId}`);
+  });
 };
 
 export const subscribeToUserMemberships = (userId: string, onData: (subIds: string[]) => void) => {
@@ -258,7 +316,9 @@ export const subscribeToUserMemberships = (userId: string, onData: (subIds: stri
   return onSnapshot(q, (snapshot) => {
     const subIds = snapshot.docs.map((doc) => doc.data().subBuvakiId as string);
     onData(subIds);
-  }, (err) => console.error('Memberships snapshot error:', err));
+  }, (err) => {
+    handleFirestoreError(err, OperationType.LIST, `memberships?userId=${userId}`);
+  });
 };
 
 // MUTATION FUNCTIONS

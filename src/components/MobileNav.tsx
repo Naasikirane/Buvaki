@@ -1,6 +1,7 @@
 import React from 'react';
 import { ViewMode, SubBuvaki, ChatChannel, FilterSort, NotificationItem, SupportedLanguage } from '../types';
 import { getTranslation } from '../lib/translations';
+import { CommunityIcon } from './CommunityIcon';
 import { 
   Layers, 
   MessageSquare, 
@@ -64,8 +65,8 @@ export const MobileNav: React.FC<MobileNavProps> = ({
 
   return (
     <>
-      {/* Mobile Bottom Navigation Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 border-t border-violet-900/40 backdrop-blur-lg px-2 py-1.5 flex items-center justify-around shadow-2xl">
+      {/* Mobile & Tablet Portrait Bottom Navigation Bar */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 border-t border-violet-900/40 backdrop-blur-lg px-2 py-1.5 flex items-center justify-around shadow-2xl">
         
         {/* Feed Tab */}
         <button
@@ -92,7 +93,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
         {/* Center Floating (+) Post Button */}
         <button
           onClick={onOpenCreatePost}
-          className="flex items-center justify-center w-12 h-12 -mt-5 rounded-full bg-gradient-to-r from-violet-600 via-fuchsia-600 to-emerald-500 text-white shadow-lg shadow-violet-600/30 active:scale-90 transition-all border-2 border-slate-950"
+          className="flex items-center justify-center w-12 h-12 -mt-5 rounded-full bg-violet-600 hover:bg-violet-500 text-white shadow-lg shadow-violet-600/30 active:scale-90 transition-all border-2 border-slate-950"
           aria-label={t.createPost}
         >
           <Plus className="w-6 h-6 stroke-[3]" />
@@ -106,7 +107,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
           <Bell className="w-5 h-5" />
           <span className="text-[10px]">{t.notifications}</span>
           {unreadCount > 0 && (
-            <span className="absolute top-1 right-3 w-2 h-2 rounded-full bg-fuchsia-500 animate-ping" />
+            <span className="absolute top-1 right-3 w-2 h-2 rounded-full bg-pink-500 animate-ping" />
           )}
         </button>
 
@@ -121,9 +122,9 @@ export const MobileNav: React.FC<MobileNavProps> = ({
 
       </nav>
 
-      {/* Slide-over Mobile Sidebar Drawer */}
+      {/* Slide-over Mobile & Tablet Sidebar Drawer */}
       {isMobileSidebarOpen && (
-        <div className="md:hidden fixed inset-0 z-50 flex">
+        <div className="lg:hidden fixed inset-0 z-50 flex">
           {/* Backdrop */}
           <div
             onClick={onCloseMobileSidebar}
@@ -197,13 +198,16 @@ export const MobileNav: React.FC<MobileNavProps> = ({
                     setViewMode('feed');
                     onCloseMobileSidebar();
                   }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                     activeSubBuvakiId === sub.id
                       ? 'bg-violet-900/80 text-white font-bold'
-                      : 'text-slate-300 bg-slate-900/40'
+                      : 'text-slate-300 bg-slate-900/40 hover:bg-slate-900/80'
                   }`}
                 >
-                  <span>{sub.icon}</span>
+                  <CommunityIcon 
+                    sub={sub}
+                    size="xs" 
+                  />
                   <span>{sub.displayName}</span>
                 </button>
               ))}
@@ -212,30 +216,34 @@ export const MobileNav: React.FC<MobileNavProps> = ({
             {/* Channels */}
             <div className="flex flex-col gap-1.5">
               <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider flex items-center gap-1">
-                <Radio className="w-3 h-3 text-emerald-400 animate-pulse" /> {t.liveChatChannels}
+                <Radio className="w-3 h-3 text-pink-400 animate-pulse" /> {t.liveChatChannels}
               </span>
-              {channels.map((chan) => (
-                <button
-                  key={chan.id}
-                  onClick={() => {
-                    onSelectChannel(chan.id);
-                    setViewMode('chat');
-                    onCloseMobileSidebar();
-                  }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-                    activeChannelId === chan.id
-                      ? 'bg-emerald-950/80 text-white font-bold'
-                      : 'text-slate-300 bg-slate-900/40'
-                  }`}
-                >
-                  {chan.type === 'voice' ? (
-                    <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
-                  ) : (
-                    <Hash className="w-3.5 h-3.5 text-violet-400" />
-                  )}
-                  <span>{chan.name}</span>
-                </button>
-              ))}
+              {channels.map((chan) => {
+                const cleanChanName = chan.name.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}]/gu, '').trim();
+
+                return (
+                  <button
+                    key={chan.id}
+                    onClick={() => {
+                      onSelectChannel(chan.id);
+                      setViewMode('chat');
+                      onCloseMobileSidebar();
+                    }}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+                      activeChannelId === chan.id
+                        ? 'bg-violet-900/80 text-white font-bold'
+                        : 'text-slate-300 bg-slate-900/40 hover:bg-slate-900/80'
+                    }`}
+                  >
+                    {chan.type === 'voice' ? (
+                      <Volume2 className="w-3.5 h-3.5 text-pink-400" />
+                    ) : (
+                      <Hash className="w-3.5 h-3.5 text-violet-400" />
+                    )}
+                    <span>{cleanChanName || chan.name}</span>
+                  </button>
+                );
+              })}
             </div>
 
           </div>

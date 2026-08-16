@@ -11,12 +11,17 @@ import {
   Share2, 
   Award, 
   CornerDownRight, 
-  Sparkles,
-  ChevronDown,
-  ChevronUp,
-  Languages,
-  RotateCcw
+  Sparkles, 
+  ChevronDown, 
+  ChevronUp, 
+  Languages, 
+  RotateCcw,
+  Youtube,
+  ExternalLink,
+  Maximize2
 } from 'lucide-react';
+import { getYouTubeEmbedUrl, isYouTubeUrl } from '../lib/mediaUtils';
+import { CommunityIcon } from './CommunityIcon';
 
 interface PostDetailModalProps {
   post: Post | null;
@@ -208,8 +213,9 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
         {/* Header Bar */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-violet-900/30 bg-slate-900/50">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-violet-300 text-sm px-2.5 py-1 rounded-full bg-violet-950 border border-violet-800/40">
-              {post.subBuvakiName}
+            <span className="font-bold text-violet-300 text-sm px-2.5 py-1 rounded-xl bg-violet-950 border border-violet-800/40 flex items-center gap-2">
+              <CommunityIcon subId={post.subBuvakiId} name={post.subBuvakiName} size="xs" containerClassName="w-4 h-4 rounded-sm border-none bg-transparent" />
+              <span>{post.subBuvakiName}</span>
             </span>
             <span className="text-xs text-slate-400">Thread Discussion</span>
           </div>
@@ -299,15 +305,75 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                 </p>
               )}
 
+              {/* Image Rendering */}
               {post.imageUrl && (
-                <div className="rounded-2xl overflow-hidden border border-violet-900/40">
+                <div className="rounded-2xl overflow-hidden border border-violet-900/40 bg-slate-950 flex flex-col">
                   <img
                     src={post.imageUrl}
                     alt={post.title}
-                    className="w-full h-auto object-cover"
+                    className="w-full max-h-[600px] object-contain bg-slate-950"
                     referrerPolicy="no-referrer"
                   />
+                  <div className="p-2.5 bg-slate-900/60 border-t border-violet-900/30 flex items-center justify-between text-xs text-slate-400">
+                    <span className="text-[11px] font-medium text-violet-300">Image Attachment</span>
+                    <a
+                      href={post.imageUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] text-violet-400 hover:text-white flex items-center gap-1 font-semibold"
+                    >
+                      <span>Open Full Size</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
                 </div>
+              )}
+
+              {/* YouTube Embed Player & Link Rendering */}
+              {post.linkUrl && (
+                isYouTubeUrl(post.linkUrl) && getYouTubeEmbedUrl(post.linkUrl) ? (
+                  <div className="rounded-2xl overflow-hidden border border-violet-900/50 bg-slate-950 shadow-lg">
+                    <div className="aspect-video w-full bg-black">
+                      <iframe
+                        src={getYouTubeEmbedUrl(post.linkUrl)!}
+                        title={post.title}
+                        className="w-full h-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
+                    <div className="p-3 bg-slate-900/90 border-t border-violet-900/40 flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs text-pink-400 font-bold">
+                        <Youtube className="w-4 h-4 text-rose-500" />
+                        <span>Embedded YouTube Player</span>
+                      </div>
+                      <a
+                        href={post.linkUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-violet-300 hover:text-white flex items-center gap-1 font-semibold"
+                      >
+                        <span>Watch on YouTube</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <a
+                    href={post.linkUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-4 rounded-2xl bg-slate-900/80 border border-violet-900/40 hover:border-violet-500/60 group/link transition-colors"
+                  >
+                    <div className="flex flex-col min-w-0 pr-2">
+                      <span className="text-xs font-semibold text-violet-300 truncate">
+                        {post.linkUrl}
+                      </span>
+                      <span className="text-[11px] text-slate-400">External Web Resource / Article</span>
+                    </div>
+                    <ExternalLink className="w-4 h-4 text-violet-400 group-hover/link:text-pink-400 transition-colors flex-shrink-0" />
+                  </a>
+                )
               )}
             </div>
           </div>
@@ -329,7 +395,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
               <button
                 type="submit"
                 disabled={!newCommentText.trim()}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-emerald-500 hover:from-violet-500 hover:to-emerald-400 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"
+                className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all shadow-md shadow-violet-600/20"
               >
                 <Send className="w-3.5 h-3.5" /> {t.submitComment}
               </button>

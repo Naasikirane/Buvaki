@@ -12,6 +12,7 @@ import { UserProfileModal } from './components/UserProfileModal';
 import { NotificationsModal } from './components/NotificationsModal';
 import { LanguageSelectorModal } from './components/LanguageSelectorModal';
 import { OnboardingFlow, OnboardingStep } from './components/OnboardingFlow';
+import { CommunityIcon } from './components/CommunityIcon';
 
 import { 
   Post, 
@@ -43,6 +44,7 @@ import {
 import { 
   initAuth, 
   ensureSeeded, 
+  testConnection,
   dbCheckAndCompleteEmailLinkSignIn,
   dbLogout,
   subscribeToSubBuvakis, 
@@ -73,7 +75,17 @@ export default function App() {
 
   const [posts, setPosts] = useState<Post[]>(() => {
     const saved = localStorage.getItem('buvaki_posts');
-    return saved ? JSON.parse(saved) : SEED_POSTS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(p => !['post_1', 'post_2', 'post_3', 'post_4', 'post_5'].includes(p.id));
+        }
+      } catch (err) {
+        return SEED_POSTS;
+      }
+    }
+    return SEED_POSTS;
   });
 
   const [subBuvakis, setSubBuvakis] = useState<SubBuvaki[]>(() => {
@@ -83,7 +95,21 @@ export default function App() {
 
   const [commentsMap, setCommentsMap] = useState<Record<string, Comment[]>>(() => {
     const saved = localStorage.getItem('buvaki_comments');
-    return saved ? JSON.parse(saved) : SEED_COMMENTS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const cleaned: Record<string, Comment[]> = {};
+        for (const [k, v] of Object.entries(parsed)) {
+          if (!['post_1', 'post_2', 'post_3', 'post_4', 'post_5'].includes(k)) {
+            cleaned[k] = v as Comment[];
+          }
+        }
+        return cleaned;
+      } catch (err) {
+        return SEED_COMMENTS;
+      }
+    }
+    return SEED_COMMENTS;
   });
 
   const [channels, setChannels] = useState<ChatChannel[]>(() => {
@@ -164,6 +190,7 @@ export default function App() {
     let unsubMemberships: () => void;
 
     const setupFirebase = async () => {
+      await testConnection();
       await initAuth();
       await ensureSeeded();
 
@@ -466,10 +493,12 @@ export default function App() {
       displayName: newSub.displayName,
       description: newSub.description,
       icon: newSub.icon,
+      imageUrl: newSub.imageUrl,
+      isDefault: false,
       bannerColor: newSub.bannerColor,
       category: newSub.category
     });
-    setSubBuvakis((prev) => [...prev, created]);
+    setSubBuvakis((prev) => [...prev.filter(s => s.id !== created.id), created]);
     setActiveSubBuvakiId(created.id);
   };
 
@@ -573,7 +602,7 @@ export default function App() {
   return (
     <div 
       dir={isRTL(selectedLanguage.code) ? 'rtl' : 'ltr'} 
-      className={`min-h-screen font-sans ${themeClasses} transition-colors duration-300 pb-16 md:pb-0`}
+      className={`min-h-screen font-sans ${themeClasses} transition-colors duration-300 pb-16 lg:pb-0`}
     >
       
       {/* Top Header */}
@@ -624,9 +653,11 @@ export default function App() {
           {activeSubObj && (
             <div className={`p-6 rounded-3xl bg-gradient-to-r ${activeSubObj.bannerColor} border border-violet-800/40 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative overflow-hidden`}>
               <div className="flex items-center gap-4 z-10">
-                <span className="text-4xl p-3 rounded-2xl bg-slate-950/80 border border-violet-600/40 shadow-md">
-                  {activeSubObj.icon}
-                </span>
+                <CommunityIcon 
+                  sub={activeSubObj}
+                  size="xl" 
+                  containerClassName="shadow-lg border-violet-500/40"
+                />
                 <div className="flex flex-col">
                   <h1 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
                     {activeSubObj.displayName}
@@ -634,7 +665,7 @@ export default function App() {
                   <p className="text-xs text-slate-300 max-w-xl leading-relaxed mt-1">
                     {activeSubObj.description}
                   </p>
-                  <span className="text-[11px] text-emerald-400 font-mono mt-1 font-bold">
+                  <span className="text-[11px] text-pink-400 font-mono mt-1 font-bold">
                     {(activeSubObj.memberCount).toLocaleString()} {t.activeMembers}
                   </span>
                 </div>
@@ -652,7 +683,7 @@ export default function App() {
                 className={`px-5 py-2.5 rounded-xl font-bold text-xs z-10 transition-all ${
                   activeSubObj.isJoined
                     ? 'bg-slate-950 text-slate-300 border border-violet-800 hover:border-rose-500 hover:text-rose-400'
-                    : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg'
+                    : 'bg-violet-600 hover:bg-violet-500 text-white shadow-lg shadow-violet-600/20 active:scale-95'
                 }`}
               >
                 {activeSubObj.isJoined ? t.joined : t.joinCommunity}

@@ -96,6 +96,8 @@ export interface SubBuvaki {
   description: string;
   memberCount: number;
   icon: string;
+  imageUrl?: string;
+  isDefault?: boolean;
   bannerColor: string;
   category: 'tech' | 'privacy' | 'gaming' | 'general' | 'creative';
   isJoined?: boolean;

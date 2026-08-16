@@ -60,26 +60,26 @@ export const getGenericAvatarByGender = (gender?: string): string => {
 };
 
 export const PRESET_INTERESTS = [
-  'Privacy & Security',
-  'AI & Robotics',
-  'Web3 & Crypto',
-  'Gaming',
-  'Anime & Manga',
-  'Open Source',
-  'Philosophy',
-  'Creative Arts',
-  'Science & Tech',
-  'Music Production'
+  'Photography & Visuals',
+  'AI & Tech Innovations',
+  'Design & Creative Arts',
+  'Gaming & Esports',
+  'Music & Audio',
+  'Travel & Lifestyle',
+  'Film & Entertainment',
+  'Fitness & Wellness',
+  'Science & Nature',
+  'Coding & Development'
 ];
 
 export const PRESET_COLORS = [
-  { name: 'Purple', hex: '#9333ea' },
-  { name: 'Neon Cyan', hex: '#06b6d4' },
-  { name: 'Emerald', hex: '#10b981' },
-  { name: 'Sunset Gold', hex: '#f59e0b' },
-  { name: 'Rose Pink', hex: '#f43f5e' },
-  { name: 'Electric Blue', hex: '#3b82f6' },
-  { name: 'Midnight Slate', hex: '#475569' },
+  { name: 'Vibrant Violet', hex: '#8b5cf6' },
+  { name: 'Rose Pink', hex: '#ec4899' },
+  { name: 'Crimson Red', hex: '#ef4444' },
+  { name: 'Deep Purple', hex: '#7c3aed' },
+  { name: 'Sunset Coral', hex: '#f43f5e' },
+  { name: 'Neon Amber', hex: '#f59e0b' },
+  { name: 'Electric Sky', hex: '#3b82f6' },
 ];
 
 interface OnboardingFlowProps {
@@ -465,23 +465,20 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
         >
           {/* FLOATING LOGO ONLY IN CENTER */}
           <div className="relative flex flex-col items-center justify-center transition-all duration-700 transform hover:scale-105">
-            <div className="absolute -inset-8 rounded-full bg-purple-600/20 blur-2xl animate-pulse" />
-            <div className="relative p-8 bg-slate-900/40 backdrop-blur-2xl border border-purple-500/20 rounded-3xl shadow-2xl flex items-center justify-center">
+            <div className="absolute -inset-8 rounded-full bg-violet-600/25 blur-3xl animate-pulse" />
+            <div className="relative p-8 bg-slate-900/40 backdrop-blur-2xl border border-violet-500/25 rounded-3xl shadow-2xl flex items-center justify-center">
               <Logo size="xl" showText={true} />
             </div>
 
-            {/* 3-Second Loading Bar */}
+            {/* 3-Second Loading Bar with Solid Violet */}
             <div className="mt-8 w-36 h-1 bg-slate-800/80 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-purple-500 via-indigo-500 to-purple-400 rounded-full animate-splash-loader" />
+              <div className="h-full bg-violet-500 rounded-full animate-splash-loader" />
             </div>
           </div>
 
-          {/* BOTTOM CREATOR SIGNATURE: [TOR onion network logo in grey] made by buvaki */}
+          {/* BOTTOM CREATOR SIGNATURE */}
           <div className="absolute bottom-8 flex items-center gap-2 text-slate-500 text-xs font-medium tracking-wider uppercase">
-            {/* TOR onion network logo in grey */}
-            <svg className="w-4 h-4 fill-slate-500" viewBox="0 0 24 24">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-8c0-2.76 2.24-5 5-5s5 2.24 5 5-2.24 5-5 5-5-2.24-5-5z" />
-            </svg>
+            <Sparkles className="w-3.5 h-3.5 text-violet-400" />
             <span>made by buvaki</span>
           </div>
         </div>
@@ -1114,7 +1111,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-xs font-semibold text-slate-200">
                       {selectedAvatarUrl || customAvatarInput 
-                        ? '📸 Profile Picture Uploaded' 
+                        ? 'Profile Picture Uploaded' 
                         : 'Default Generic Silhouette'}
                     </span>
 
@@ -1165,11 +1162,12 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
               </label>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { id: 'male', label: 'Male', icon: '👨' },
-                  { id: 'female', label: 'Female', icon: '👩' },
-                  { id: 'prefer_not_to_say', label: 'Prefer not to say', icon: '👤' },
+                  { id: 'male', label: 'Male', Icon: UserIcon },
+                  { id: 'female', label: 'Female', Icon: UserIcon },
+                  { id: 'prefer_not_to_say', label: 'Prefer not to say', Icon: Sparkles },
                 ].map((g) => {
                   const isSelected = genderInput === g.id;
+                  const GIcon = g.Icon;
                   return (
                     <button
                       key={g.id}
@@ -1181,7 +1179,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                           : 'bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-900 hover:border-slate-700'
                       }`}
                     >
-                      <span>{g.icon}</span>
+                      <GIcon className="w-3.5 h-3.5" />
                       <span className="truncate">{g.label}</span>
                     </button>
                   );

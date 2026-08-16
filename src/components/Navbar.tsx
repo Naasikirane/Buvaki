@@ -17,7 +17,8 @@ import {
   Flame,
   Radio,
   Globe,
-  LogIn
+  LogIn,
+  Sparkles
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -74,7 +75,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center gap-3">
           <button
             onClick={onToggleMobileSidebar}
-            className="md:hidden p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors"
+            className="lg:hidden p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors"
             aria-label="Open menu"
           >
             <SlidersHorizontal className="w-5 h-5" />
@@ -123,12 +124,12 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center gap-1.5 sm:gap-3">
           
           {/* View Mode Switcher (Feed vs Chat vs Split) */}
-          <div className="hidden md:flex items-center p-1 rounded-xl bg-slate-900 border border-violet-900/40">
+          <div className="hidden lg:flex items-center p-1 rounded-xl bg-slate-900 border border-violet-900/40">
             <button
               onClick={() => setViewMode('feed')}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
                 viewMode === 'feed'
-                  ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-sm'
+                  ? 'bg-violet-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -139,7 +140,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => setViewMode('chat')}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
                 viewMode === 'chat'
-                  ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-sm'
+                  ? 'bg-violet-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -150,7 +151,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => setViewMode('split')}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
                 viewMode === 'split'
-                  ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-sm'
+                  ? 'bg-violet-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -166,7 +167,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             title={`Selected Language: ${selectedLanguage.name} (${selectedLanguage.nativeName})`}
           >
             <FlagIcon code={selectedLanguage.code} size="sm" />
-            <span className="hidden md:inline text-xs font-semibold">{selectedLanguage.code.toUpperCase()}</span>
+            <span className="hidden sm:inline text-xs font-semibold">{selectedLanguage.code.toUpperCase()}</span>
           </button>
 
           {/* Theme Switcher */}
@@ -176,37 +177,37 @@ export const Navbar: React.FC<NavbarProps> = ({
             title={`Current Theme: ${theme.toUpperCase()} (Click to change)`}
           >
             {theme === 'dark' && <Moon className="w-4 h-4 text-violet-300" />}
-            {theme === 'stealth' && <ShieldAlert className="w-4 h-4 text-emerald-400 animate-pulse" />}
+            {theme === 'stealth' && <Eye className="w-4 h-4 text-pink-400" />}
             {theme === 'light' && <Sun className="w-4 h-4 text-amber-400" />}
           </button>
 
-          {/* Create Post Button */}
+          {/* Create Post Button (Desktop only, as bottom bar handles mobile/tablet) */}
           <button
             onClick={onOpenCreatePost}
-            className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-emerald-500 hover:from-violet-500 hover:to-emerald-400 text-white font-semibold text-xs sm:text-sm shadow-md hover:shadow-violet-500/20 active:scale-95 transition-all"
+            className="hidden lg:flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold text-xs sm:text-sm shadow-md hover:shadow-violet-500/20 active:scale-95 transition-all"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span className="hidden sm:inline">{t.createPost}</span>
+            <span>{t.createPost}</span>
           </button>
 
-          {/* Notifications Bell */}
+          {/* Notifications Bell (Desktop only, as bottom bar handles mobile/tablet) */}
           <button
             onClick={onOpenNotifications}
-            className="relative p-2 rounded-xl bg-slate-900/80 border border-violet-900/40 text-slate-300 hover:text-white hover:border-violet-500/50 transition-all"
+            className="hidden lg:flex relative p-2 rounded-xl bg-slate-900/80 border border-violet-900/40 text-slate-300 hover:text-white hover:border-violet-500/50 transition-all"
             aria-label="Notifications"
           >
             <Bell className="w-4 h-4" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 flex items-center justify-center rounded-full bg-fuchsia-500 text-[10px] font-bold text-white shadow-sm">
+              <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 flex items-center justify-center rounded-full bg-pink-500 text-[10px] font-bold text-white shadow-sm">
                 {unreadCount}
               </span>
             )}
           </button>
 
-          {/* User Profile Avatar */}
+          {/* User Profile Avatar (Desktop only, as bottom bar handles mobile/tablet) */}
           <button
             onClick={onOpenProfile}
-            className="flex items-center gap-2 p-1 rounded-xl bg-slate-900 border border-violet-900/40 hover:border-violet-500/50 transition-all"
+            className="hidden lg:flex items-center gap-2 p-1 rounded-xl bg-slate-900 border border-violet-900/40 hover:border-violet-500/50 transition-all"
           >
             <img
               src={currentUser.avatar}
@@ -218,8 +219,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="text-xs font-bold text-slate-100 leading-none">
                 {currentUser.username}
               </span>
-              <span className="text-[10px] text-emerald-400 font-medium leading-none mt-0.5">
-                {currentUser.karma} 🌪️
+              <span className="text-[10px] text-pink-400 font-medium leading-none mt-0.5 flex items-center gap-1">
+                <Sparkles className="w-2.5 h-2.5 text-pink-400" />
+                <span>{currentUser.karma}</span>
               </span>
             </div>
           </button>
