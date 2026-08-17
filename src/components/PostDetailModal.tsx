@@ -172,7 +172,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
         {isReplying && (
           <div className="ml-4 p-3 rounded-xl bg-slate-950 border border-violet-700/50 flex flex-col gap-2">
             <textarea
-              value={replyText}
+              value={replyText || ''}
               onChange={(e) => setReplyText(e.target.value)}
               placeholder={`Replying to ${comment.author.handle}...`}
               rows={2}
@@ -385,7 +385,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
               <span>{t.writeComment} <span className="text-emerald-400">{currentUser.handle}</span></span>
             </div>
             <textarea
-              value={newCommentText}
+              value={newCommentText || ''}
               onChange={(e) => setNewCommentText(e.target.value)}
               placeholder={t.writeComment}
               rows={3}

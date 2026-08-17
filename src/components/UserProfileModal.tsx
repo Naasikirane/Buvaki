@@ -26,7 +26,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<'posts' | 'saved' | 'badges'>('posts');
   const [isEditingBio, setIsEditingBio] = useState(false);
-  const [bioText, setBioText] = useState(user.bio);
+  const [bioText, setBioText] = useState(user?.bio || '');
 
   const handleSaveBio = () => {
     onUpdateBio(bioText);
@@ -168,7 +168,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             {isEditingBio ? (
               <div className="flex flex-col gap-2">
                 <textarea
-                  value={bioText}
+                  value={bioText || ''}
                   onChange={(e) => setBioText(e.target.value)}
                   className="w-full p-2 text-xs rounded-xl bg-slate-950 text-slate-100 border border-violet-700/50 focus:outline-none"
                   rows={2}

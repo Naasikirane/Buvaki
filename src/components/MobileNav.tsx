@@ -5,23 +5,19 @@ import { FlagIcon } from './FlagIcon';
 import { CommunityIcon } from './CommunityIcon';
 import { 
   Layers, 
-  MessageSquare, 
   Plus, 
-  Bell, 
   User as UserIcon, 
   X, 
   Compass, 
   Bookmark, 
   Flame, 
-  PlusCircle, 
-  Hash, 
-  Volume2, 
   ShieldCheck,
-  Radio,
   Moon,
   Eye,
   Sun,
-  Globe
+  Globe,
+  Clapperboard,
+  Tv
 } from 'lucide-react';
 
 interface MobileNavProps {
@@ -36,9 +32,9 @@ interface MobileNavProps {
   subBuvakis: SubBuvaki[];
   activeSubBuvakiId: string | null;
   onSelectSubBuvaki: (id: string | null) => void;
-  channels: ChatChannel[];
-  activeChannelId: string;
-  onSelectChannel: (id: string) => void;
+  channels?: ChatChannel[];
+  activeChannelId?: string;
+  onSelectChannel?: (id: string) => void;
   onOpenCreateSub: () => void;
   showSavedOnly: boolean;
   onToggleSavedOnly: (saved: boolean) => void;
@@ -52,17 +48,12 @@ export const MobileNav: React.FC<MobileNavProps> = ({
   viewMode,
   setViewMode,
   onOpenCreatePost,
-  onOpenNotifications,
   onOpenProfile,
-  notifications,
   isMobileSidebarOpen,
   onCloseMobileSidebar,
   subBuvakis,
   activeSubBuvakiId,
   onSelectSubBuvaki,
-  channels,
-  activeChannelId,
-  onSelectChannel,
   onOpenCreateSub,
   showSavedOnly,
   onToggleSavedOnly,
@@ -72,7 +63,6 @@ export const MobileNav: React.FC<MobileNavProps> = ({
   setTheme,
 }) => {
   const t = getTranslation(selectedLanguage.code);
-  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const toggleTheme = () => {
     if (theme === 'dark') setTheme('stealth');
@@ -82,8 +72,8 @@ export const MobileNav: React.FC<MobileNavProps> = ({
 
   return (
     <>
-      {/* Mobile & Tablet Portrait Bottom Navigation Bar */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 border-t border-violet-900/40 backdrop-blur-lg px-2 py-1.5 flex items-center justify-around shadow-2xl">
+      {/* Bottom Navigation Bar */}
+      <nav className={`${viewMode === 'shorts' ? 'flex' : 'lg:hidden flex'} fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 border-t border-violet-900/40 backdrop-blur-lg px-2 py-1.5 items-center justify-around shadow-2xl max-w-md mx-auto sm:rounded-t-2xl`}>
         
         {/* Feed Tab */}
         <button
@@ -96,15 +86,15 @@ export const MobileNav: React.FC<MobileNavProps> = ({
           <span className="text-[10px]">{t.feedView}</span>
         </button>
 
-        {/* Chat Tab */}
+        {/* Shorts (Short Videos) Tab - Replaced Live Chat */}
         <button
-          onClick={() => setViewMode('chat')}
+          onClick={() => setViewMode('shorts')}
           className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
-            viewMode === 'chat' ? 'text-violet-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+            viewMode === 'shorts' ? 'text-pink-400 font-bold scale-105' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <MessageSquare className="w-5 h-5" />
-          <span className="text-[10px]">{t.chatView}</span>
+          <Clapperboard className="w-5 h-5" />
+          <span className="text-[10px]">Shorts</span>
         </button>
 
         {/* Center Floating (+) Post Button */}
@@ -116,16 +106,15 @@ export const MobileNav: React.FC<MobileNavProps> = ({
           <Plus className="w-6 h-6 stroke-[3]" />
         </button>
 
-        {/* Notifications Tab */}
+        {/* Longs (Long Videos) Tab - Replaced Notifications */}
         <button
-          onClick={onOpenNotifications}
-          className="relative flex flex-col items-center gap-1 p-2 rounded-xl text-slate-400 hover:text-slate-200 transition-all"
+          onClick={() => setViewMode('longs')}
+          className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
+            viewMode === 'longs' ? 'text-violet-400 font-bold scale-105' : 'text-slate-400 hover:text-slate-200'
+          }`}
         >
-          <Bell className="w-5 h-5" />
-          <span className="text-[10px]">{t.notifications}</span>
-          {unreadCount > 0 && (
-            <span className="absolute top-1 right-3 w-2 h-2 rounded-full bg-pink-500 animate-ping" />
-          )}
+          <Tv className="w-5 h-5" />
+          <span className="text-[10px]">Longs</span>
         </button>
 
         {/* Profile Tab */}
@@ -192,7 +181,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
             {/* Feeds */}
             <div className="flex flex-col gap-1.5">
               <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider">
-                Feeds
+                Feeds & Media
               </span>
               <button
                 onClick={() => {
@@ -205,6 +194,27 @@ export const MobileNav: React.FC<MobileNavProps> = ({
               >
                 <Compass className="w-4 h-4 text-violet-400" /> {t.allSubBuvakis}
               </button>
+              
+              <button
+                onClick={() => {
+                  setViewMode('shorts');
+                  onCloseMobileSidebar();
+                }}
+                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-pink-300 bg-slate-900/80"
+              >
+                <Clapperboard className="w-4 h-4 text-pink-400" /> Shorts (Short Videos)
+              </button>
+
+              <button
+                onClick={() => {
+                  setViewMode('longs');
+                  onCloseMobileSidebar();
+                }}
+                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-violet-300 bg-slate-900/80"
+              >
+                <Tv className="w-4 h-4 text-violet-400" /> Longs (Long Videos)
+              </button>
+
               <button
                 onClick={() => {
                   onToggleSavedOnly(true);
@@ -243,7 +253,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
                     onCloseMobileSidebar();
                   }}
                   className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-                    activeSubBuvakiId === sub.id
+                    activeSubBuvakiId === sub.id && viewMode === 'feed'
                       ? 'bg-violet-900/80 text-white font-bold'
                       : 'text-slate-300 bg-slate-900/40 hover:bg-slate-900/80'
                   }`}
@@ -255,39 +265,6 @@ export const MobileNav: React.FC<MobileNavProps> = ({
                   <span>{sub.displayName}</span>
                 </button>
               ))}
-            </div>
-
-            {/* Channels */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider flex items-center gap-1">
-                <Radio className="w-3 h-3 text-pink-400 animate-pulse" /> {t.liveChatChannels}
-              </span>
-              {channels.map((chan) => {
-                const cleanChanName = chan.name.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}]/gu, '').trim();
-
-                return (
-                  <button
-                    key={chan.id}
-                    onClick={() => {
-                      onSelectChannel(chan.id);
-                      setViewMode('chat');
-                      onCloseMobileSidebar();
-                    }}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-                      activeChannelId === chan.id
-                        ? 'bg-violet-900/80 text-white font-bold'
-                        : 'text-slate-300 bg-slate-900/40 hover:bg-slate-900/80'
-                    }`}
-                  >
-                    {chan.type === 'voice' ? (
-                      <Volume2 className="w-3.5 h-3.5 text-pink-400" />
-                    ) : (
-                      <Hash className="w-3.5 h-3.5 text-violet-400" />
-                    )}
-                    <span>{cleanChanName || chan.name}</span>
-                  </button>
-                );
-              })}
             </div>
 
           </div>

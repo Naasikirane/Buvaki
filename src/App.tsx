@@ -7,6 +7,8 @@ import { PostDetailModal } from './components/PostDetailModal';
 import { CreatePostModal } from './components/CreatePostModal';
 import { CreateSubModal } from './components/CreateSubModal';
 import { LiveChatView } from './components/LiveChatView';
+import { ShortsFeed } from './components/ShortsFeed';
+import { LongsFeed } from './components/LongsFeed';
 import { VoiceRoomBar } from './components/VoiceRoomBar';
 import { UserProfileModal } from './components/UserProfileModal';
 import { NotificationsModal } from './components/NotificationsModal';
@@ -602,55 +604,59 @@ export default function App() {
   return (
     <div 
       dir={isRTL(selectedLanguage.code) ? 'rtl' : 'ltr'} 
-      className={`min-h-screen font-sans ${themeClasses} transition-colors duration-300 pb-16 lg:pb-0`}
+      className={`min-h-screen font-sans ${themeClasses} transition-colors duration-300 pb-16 lg:pb-0 ${viewMode === 'shorts' ? 'overflow-hidden bg-black' : ''}`}
     >
       
-      {/* Top Header */}
-      <Navbar
-        viewMode={viewMode}
-        setViewMode={setViewMode}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        currentUser={currentUser}
-        selectedLanguage={selectedLanguage}
-        onOpenCreatePost={() => setIsCreatePostOpen(true)}
-        onOpenNotifications={() => setIsNotificationsOpen(true)}
-        onOpenProfile={() => setIsProfileOpen(true)}
-        onOpenAuth={() => setOnboardingStep('signin')}
-        notifications={notifications}
-        activeSubBuvakiName={activeSubObj?.displayName}
-        onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
-      />
-
-      {/* Main Container */}
-      <div className="max-w-7xl mx-auto px-2 sm:px-6 flex gap-6">
-        
-        {/* Desktop Sidebar (Left Navigation) */}
-        <Sidebar
-          subBuvakis={subBuvakis}
-          activeSubBuvakiId={activeSubBuvakiId}
-          onSelectSubBuvaki={setActiveSubBuvakiId}
-          activeFilter={activeFilter}
-          onChangeFilter={setActiveFilter}
-          showSavedOnly={showSavedOnly}
-          onToggleSavedOnly={setShowSavedOnly}
-          channels={channels}
-          activeChannelId={activeChannelId}
-          onSelectChannel={setActiveChannelId}
-          onOpenCreateSub={() => setIsCreateSubOpen(true)}
+      {/* Top Header - Hidden in Shorts and Longs views */}
+      {viewMode !== 'shorts' && viewMode !== 'longs' && (
+        <Navbar
           viewMode={viewMode}
           setViewMode={setViewMode}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          currentUser={currentUser}
           selectedLanguage={selectedLanguage}
-          onOpenLanguage={() => setIsLanguageModalOpen(true)}
-          theme={theme}
-          setTheme={setTheme}
+          onOpenCreatePost={() => setIsCreatePostOpen(true)}
+          onOpenNotifications={() => setIsNotificationsOpen(true)}
+          onOpenProfile={() => setIsProfileOpen(true)}
+          onOpenAuth={() => setOnboardingStep('signin')}
+          notifications={notifications}
+          activeSubBuvakiName={activeSubObj?.displayName}
+          onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
         />
+      )}
+
+      {/* Main Container */}
+      <div className={viewMode === 'shorts' ? 'w-full h-full p-0 m-0' : 'max-w-7xl mx-auto px-2 sm:px-6 flex gap-6'}>
+        
+        {/* Desktop Sidebar (Left Navigation) - Hidden in Shorts view */}
+        {viewMode !== 'shorts' && (
+          <Sidebar
+            subBuvakis={subBuvakis}
+            activeSubBuvakiId={activeSubBuvakiId}
+            onSelectSubBuvaki={setActiveSubBuvakiId}
+            activeFilter={activeFilter}
+            onChangeFilter={setActiveFilter}
+            showSavedOnly={showSavedOnly}
+            onToggleSavedOnly={setShowSavedOnly}
+            channels={channels}
+            activeChannelId={activeChannelId}
+            onSelectChannel={setActiveChannelId}
+            onOpenCreateSub={() => setIsCreateSubOpen(true)}
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+            selectedLanguage={selectedLanguage}
+            onOpenLanguage={() => setIsLanguageModalOpen(true)}
+            theme={theme}
+            setTheme={setTheme}
+          />
+        )}
 
         {/* Center Main Stage */}
-        <main className="flex-1 min-w-0 py-2 sm:py-3 flex flex-col gap-3">
+        <main className={viewMode === 'shorts' ? 'w-full h-full p-0 m-0 flex justify-center' : 'flex-1 min-w-0 py-2 sm:py-3 flex flex-col gap-3'}>
           
           {/* Sub-Buvaki Banner Header if a specific community is active */}
-          {activeSubObj && (
+          {activeSubObj && viewMode !== 'shorts' && viewMode !== 'longs' && (
             <div className={`p-6 rounded-3xl bg-gradient-to-r ${activeSubObj.bannerColor} border border-violet-800/40 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative overflow-hidden`}>
               <div className="flex items-center gap-4 z-10">
                 <CommunityIcon 
@@ -797,6 +803,30 @@ export default function App() {
               </div>
 
             </div>
+          )}
+
+          {/* VIEW MODE: SHORTS */}
+          {viewMode === 'shorts' && (
+            <ShortsFeed
+              posts={posts}
+              currentUser={currentUser}
+              selectedLanguage={selectedLanguage}
+              onVote={handleVotePost}
+              onToggleSave={handleToggleSavePost}
+              onSelectPost={(p) => setSelectedPost(p)}
+            />
+          )}
+
+          {/* VIEW MODE: LONGS */}
+          {viewMode === 'longs' && (
+            <LongsFeed
+              posts={posts}
+              currentUser={currentUser}
+              selectedLanguage={selectedLanguage}
+              onVote={handleVotePost}
+              onToggleSave={handleToggleSavePost}
+              onSelectPost={(p) => setSelectedPost(p)}
+            />
           )}
 
           {/* VIEW MODE: CHAT ONLY */}

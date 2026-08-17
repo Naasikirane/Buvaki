@@ -151,7 +151,7 @@ export const CreateSubModal: React.FC<CreateSubModalProps> = ({
               <input
                 type="text"
                 required
-                value={name}
+                value={name || ''}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. cyberart, anime, robotics"
                 className="bg-transparent border-none focus:outline-none w-full text-white placeholder-slate-500"
@@ -279,7 +279,7 @@ export const CreateSubModal: React.FC<CreateSubModalProps> = ({
                   <LinkIcon className="w-4 h-4 text-violet-400 mr-2 shrink-0" />
                   <input
                     type="url"
-                    value={customImageUrl}
+                    value={customImageUrl || ''}
                     onChange={(e) => setCustomImageUrl(e.target.value)}
                     placeholder="https://example.com/community-avatar.jpg"
                     className="bg-transparent border-none focus:outline-none w-full text-white placeholder-slate-500"
@@ -325,7 +325,7 @@ export const CreateSubModal: React.FC<CreateSubModalProps> = ({
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-violet-300">Category</label>
             <select
-              value={category}
+              value={category || 'creative'}
               onChange={(e) => setCategory(e.target.value as any)}
               className="p-2.5 rounded-xl bg-slate-900 border border-violet-900/40 text-xs text-slate-200 focus:outline-none focus:border-violet-500"
             >
@@ -366,7 +366,7 @@ export const CreateSubModal: React.FC<CreateSubModalProps> = ({
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-violet-300">Description</label>
             <textarea
-              value={description}
+              value={description || ''}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="What is your sub-buvaki about? Share rules, guidelines, or discussion topics."
               rows={3}

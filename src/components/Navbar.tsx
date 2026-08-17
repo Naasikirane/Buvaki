@@ -6,12 +6,12 @@ import {
   Search, 
   Plus, 
   Bell, 
-  MessageSquare, 
   Layers, 
   SlidersHorizontal,
-  Radio,
   Sparkles,
-  X
+  X,
+  Clapperboard,
+  Tv
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -80,10 +80,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </div>
 
-        {/* Right Actions & Controls (Search collapsed into icon on the right) */}
-        <div className="flex items-center gap-1.5 sm:gap-3">
+        {/* Right Actions & Controls */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5">
           
-          {/* View Mode Switcher (Feed vs Chat vs Split) */}
+          {/* View Mode Switcher (Feed vs Shorts vs Longs) */}
           <div className="hidden lg:flex items-center p-1 rounded-xl bg-slate-900 border border-violet-900/40">
             <button
               onClick={() => setViewMode('feed')}
@@ -97,38 +97,53 @@ export const Navbar: React.FC<NavbarProps> = ({
               {t.feedView}
             </button>
             <button
-              onClick={() => setViewMode('chat')}
+              onClick={() => setViewMode('shorts')}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                viewMode === 'chat'
-                  ? 'bg-violet-600 text-white shadow-sm'
+                viewMode === 'shorts'
+                  ? 'bg-pink-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <MessageSquare className="w-3.5 h-3.5" />
-              {t.chatView}
+              <Clapperboard className="w-3.5 h-3.5" />
+              <span>Shorts</span>
             </button>
             <button
-              onClick={() => setViewMode('split')}
+              onClick={() => setViewMode('longs')}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                viewMode === 'split'
+                viewMode === 'longs'
                   ? 'bg-violet-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <Radio className="w-3.5 h-3.5" />
-              {t.splitView}
+              <Tv className="w-3.5 h-3.5" />
+              <span>Longs</span>
             </button>
           </div>
+
+          {/* Notifications Bell placed to the LEFT of the search icon */}
+          <button
+            onClick={onOpenNotifications}
+            className="relative p-2 rounded-xl bg-slate-900/80 border border-violet-900/40 text-slate-300 hover:text-white hover:border-violet-500/50 transition-all flex items-center justify-center"
+            aria-label="Notifications"
+            title="Notifications"
+          >
+            <Bell className="w-4 h-4" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 flex items-center justify-center rounded-full bg-pink-500 text-[10px] font-bold text-white shadow-sm">
+                {unreadCount}
+              </span>
+            )}
+          </button>
 
           {/* Collapsible Search Bar pushed to the Right of Top Nav */}
           <div className="relative flex items-center">
             {isSearchExpanded || searchQuery ? (
-              <div className="flex items-center gap-2 bg-slate-900/95 border border-violet-500/70 rounded-full px-3 py-1.5 shadow-lg w-48 sm:w-64 transition-all duration-200">
+              <div className="flex items-center gap-2 bg-slate-900/95 border border-violet-500/70 rounded-full px-3 py-1.5 shadow-lg w-44 sm:w-60 transition-all duration-200">
                 <Search className="w-4 h-4 text-violet-400 shrink-0" />
                 <input
                   type="text"
                   autoFocus
-                  value={searchQuery}
+                  value={searchQuery || ''}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={t.searchPlaceholder}
                   className="w-full bg-transparent text-xs sm:text-sm text-slate-100 placeholder-slate-400 focus:outline-none"
@@ -156,7 +171,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </div>
 
-          {/* Create Post Button (Desktop only, as bottom bar handles mobile/tablet) */}
+          {/* Create Post Button (Desktop only) */}
           <button
             onClick={onOpenCreatePost}
             className="hidden lg:flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold text-xs sm:text-sm shadow-md hover:shadow-violet-500/20 active:scale-95 transition-all"
@@ -165,21 +180,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span>{t.createPost}</span>
           </button>
 
-          {/* Notifications Bell (Desktop only, as bottom bar handles mobile/tablet) */}
-          <button
-            onClick={onOpenNotifications}
-            className="hidden lg:flex relative p-2 rounded-xl bg-slate-900/80 border border-violet-900/40 text-slate-300 hover:text-white hover:border-violet-500/50 transition-all"
-            aria-label="Notifications"
-          >
-            <Bell className="w-4 h-4" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 flex items-center justify-center rounded-full bg-pink-500 text-[10px] font-bold text-white shadow-sm">
-                {unreadCount}
-              </span>
-            )}
-          </button>
-
-          {/* User Profile Avatar (Desktop only, as bottom bar handles mobile/tablet) */}
+          {/* User Profile Avatar (Desktop only) */}
           <button
             onClick={onOpenProfile}
             className="hidden lg:flex items-center gap-2 p-1 rounded-xl bg-slate-900 border border-violet-900/40 hover:border-violet-500/50 transition-all"

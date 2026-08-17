@@ -258,7 +258,7 @@ export const LiveChatView: React.FC<LiveChatViewProps> = ({
 
           <input
             type="text"
-            value={inputText}
+            value={inputText || ''}
             onChange={(e) => setInputText(e.target.value)}
             placeholder={`${t.typeMessage} #${channel.name}...`}
             className="flex-1 bg-transparent text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none"

@@ -733,7 +733,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                             type="text"
                             required
                             placeholder={t.username}
-                            value={usernameInput}
+                            value={usernameInput || ''}
                             onChange={(e) => setUsernameInput(e.target.value)}
                             className="w-full pl-9 pr-3 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
                           />
@@ -749,7 +749,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                           type="email"
                           required
                           placeholder="name@example.com"
-                          value={emailInput}
+                          value={emailInput || ''}
                           onChange={(e) => setEmailInput(e.target.value)}
                           className="w-full pl-9 pr-3 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
                         />
@@ -766,7 +766,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                               type="password"
                               required
                               placeholder="••••••••"
-                              value={passwordInput}
+                              value={passwordInput || ''}
                               onChange={(e) => setPasswordInput(e.target.value)}
                               className="w-full pl-9 pr-3 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
                             />
@@ -855,7 +855,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                       <label className="block text-xs text-slate-400 mb-1">{t.phoneNumber}</label>
                       <div className="flex gap-2">
                         <select
-                          value={countryCode}
+                          value={countryCode || '+1'}
                           onChange={(e) => setCountryCode(e.target.value)}
                           className="bg-slate-950/90 border border-slate-800 rounded-xl text-xs text-slate-300 px-2 py-2.5 focus:outline-none focus:border-purple-500"
                         >
@@ -876,7 +876,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                             type="tel"
                             required
                             placeholder="555-0199"
-                            value={phoneInput}
+                            value={phoneInput || ''}
                             onChange={(e) => setPhoneInput(e.target.value)}
                             className="w-full pl-9 pr-3 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500"
                           />
@@ -958,7 +958,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                     required
                     maxLength={6}
                     placeholder="• • • • • •"
-                    value={verificationCode}
+                    value={verificationCode || ''}
                     onChange={(e) => setVerificationCode(e.target.value)}
                     className="w-full text-center tracking-[0.5em] font-mono text-xl py-3 bg-slate-950/90 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-purple-500 placeholder-slate-600"
                   />
@@ -1142,7 +1142,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
 
                   <input
                     type="url"
-                    value={customAvatarInput}
+                    value={customAvatarInput || ''}
                     onChange={(e) => {
                       setCustomAvatarInput(e.target.value);
                       setSelectedAvatarUrl('');
@@ -1198,7 +1198,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 </label>
                 <input
                   type="date"
-                  value={dobInput}
+                  value={dobInput || ''}
                   onChange={(e) => setDobInput(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-purple-500/60 transition-all"
                 />
@@ -1212,7 +1212,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 </label>
                 <input
                   type="text"
-                  value={schoolingInput}
+                  value={schoolingInput || ''}
                   onChange={(e) => setSchoolingInput(e.target.value)}
                   placeholder="e.g. Stanford University / High School"
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500/60 transition-all"
@@ -1227,7 +1227,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 </label>
                 <input
                   type="text"
-                  value={occupationInput}
+                  value={occupationInput || ''}
                   onChange={(e) => setOccupationInput(e.target.value)}
                   placeholder="e.g. Software Engineer / Student / Designer"
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500/60 transition-all"
@@ -1242,7 +1242,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 </label>
                 <input
                   type="text"
-                  value={nicheInput}
+                  value={nicheInput || ''}
                   onChange={(e) => setNicheInput(e.target.value)}
                   placeholder="e.g. Quantum Computing, Cybersecurity"
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500/60 transition-all"
@@ -1257,7 +1257,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 </label>
                 <input
                   type="text"
-                  value={petNameInput}
+                  value={petNameInput || ''}
                   onChange={(e) => setPetNameInput(e.target.value)}
                   placeholder="e.g. Milo, Luna, Buddy"
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500/60 transition-all"
@@ -1287,7 +1287,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                   </div>
                   <input
                     type="color"
-                    value={bestColor}
+                    value={bestColor || '#9333ea'}
                     onChange={(e) => setBestColor(e.target.value)}
                     className="w-8 h-8 rounded-lg bg-transparent cursor-pointer border-0 p-0"
                     title="Choose custom color"
@@ -1304,7 +1304,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 <span>Biography</span>
               </label>
               <textarea
-                value={bioInput}
+                value={bioInput || ''}
                 onChange={(e) => setBioInput(e.target.value)}
                 rows={2}
                 placeholder="Tell the Buvaki community a little about yourself..."
@@ -1350,7 +1350,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
               <div className="flex items-center gap-2 pt-1">
                 <input
                   type="text"
-                  value={customInterestInput}
+                  value={customInterestInput || ''}
                   onChange={(e) => setCustomInterestInput(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {

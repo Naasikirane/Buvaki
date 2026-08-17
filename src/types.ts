@@ -1,4 +1,4 @@
-export type ViewMode = 'feed' | 'chat' | 'split';
+export type ViewMode = 'feed' | 'shorts' | 'longs' | 'chat' | 'split';
 export type FilterSort = 'hot' | 'new' | 'top' | 'discussed';
 export type Theme = 'dark' | 'light' | 'stealth';
 
@@ -75,8 +75,11 @@ export interface Post {
   author: User;
   title: string;
   content: string;
-  type: 'text' | 'image' | 'link' | 'poll';
+  type: 'text' | 'image' | 'link' | 'poll' | 'short' | 'video';
   imageUrl?: string;
+  videoUrl?: string;
+  duration?: string;
+  viewsCount?: number;
   linkUrl?: string;
   poll?: Poll;
   flair?: string;
