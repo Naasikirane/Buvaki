@@ -1,4 +1,4 @@
-// Helper utilities for media, YouTube embedding, and device image processing
+// Helper utilities for media, YouTube embedding, device image processing, and video processing
 
 /**
  * Extracts YouTube video ID from various standard YouTube URL formats
@@ -32,6 +32,30 @@ export function isYouTubeUrl(url?: string): boolean {
 export function getYouTubeThumbnailUrl(url?: string): string | null {
   const id = getYouTubeVideoId(url);
   return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null;
+}
+
+/**
+ * Formats duration in seconds into MM:SS or HH:MM:SS
+ */
+export function formatDuration(seconds: number): string {
+  if (isNaN(seconds) || seconds < 0) return '00:00';
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+
+  if (hrs > 0) {
+    return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Formats file size in readable format (KB / MB)
+ */
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 /**
@@ -90,3 +114,102 @@ export function processImageFile(file: File, maxDimension = 1920, quality = 0.85
     reader.readAsDataURL(file);
   });
 }
+
+/**
+ * Extracts a representative thumbnail frame and duration from a video file or video element
+ */
+export function captureVideoFrame(
+  fileOrUrl: File | string,
+  seekTimeSeconds = 1.0
+): Promise<{ thumbnailDataUrl: string; durationFormatted: string; durationSeconds: number; width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.muted = true;
+    video.playsInline = true;
+
+    let videoUrl = '';
+    let isBlob = false;
+    if (typeof fileOrUrl === 'string') {
+      videoUrl = fileOrUrl;
+    } else {
+      videoUrl = URL.createObjectURL(fileOrUrl);
+      isBlob = true;
+    }
+
+    video.src = videoUrl;
+
+    const cleanup = () => {
+      if (isBlob) {
+        // do not revoke immediately if we want to keep it, but revoke if error
+      }
+    };
+
+    video.onloadedmetadata = () => {
+      const durationSeconds = video.duration || 0;
+      const durationFormatted = formatDuration(durationSeconds);
+      // Seek to target time or middle of short clips
+      const targetSeek = Math.min(seekTimeSeconds, Math.max(0, durationSeconds / 2));
+      video.currentTime = targetSeek;
+    };
+
+    video.onseeked = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        const maxW = 1280;
+        let w = video.videoWidth || 1280;
+        let h = video.videoHeight || 720;
+
+        if (w > maxW) {
+          h = Math.round((h * maxW) / w);
+          w = maxW;
+        }
+
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, w, h);
+          const thumbnailDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          resolve({
+            thumbnailDataUrl,
+            durationFormatted: formatDuration(video.duration || 0),
+            durationSeconds: video.duration || 0,
+            width: video.videoWidth || 1280,
+            height: video.videoHeight || 720
+          });
+        } else {
+          resolve({
+            thumbnailDataUrl: '',
+            durationFormatted: formatDuration(video.duration || 0),
+            durationSeconds: video.duration || 0,
+            width: video.videoWidth || 1280,
+            height: video.videoHeight || 720
+          });
+        }
+      } catch (err) {
+        console.warn('Canvas video frame extraction error:', err);
+        resolve({
+          thumbnailDataUrl: '',
+          durationFormatted: formatDuration(video.duration || 0),
+          durationSeconds: video.duration || 0,
+          width: video.videoWidth || 1280,
+          height: video.videoHeight || 720
+        });
+      }
+    };
+
+    video.onerror = (e) => {
+      cleanup();
+      console.warn('Could not load video metadata for thumbnail extraction:', e);
+      resolve({
+        thumbnailDataUrl: '',
+        durationFormatted: '15:00',
+        durationSeconds: 900,
+        width: 1920,
+        height: 1080
+      });
+    };
+  });
+}
+

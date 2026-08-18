@@ -123,25 +123,50 @@ export const CreateSubModal: React.FC<CreateSubModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md">
-      <div className="relative w-full max-w-lg bg-slate-950 border border-violet-900/50 rounded-3xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-violet-900/30 bg-slate-900/60 shrink-0">
-          <div className="flex items-center gap-2">
-            <PlusCircle className="w-5 h-5 text-violet-400" />
-            <h2 className="text-base font-bold text-slate-100">Create Sub-Buvaki</h2>
+    <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col w-full h-full min-h-screen overflow-hidden">
+      {/* Full-width Header */}
+      <header className="flex items-center justify-between px-4 sm:px-8 py-3.5 border-b border-violet-900/40 bg-slate-950/95 backdrop-blur-md shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-violet-600/20 border border-violet-500/40 flex items-center justify-center text-violet-400">
+            <PlusCircle className="w-4 h-4" />
           </div>
+          <div>
+            <h2 className="text-sm sm:text-base font-bold text-slate-100 leading-tight">Create Sub-Buvaki Community</h2>
+            <p className="text-[11px] text-slate-400 hidden sm:block">Start a new dedicated space on Buvaki</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!name.trim() || isProcessingImage}
+            className="px-4 sm:px-5 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-bold text-xs shadow-md shadow-violet-600/20 active:scale-95 transition-all flex items-center gap-1.5"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Launch Sub-Buvaki</span>
+          </button>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 transition-colors"
+            aria-label="Close"
+            className="p-1.5 rounded-full text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 ml-1 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
+      </header>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-5 overflow-y-auto custom-scrollbar">
+      {/* Full-width Scrollable Content */}
+      <main className="flex-1 w-full overflow-y-auto custom-scrollbar bg-slate-950">
+        <div className="w-full max-w-3xl mx-auto px-4 sm:px-8 py-6 sm:py-8">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
           
           {/* Community Name */}
           <div className="flex flex-col gap-1.5">
@@ -393,8 +418,8 @@ export const CreateSubModal: React.FC<CreateSubModalProps> = ({
             </button>
           </div>
         </form>
-
-      </div>
+        </div>
+      </main>
     </div>
   );
 };

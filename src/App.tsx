@@ -13,7 +13,7 @@ import { VoiceRoomBar } from './components/VoiceRoomBar';
 import { UserProfileModal } from './components/UserProfileModal';
 import { NotificationsModal } from './components/NotificationsModal';
 import { LanguageSelectorModal } from './components/LanguageSelectorModal';
-import { OnboardingFlow, OnboardingStep } from './components/OnboardingFlow';
+import { AuthModal } from './components/AuthModal';
 import { CommunityIcon } from './components/CommunityIcon';
 
 import { 
@@ -69,10 +69,17 @@ import {
 import { Flame, Sparkles, TrendingUp, MessageSquare, Compass, Radio, ShieldCheck } from 'lucide-react';
 
 export default function App() {
-  // Persistence state initialized from localStorage with fallback to SEED data
-  const [currentUser, setCurrentUser] = useState<User>(() => {
+  // Guest state by default; persists logged-in user if saved in localStorage
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('buvaki_user');
-    return saved ? JSON.parse(saved) : CURRENT_USER;
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (err) {
+        return null;
+      }
+    }
+    return null; // Free guest access by default!
   });
 
   const [posts, setPosts] = useState<Post[]>(() => {
@@ -129,12 +136,6 @@ export default function App() {
     return saved ? JSON.parse(saved) : SEED_NOTIFICATIONS;
   });
 
-  // UI state
-  const [onboardingStep, setOnboardingStep] = useState<OnboardingStep | 'app'>(() => {
-    const hasCompleted = localStorage.getItem('buvaki_onboarding_completed');
-    return hasCompleted ? 'app' : 'splash';
-  });
-
   const [selectedLanguage, setSelectedLanguage] = useState<SupportedLanguage>(() => {
     const savedLangCode = localStorage.getItem('buvaki_selected_lang');
     if (savedLangCode) {
@@ -152,6 +153,15 @@ export default function App() {
   const [showSavedOnly, setShowSavedOnly] = useState(false);
   const [activeChannelId, setActiveChannelId] = useState<string>('chan_general');
 
+  // Auth Modal State for Guest Interception
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalPrompt, setAuthModalPrompt] = useState<string | undefined>(undefined);
+
+  const handleRequireAuth = (promptReason?: string) => {
+    setAuthModalPrompt(promptReason || 'Sign in or create an account to unlock all features on Buvaki');
+    setIsAuthModalOpen(true);
+  };
+
   const handleSelectLanguage = (lang: SupportedLanguage) => {
     setSelectedLanguage(lang);
     localStorage.setItem('buvaki_selected_lang', lang.code);
@@ -160,17 +170,14 @@ export default function App() {
   const handleCompleteAuth = (user: User) => {
     setCurrentUser(user);
     localStorage.setItem('buvaki_user', JSON.stringify(user));
-    localStorage.setItem('buvaki_onboarding_completed', 'true');
-    setOnboardingStep('app');
+    setIsAuthModalOpen(false);
   };
 
   const handleLogout = async () => {
     await dbLogout();
     localStorage.removeItem('buvaki_user');
-    localStorage.removeItem('buvaki_onboarding_completed');
-    setCurrentUser(CURRENT_USER);
+    setCurrentUser(null);
     setIsProfileOpen(false);
-    setOnboardingStep('splash');
   };
 
   // Modal states
@@ -182,6 +189,42 @@ export default function App() {
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isInVoiceRoom, setIsInVoiceRoom] = useState(false);
+
+  // Profile action guard
+  const handleOpenProfile = () => {
+    if (currentUser) {
+      setIsProfileOpen(true);
+    } else {
+      handleRequireAuth('Sign in or create an account to access and customize your personal profile.');
+    }
+  };
+
+  // Create Post guard
+  const handleOpenCreatePost = () => {
+    if (currentUser) {
+      setIsCreatePostOpen(true);
+    } else {
+      handleRequireAuth('Sign in or create an account to create posts, upload videos, and share stories.');
+    }
+  };
+
+  // Create Sub-Buvaki guard
+  const handleOpenCreateSub = () => {
+    if (currentUser) {
+      setIsCreateSubOpen(true);
+    } else {
+      handleRequireAuth('Sign in or create an account to launch your own Sub-Buvaki community.');
+    }
+  };
+
+  // Voice room guard
+  const handleVoiceRoomToggle = () => {
+    if (currentUser) {
+      setIsInVoiceRoom(!isInVoiceRoom);
+    } else {
+      handleRequireAuth('Sign in or create an account to participate in live audio lounges.');
+    }
+  };
 
   // Firebase initialization and real-time synchronization
   useEffect(() => {
@@ -218,23 +261,25 @@ export default function App() {
         if (data.length > 0) setChannels(data);
       });
 
-      unsubVotes = subscribeToUserVotes(currentUser.id, (voteMap) => {
-        setPosts((prev) =>
-          prev.map((p) => ({
-            ...p,
-            userVote: voteMap[p.id] || null,
-          }))
-        );
-      });
+      if (currentUser?.id) {
+        unsubVotes = subscribeToUserVotes(currentUser.id, (voteMap) => {
+          setPosts((prev) =>
+            prev.map((p) => ({
+              ...p,
+              userVote: voteMap[p.id] || null,
+            }))
+          );
+        });
 
-      unsubMemberships = subscribeToUserMemberships(currentUser.id, (joinedSubIds) => {
-        setSubBuvakis((prev) =>
-          prev.map((s) => ({
-            ...s,
-            isJoined: joinedSubIds.includes(s.id),
-          }))
-        );
-      });
+        unsubMemberships = subscribeToUserMemberships(currentUser.id, (joinedSubIds) => {
+          setSubBuvakis((prev) =>
+            prev.map((s) => ({
+              ...s,
+              isJoined: joinedSubIds.includes(s.id),
+            }))
+          );
+        });
+      }
     };
 
     setupFirebase();
@@ -246,7 +291,7 @@ export default function App() {
       if (unsubVotes) unsubVotes();
       if (unsubMemberships) unsubMemberships();
     };
-  }, [currentUser.id]);
+  }, [currentUser?.id]);
 
   // Subscribe to comments for selected post
   useEffect(() => {
@@ -274,6 +319,11 @@ export default function App() {
 
   // Handle Post Voting
   const handleVotePost = (postId: string, direction: 'up' | 'down') => {
+    if (!currentUser) {
+      handleRequireAuth('Sign in or create an account to upvote or downvote posts.');
+      return;
+    }
+
     dbVote(currentUser.id, postId, 'post', direction);
 
     setPosts((prev) =>
@@ -284,13 +334,11 @@ export default function App() {
         let newVote: 'up' | 'down' | null = direction;
 
         if (p.userVote === direction) {
-          // Toggle off
           newVote = null;
           scoreDiff = direction === 'up' ? -1 : 1;
         } else if (p.userVote === null) {
           scoreDiff = direction === 'up' ? 1 : -1;
         } else {
-          // Switched from up to down or vice versa
           scoreDiff = direction === 'up' ? 2 : -2;
         }
 
@@ -327,6 +375,11 @@ export default function App() {
 
   // Toggle Save Post
   const handleToggleSavePost = (postId: string) => {
+    if (!currentUser) {
+      handleRequireAuth('Sign in or create an account to save posts to your collection.');
+      return;
+    }
+
     setPosts((prev) =>
       prev.map((p) => (p.id === postId ? { ...p, isSaved: !p.isSaved } : p))
     );
@@ -337,12 +390,17 @@ export default function App() {
 
   // Vote on Poll
   const handleVotePoll = (postId: string, optionId: string) => {
+    if (!currentUser) {
+      handleRequireAuth('Sign in or create an account to vote in community polls.');
+      return;
+    }
+
     dbVotePoll(postId, optionId, currentUser.id);
 
     setPosts((prev) =>
       prev.map((p) => {
         if (p.id !== postId || !p.poll) return p;
-        if (p.poll.userVotedOptionId === optionId) return p; // Already voted
+        if (p.poll.userVotedOptionId === optionId) return p;
 
         const previousVotedId = p.poll.userVotedOptionId;
         const updatedOptions = p.poll.options.map((opt) => {
@@ -374,6 +432,11 @@ export default function App() {
 
   // Add Comment
   const handleAddComment = (postId: string, content: string, parentId?: string) => {
+    if (!currentUser) {
+      handleRequireAuth('Sign in or create an account to comment and join discussions.');
+      return;
+    }
+
     dbAddComment(postId, content, currentUser, parentId || null);
 
     const newComment: Comment = {
@@ -395,7 +458,6 @@ export default function App() {
         return { ...prevMap, [postId]: [newComment, ...list] };
       }
 
-      // Helper to add recursively
       const addNested = (arr: Comment[]): Comment[] => {
         return arr.map((item) => {
           if (item.id === parentId) {
@@ -417,7 +479,6 @@ export default function App() {
       return { ...prevMap, [postId]: addNested(list) };
     });
 
-    // Update comment count on post
     setPosts((prev) =>
       prev.map((p) => (p.id === postId ? { ...p, commentCount: p.commentCount + 1 } : p))
     );
@@ -428,6 +489,10 @@ export default function App() {
 
   // Comment Vote
   const handleVoteComment = (commentId: string, direction: 'up' | 'down') => {
+    if (!currentUser) {
+      handleRequireAuth('Sign in or create an account to upvote or downvote comments.');
+      return;
+    }
     if (!selectedPost) return;
     const postId = selectedPost.id;
 
@@ -468,6 +533,11 @@ export default function App() {
 
   // Publish New Post
   const handlePublishPost = async (postData: Partial<Post>) => {
+    if (!currentUser) {
+      handleRequireAuth('Sign in or create an account to publish posts and videos.');
+      return;
+    }
+
     const postPayload = {
       subBuvakiId: postData.subBuvakiId || 'general',
       subBuvakiName: postData.subBuvakiName || 'b/general',
@@ -476,6 +546,7 @@ export default function App() {
       content: postData.content || '',
       type: postData.type || 'text',
       imageUrl: postData.imageUrl,
+      videoUrl: postData.videoUrl,
       linkUrl: postData.linkUrl,
       poll: postData.poll,
       flair: postData.flair || 'Discussion',
@@ -485,11 +556,16 @@ export default function App() {
 
     const created = await dbCreatePost(postPayload);
     setPosts((prev) => [created, ...prev.filter(p => p.id !== created.id)]);
-    setCurrentUser((u) => ({ ...u, karma: u.karma + 10 }));
+    setCurrentUser((u) => u ? ({ ...u, karma: u.karma + 10 }) : null);
   };
 
   // Create Sub Buvaki
   const handleCreateSubBuvaki = async (newSub: SubBuvaki) => {
+    if (!currentUser) {
+      handleRequireAuth('Sign in or create an account to create Sub-Buvaki communities.');
+      return;
+    }
+
     const created = await dbCreateSubBuvaki({
       name: newSub.name,
       displayName: newSub.displayName,
@@ -506,6 +582,11 @@ export default function App() {
 
   // Chat Send Message
   const handleSendMessage = (channelId: string, content: string) => {
+    if (!currentUser) {
+      handleRequireAuth('Sign in or create an account to chat with the community.');
+      return;
+    }
+
     dbSendChatMessage(channelId, content, currentUser);
 
     const newMsg: ChatMessage = {
@@ -525,6 +606,11 @@ export default function App() {
 
   // Add Reaction
   const handleAddReaction = (messageId: string, emoji: string) => {
+    if (!currentUser) {
+      handleRequireAuth('Sign in or create an account to react to messages.');
+      return;
+    }
+
     setMessagesMap((prevMap) => {
       const channelMsgs = prevMap[activeChannelId] || [];
       const updated = channelMsgs.map((m) => {
@@ -547,7 +633,7 @@ export default function App() {
   // Filter & Search Logic
   const filteredPosts = posts.filter((p) => {
     if (showSavedOnly && !p.isSaved) return false;
-    if (activeSubBuvakiId && p.subBuvakiId !== activeSubBuvakiId) return false;
+    if (activeSubBuvakiId && activeSubBuvakiId !== 'general' && p.subBuvakiId !== activeSubBuvakiId) return false;
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -572,7 +658,7 @@ export default function App() {
   const activeChannel = channels.find((c) => c.id === activeChannelId) || channels[0];
   const activeChannelMessages = messagesMap[activeChannelId] || [];
   const currentPostComments = selectedPost ? commentsMap[selectedPost.id] || [] : [];
-  const userPublishedPosts = posts.filter((p) => p.author.id === currentUser.id);
+  const userPublishedPosts = currentUser ? posts.filter((p) => p.author.id === currentUser.id) : [];
   const userSavedPosts = posts.filter((p) => p.isSaved);
   const activeSubObj = subBuvakis.find((s) => s.id === activeSubBuvakiId);
 
@@ -582,22 +668,6 @@ export default function App() {
     stealth: 'bg-black text-emerald-100 selection:bg-emerald-600 selection:text-white',
     light: 'bg-slate-50 text-slate-900 selection:bg-violet-500 selection:text-white',
   }[theme];
-
-  if (onboardingStep !== 'app') {
-    return (
-      <OnboardingFlow
-        currentStep={onboardingStep}
-        setStep={(step) => setOnboardingStep(step)}
-        selectedLanguage={selectedLanguage}
-        onSelectLanguage={handleSelectLanguage}
-        onCompleteAuth={handleCompleteAuth}
-        onSkipToApp={() => {
-          localStorage.setItem('buvaki_onboarding_completed', 'true');
-          setOnboardingStep('app');
-        }}
-      />
-    );
-  }
 
   const t = getTranslation(selectedLanguage.code);
 
@@ -616,10 +686,10 @@ export default function App() {
           setSearchQuery={setSearchQuery}
           currentUser={currentUser}
           selectedLanguage={selectedLanguage}
-          onOpenCreatePost={() => setIsCreatePostOpen(true)}
+          onOpenCreatePost={handleOpenCreatePost}
           onOpenNotifications={() => setIsNotificationsOpen(true)}
-          onOpenProfile={() => setIsProfileOpen(true)}
-          onOpenAuth={() => setOnboardingStep('signin')}
+          onOpenProfile={handleOpenProfile}
+          onOpenAuth={() => handleRequireAuth('Sign in or create an account to access your profile and full features')}
           notifications={notifications}
           activeSubBuvakiName={activeSubObj?.displayName}
           onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
@@ -642,7 +712,7 @@ export default function App() {
             channels={channels}
             activeChannelId={activeChannelId}
             onSelectChannel={setActiveChannelId}
-            onOpenCreateSub={() => setIsCreateSubOpen(true)}
+            onOpenCreateSub={handleOpenCreateSub}
             viewMode={viewMode}
             setViewMode={setViewMode}
             selectedLanguage={selectedLanguage}
@@ -679,6 +749,10 @@ export default function App() {
 
               <button
                 onClick={() => {
+                  if (!currentUser) {
+                    handleRequireAuth('Sign in or create an account to join Sub-Buvaki communities.');
+                    return;
+                  }
                   dbToggleJoinSub(currentUser.id, activeSubObj.id);
                   setSubBuvakis(
                     subBuvakis.map((s) =>
@@ -761,7 +835,7 @@ export default function App() {
                       <Compass className="w-8 h-8 text-violet-400" />
                       <span className="text-sm font-bold text-slate-300">{t.noPostsFound}</span>
                       <button
-                        onClick={() => setIsCreatePostOpen(true)}
+                        onClick={handleOpenCreatePost}
                         className="mt-2 px-4 py-2 rounded-xl bg-violet-600 text-white font-bold text-xs"
                       >
                         {t.createFirstThread}
@@ -794,8 +868,9 @@ export default function App() {
                       onSendMessage={handleSendMessage}
                       onAddReaction={handleAddReaction}
                       isInVoiceRoom={isInVoiceRoom}
-                      onToggleVoiceRoom={() => setIsInVoiceRoom(!isInVoiceRoom)}
+                      onToggleVoiceRoom={handleVoiceRoomToggle}
                       selectedLanguage={selectedLanguage}
+                      onRequireAuth={handleRequireAuth}
                     />
                   </div>
                 )}
@@ -811,9 +886,14 @@ export default function App() {
               posts={posts}
               currentUser={currentUser}
               selectedLanguage={selectedLanguage}
+              activeSubBuvakiId={activeSubBuvakiId}
+              subBuvakis={subBuvakis}
+              onSelectSubBuvaki={setActiveSubBuvakiId}
+              onOpenCreatePost={handleOpenCreatePost}
               onVote={handleVotePost}
               onToggleSave={handleToggleSavePost}
               onSelectPost={(p) => setSelectedPost(p)}
+              onRequireAuth={handleRequireAuth}
             />
           )}
 
@@ -823,9 +903,14 @@ export default function App() {
               posts={posts}
               currentUser={currentUser}
               selectedLanguage={selectedLanguage}
+              activeSubBuvakiId={activeSubBuvakiId}
+              subBuvakis={subBuvakis}
+              onSelectSubBuvaki={setActiveSubBuvakiId}
+              onOpenCreatePost={handleOpenCreatePost}
               onVote={handleVotePost}
               onToggleSave={handleToggleSavePost}
               onSelectPost={(p) => setSelectedPost(p)}
+              onRequireAuth={handleRequireAuth}
             />
           )}
 
@@ -839,8 +924,9 @@ export default function App() {
               onSendMessage={handleSendMessage}
               onAddReaction={handleAddReaction}
               isInVoiceRoom={isInVoiceRoom}
-              onToggleVoiceRoom={() => setIsInVoiceRoom(!isInVoiceRoom)}
+              onToggleVoiceRoom={handleVoiceRoomToggle}
               selectedLanguage={selectedLanguage}
+              onRequireAuth={handleRequireAuth}
             />
           )}
 
@@ -852,9 +938,10 @@ export default function App() {
       <MobileNav
         viewMode={viewMode}
         setViewMode={setViewMode}
-        onOpenCreatePost={() => setIsCreatePostOpen(true)}
+        currentUser={currentUser}
+        onOpenCreatePost={handleOpenCreatePost}
         onOpenNotifications={() => setIsNotificationsOpen(true)}
-        onOpenProfile={() => setIsProfileOpen(true)}
+        onOpenProfile={handleOpenProfile}
         notifications={notifications}
         isMobileSidebarOpen={isMobileSidebarOpen}
         onCloseMobileSidebar={() => setIsMobileSidebarOpen(false)}
@@ -864,7 +951,7 @@ export default function App() {
         channels={channels}
         activeChannelId={activeChannelId}
         onSelectChannel={setActiveChannelId}
-        onOpenCreateSub={() => setIsCreateSubOpen(true)}
+        onOpenCreateSub={handleOpenCreateSub}
         showSavedOnly={showSavedOnly}
         onToggleSavedOnly={setShowSavedOnly}
         selectedLanguage={selectedLanguage}
@@ -876,7 +963,7 @@ export default function App() {
       {/* Voice Channel Floating Controller Bar */}
       {isInVoiceRoom && (
         <VoiceRoomBar
-          activeVoiceUsers={[currentUser, SEED_USERS.u1, SEED_USERS.u2]}
+          activeVoiceUsers={[currentUser || SEED_USERS.u1, SEED_USERS.u1, SEED_USERS.u2]}
           onDisconnect={() => setIsInVoiceRoom(false)}
         />
       )}
@@ -913,7 +1000,7 @@ export default function App() {
         />
       )}
 
-      {isProfileOpen && (
+      {isProfileOpen && currentUser && (
         <UserProfileModal
           user={currentUser}
           savedPosts={userSavedPosts}
@@ -956,6 +1043,15 @@ export default function App() {
           }}
         />
       )}
+
+      {/* Guest Authentication Modal Interception */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onCompleteAuth={handleCompleteAuth}
+        promptReason={authModalPrompt}
+        selectedLanguage={selectedLanguage}
+      />
 
     </div>
   );

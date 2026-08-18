@@ -11,7 +11,9 @@ import {
   Sparkles,
   X,
   Clapperboard,
-  Tv
+  Tv,
+  LogIn,
+  User as UserIcon
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -19,7 +21,7 @@ interface NavbarProps {
   setViewMode: (mode: ViewMode) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
-  currentUser: User;
+  currentUser: User | null;
   selectedLanguage: SupportedLanguage;
   onOpenCreatePost: () => void;
   onOpenNotifications: () => void;
@@ -180,27 +182,37 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span>{t.createPost}</span>
           </button>
 
-          {/* User Profile Avatar (Desktop only) */}
-          <button
-            onClick={onOpenProfile}
-            className="hidden lg:flex items-center gap-2 p-1 rounded-xl bg-slate-900 border border-violet-900/40 hover:border-violet-500/50 transition-all"
-          >
-            <img
-              src={currentUser.avatar}
-              alt={currentUser.username}
-              className="w-7 h-7 rounded-lg object-cover ring-1 ring-violet-500/50"
-              referrerPolicy="no-referrer"
-            />
-            <div className="hidden xl:flex flex-col text-left pr-1">
-              <span className="text-xs font-bold text-slate-100 leading-none">
-                {currentUser.username}
-              </span>
-              <span className="text-[10px] text-pink-400 font-medium leading-none mt-0.5 flex items-center gap-1">
-                <Sparkles className="w-2.5 h-2.5 text-pink-400" />
-                <span>{currentUser.karma}</span>
-              </span>
-            </div>
-          </button>
+          {/* User Profile Avatar or Sign In Button (Desktop only) */}
+          {currentUser ? (
+            <button
+              onClick={onOpenProfile}
+              className="hidden lg:flex items-center gap-2 p-1 rounded-xl bg-slate-900 border border-violet-900/40 hover:border-violet-500/50 transition-all"
+            >
+              <img
+                src={currentUser.avatar}
+                alt={currentUser.username}
+                className="w-7 h-7 rounded-lg object-cover ring-1 ring-violet-500/50"
+                referrerPolicy="no-referrer"
+              />
+              <div className="hidden xl:flex flex-col text-left pr-1">
+                <span className="text-xs font-bold text-slate-100 leading-none">
+                  {currentUser.username}
+                </span>
+                <span className="text-[10px] text-pink-400 font-medium leading-none mt-0.5 flex items-center gap-1">
+                  <Sparkles className="w-2.5 h-2.5 text-pink-400" />
+                  <span>{currentUser.karma}</span>
+                </span>
+              </div>
+            </button>
+          ) : (
+            <button
+              onClick={onOpenProfile}
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-violet-700/60 hover:bg-violet-900/40 hover:border-violet-500 text-slate-100 text-xs font-bold transition-all shadow-sm"
+            >
+              <LogIn className="w-3.5 h-3.5 text-pink-400" />
+              <span>Sign In</span>
+            </button>
+          )}
 
         </div>
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ViewMode, SubBuvaki, ChatChannel, FilterSort, NotificationItem, SupportedLanguage, Theme } from '../types';
+import { ViewMode, SubBuvaki, ChatChannel, FilterSort, NotificationItem, SupportedLanguage, Theme, User } from '../types';
 import { getTranslation } from '../lib/translations';
 import { FlagIcon } from './FlagIcon';
 import { CommunityIcon } from './CommunityIcon';
@@ -17,12 +17,14 @@ import {
   Sun,
   Globe,
   Clapperboard,
-  Tv
+  Tv,
+  LogIn
 } from 'lucide-react';
 
 interface MobileNavProps {
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
+  currentUser?: User | null;
   onOpenCreatePost: () => void;
   onOpenNotifications: () => void;
   onOpenProfile: () => void;
@@ -47,6 +49,7 @@ interface MobileNavProps {
 export const MobileNav: React.FC<MobileNavProps> = ({
   viewMode,
   setViewMode,
+  currentUser,
   onOpenCreatePost,
   onOpenProfile,
   isMobileSidebarOpen,
@@ -117,13 +120,27 @@ export const MobileNav: React.FC<MobileNavProps> = ({
           <span className="text-[10px]">Longs</span>
         </button>
 
-        {/* Profile Tab */}
+        {/* Profile / Sign In Tab */}
         <button
           onClick={onOpenProfile}
           className="flex flex-col items-center gap-1 p-2 rounded-xl text-slate-400 hover:text-slate-200 transition-all"
         >
-          <UserIcon className="w-5 h-5" />
-          <span className="text-[10px]">{t.myProfile}</span>
+          {currentUser ? (
+            <>
+              <img
+                src={currentUser.avatar}
+                alt={currentUser.username}
+                className="w-5 h-5 rounded-full object-cover ring-1 ring-violet-500"
+                referrerPolicy="no-referrer"
+              />
+              <span className="text-[10px] truncate max-w-[60px]">{currentUser.username}</span>
+            </>
+          ) : (
+            <>
+              <LogIn className="w-5 h-5 text-pink-400" />
+              <span className="text-[10px] text-pink-300 font-semibold">Sign In</span>
+            </>
+          )}
         </button>
 
       </nav>
@@ -243,28 +260,34 @@ export const MobileNav: React.FC<MobileNavProps> = ({
                   {t.createCommunity}
                 </button>
               </div>
-              {subBuvakis.map((sub) => (
-                <button
-                  key={sub.id}
-                  onClick={() => {
-                    onSelectSubBuvaki(sub.id);
-                    onToggleSavedOnly(false);
-                    setViewMode('feed');
-                    onCloseMobileSidebar();
-                  }}
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-                    activeSubBuvakiId === sub.id && viewMode === 'feed'
-                      ? 'bg-violet-900/80 text-white font-bold'
-                      : 'text-slate-300 bg-slate-900/40 hover:bg-slate-900/80'
-                  }`}
-                >
-                  <CommunityIcon 
-                    sub={sub}
-                    size="xs" 
-                  />
-                  <span>{sub.displayName}</span>
-                </button>
-              ))}
+              {subBuvakis.map((sub) => {
+                const isGeneral = sub.id === 'general';
+                const isActive = activeSubBuvakiId === sub.id || (isGeneral && (!activeSubBuvakiId || activeSubBuvakiId === 'general'));
+                return (
+                  <button
+                    key={sub.id}
+                    onClick={() => {
+                      onSelectSubBuvaki(isGeneral ? null : sub.id);
+                      onToggleSavedOnly(false);
+                      if (viewMode !== 'feed' && viewMode !== 'shorts' && viewMode !== 'longs') {
+                        setViewMode('feed');
+                      }
+                      onCloseMobileSidebar();
+                    }}
+                    className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+                      isActive
+                        ? 'bg-violet-900/80 text-white font-bold'
+                        : 'text-slate-300 bg-slate-900/40 hover:bg-slate-900/80'
+                    }`}
+                  >
+                    <CommunityIcon 
+                      sub={sub}
+                      size="xs" 
+                    />
+                    <span>{sub.displayName}</span>
+                  </button>
+                );
+              })}
             </div>
 
           </div>

@@ -26,7 +26,7 @@ import { CommunityIcon } from './CommunityIcon';
 interface PostDetailModalProps {
   post: Post | null;
   comments: Comment[];
-  currentUser: User;
+  currentUser: User | null;
   selectedLanguage?: SupportedLanguage;
   onClose: () => void;
   onVotePost: (postId: string, direction: 'up' | 'down') => void;
@@ -380,14 +380,16 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
 
           {/* Add Comment Input Form */}
           <form onSubmit={handleMainCommentSubmit} className="p-4 rounded-2xl bg-slate-900/90 border border-violet-900/40 flex flex-col gap-3">
-            <div className="flex items-center gap-2 text-xs text-violet-300 font-semibold">
-              <MessageSquare className="w-4 h-4" />
-              <span>{t.writeComment} <span className="text-emerald-400">{currentUser.handle}</span></span>
+            <div className="flex items-center justify-between text-xs text-violet-300 font-semibold">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" />
+                <span>{t.writeComment} {currentUser ? <span className="text-emerald-400">{currentUser.handle}</span> : <span className="text-pink-400 font-bold">(Sign in to post)</span>}</span>
+              </div>
             </div>
             <textarea
               value={newCommentText || ''}
               onChange={(e) => setNewCommentText(e.target.value)}
-              placeholder={t.writeComment}
+              placeholder={currentUser ? t.writeComment : 'Sign in to join the conversation and post a comment...'}
               rows={3}
               className="w-full p-3 text-xs sm:text-sm rounded-xl bg-slate-950 border border-violet-900/40 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-violet-500"
             />
@@ -397,7 +399,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                 disabled={!newCommentText.trim()}
                 className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all shadow-md shadow-violet-600/20"
               >
-                <Send className="w-3.5 h-3.5" /> {t.submitComment}
+                <Send className="w-3.5 h-3.5" /> {currentUser ? t.submitComment : 'Sign In & Post'}
               </button>
             </div>
           </form>

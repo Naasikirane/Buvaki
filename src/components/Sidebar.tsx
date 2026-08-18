@@ -202,14 +202,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {subBuvakis.map((sub) => {
-          const isActive = activeSubBuvakiId === sub.id && viewMode === 'feed';
+          const isGeneral = sub.id === 'general';
+          const isActive = activeSubBuvakiId === sub.id || (isGeneral && (!activeSubBuvakiId || activeSubBuvakiId === 'general'));
           return (
             <button
               key={sub.id}
               onClick={() => {
-                onSelectSubBuvaki(sub.id);
+                onSelectSubBuvaki(isGeneral ? null : sub.id);
                 onToggleSavedOnly(false);
-                setViewMode('feed');
+                if (viewMode !== 'feed' && viewMode !== 'shorts' && viewMode !== 'longs') {
+                  setViewMode('feed');
+                }
               }}
               className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all group ${
                 isActive

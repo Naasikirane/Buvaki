@@ -22,7 +22,7 @@ import { CommunityIcon } from './CommunityIcon';
 
 interface PostCardProps {
   post: Post;
-  currentUser: User;
+  currentUser: User | null;
   selectedLanguage?: SupportedLanguage;
   onVote: (postId: string, direction: 'up' | 'down') => void;
   onSelectPost: (post: Post) => void;

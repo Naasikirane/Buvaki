@@ -561,28 +561,70 @@ export const dbLoginWithEmail = async (email: string, pass: string): Promise<Use
   return newUser;
 };
 
-// Google OAuth Sign In
-export const dbLoginWithGoogle = async (langName: string): Promise<User> => {
-  const provider = new GoogleAuthProvider();
-  const res = await signInWithPopup(auth, provider);
-  const existing = await dbGetUserProfile(res.user.uid);
-  if (existing) return existing;
+// In-flight guard to prevent duplicate popup attempts
+let isGoogleAuthInProgress = false;
 
-  const name = res.user.displayName || 'Google User';
-  const handle = `@${name.toLowerCase().replace(/[^a-z0-9_]/g, '')}`;
-  const newUser: User = {
-    id: res.user.uid,
-    username: name,
-    handle,
-    avatar: res.user.photoURL || `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80`,
-    bio: `Google Authenticated • Language: ${langName}`,
-    karma: 250,
-    badges: ['Google Verified', 'Buvaki Pioneer'],
-    joinedDate: 'Today',
-    status: 'online'
-  };
-  await dbSaveUserProfile(newUser);
-  return newUser;
+// Google OAuth Sign In
+export const dbLoginWithGoogle = async (langName: string): Promise<User | null> => {
+  if (isGoogleAuthInProgress) {
+    return null;
+  }
+
+  isGoogleAuthInProgress = true;
+  try {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    const res = await signInWithPopup(auth, provider);
+    
+    if (!res || !res.user) {
+      return null;
+    }
+
+    const existing = await dbGetUserProfile(res.user.uid);
+    if (existing) return existing;
+
+    const name = res.user.displayName || 'Google User';
+    const handle = `@${name.toLowerCase().replace(/[^a-z0-9_]/g, '')}`;
+    const newUser: User = {
+      id: res.user.uid,
+      username: name,
+      handle,
+      avatar: res.user.photoURL || `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80`,
+      bio: `Google Authenticated • Language: ${langName}`,
+      karma: 250,
+      badges: ['Google Verified', 'Buvaki Pioneer'],
+      joinedDate: 'Today',
+      status: 'online'
+    };
+    await dbSaveUserProfile(newUser);
+    return newUser;
+  } catch (err: any) {
+    const errCode = err?.code || '';
+    const errMsg = err?.message || String(err);
+
+    // Benign user cancellation: user closed the Google popup window or dismissed it
+    if (
+      errCode === 'auth/popup-closed-by-user' ||
+      errCode === 'auth/cancelled-popup-request' ||
+      errCode === 'auth/user-cancelled' ||
+      errMsg.includes('popup-closed-by-user') ||
+      errMsg.includes('cancelled-popup-request')
+    ) {
+      return null;
+    }
+
+    if (errCode === 'auth/popup-blocked') {
+      throw new Error('Google sign-in popup was blocked by your browser. Please allow popups or use Email/Password sign-in.');
+    }
+
+    if (errMsg.includes('Pending promise was never set') || errMsg.includes('INTERNAL ASSERTION FAILED')) {
+      return null;
+    }
+
+    throw err;
+  } finally {
+    isGoogleAuthInProgress = false;
+  }
 };
 
 // Official Firebase Email Link Verification (Passwordless / Link Verification)

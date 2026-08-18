@@ -433,10 +433,18 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     setIsLoading(true);
     try {
       const user = await dbLoginWithGoogle(selectedLanguage.name);
-      startProfileStep(user);
+      if (user) {
+        startProfileStep(user);
+      }
     } catch (err: any) {
-      console.error("Google Auth error:", err);
-      setAuthError(err.message || 'Google sign-in was canceled or failed.');
+      if (
+        err?.code !== 'auth/popup-closed-by-user' &&
+        err?.code !== 'auth/cancelled-popup-request' &&
+        !err?.message?.includes('Pending promise was never set')
+      ) {
+        console.warn("Google Auth note:", err?.message || err);
+        setAuthError(err.message || 'Google sign-in was interrupted.');
+      }
     } finally {
       setIsLoading(false);
     }

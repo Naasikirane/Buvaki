@@ -19,13 +19,14 @@ import {
 interface LiveChatViewProps {
   channel: ChatChannel;
   messages: ChatMessage[];
-  currentUser: User;
+  currentUser: User | null;
   onlineMembers: User[];
   onSendMessage: (channelId: string, content: string) => void;
   onAddReaction: (messageId: string, emoji: string) => void;
   isInVoiceRoom: boolean;
   onToggleVoiceRoom: () => void;
   selectedLanguage?: SupportedLanguage;
+  onRequireAuth?: (promptReason?: string) => void;
 }
 
 export const LiveChatView: React.FC<LiveChatViewProps> = ({
@@ -38,6 +39,7 @@ export const LiveChatView: React.FC<LiveChatViewProps> = ({
   isInVoiceRoom,
   onToggleVoiceRoom,
   selectedLanguage,
+  onRequireAuth,
 }) => {
   const t = getTranslation(selectedLanguage?.code || 'en');
   const [inputText, setInputText] = useState('');
@@ -54,8 +56,28 @@ export const LiveChatView: React.FC<LiveChatViewProps> = ({
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim()) return;
+    if (!currentUser) {
+      if (onRequireAuth) onRequireAuth('Sign in to chat in real-time channels');
+      return;
+    }
     onSendMessage(channel.id, inputText.trim());
     setInputText('');
+  };
+
+  const handleVoiceToggle = () => {
+    if (!currentUser) {
+      if (onRequireAuth) onRequireAuth('Sign in to join voice lounges');
+      return;
+    }
+    onToggleVoiceRoom();
+  };
+
+  const handleReaction = (msgId: string, emoji: string) => {
+    if (!currentUser) {
+      if (onRequireAuth) onRequireAuth('Sign in to react to messages');
+      return;
+    }
+    onAddReaction(msgId, emoji);
   };
 
   const handleEmojiClick = (emoji: string) => {

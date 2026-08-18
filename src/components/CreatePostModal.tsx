@@ -21,9 +21,11 @@ import {
   Video,
   Play,
   Clock,
-  Layers
+  Layers,
+  Camera,
+  Film
 } from 'lucide-react';
-import { getYouTubeEmbedUrl, isYouTubeUrl, processImageFile } from '../lib/mediaUtils';
+import { getYouTubeEmbedUrl, isYouTubeUrl, processImageFile, captureVideoFrame, formatFileSize, formatDuration } from '../lib/mediaUtils';
 import { CommunityIcon } from './CommunityIcon';
 
 interface CreatePostModalProps {
@@ -64,15 +66,32 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [shortMusicTitle, setShortMusicTitle] = useState('Original Audio - Buvaki Sound');
   const shortFileInputRef = useRef<HTMLInputElement>(null);
 
-  // Longs state
-  const [longVideoMode, setLongVideoMode] = useState<'upload' | 'url'>('url');
+  // Longs state - default to device upload for first-class local file support
+  const [longVideoMode, setLongVideoMode] = useState<'upload' | 'url'>('upload');
   const [longVideoUrl, setLongVideoUrl] = useState('');
   const [longVideoPreview, setLongVideoPreview] = useState<string | null>(null);
+  const [longVideoFileName, setLongVideoFileName] = useState<string>('');
+  const [longVideoFileSize, setLongVideoFileSize] = useState<string>('');
+  const [isProcessingLongVideo, setIsProcessingLongVideo] = useState<boolean>(false);
+  const [longVideoError, setLongVideoError] = useState<string | null>(null);
+  const [isDraggingLongVideo, setIsDraggingLongVideo] = useState<boolean>(false);
+  const longFileInputRef = useRef<HTMLInputElement>(null);
+  const longVideoElementRef = useRef<HTMLVideoElement>(null);
+
+  // Longs Thumbnail state - full device upload support
+  const [longThumbnailMode, setLongThumbnailMode] = useState<'upload' | 'url'>('upload');
   const [longThumbnailUrl, setLongThumbnailUrl] = useState('');
+  const [longThumbnailPreview, setLongThumbnailPreview] = useState<string | null>(null);
+  const [longThumbnailFileName, setLongThumbnailFileName] = useState<string>('');
+  const [longThumbnailFileSize, setLongThumbnailFileSize] = useState<string>('');
+  const [isProcessingLongThumbnail, setIsProcessingLongThumbnail] = useState<boolean>(false);
+  const [longThumbnailError, setLongThumbnailError] = useState<string | null>(null);
+  const [isDraggingLongThumbnail, setIsDraggingLongThumbnail] = useState<boolean>(false);
+  const longThumbnailFileInputRef = useRef<HTMLInputElement>(null);
+
   const [longDuration, setLongDuration] = useState('18:45');
   const [longQuality, setLongQuality] = useState('1080p 60fps');
   const [longCategory, setLongCategory] = useState('tech');
-  const longFileInputRef = useRef<HTMLInputElement>(null);
 
   // Link state
   const [linkUrl, setLinkUrl] = useState('');
@@ -115,11 +134,118 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
     setShortVideoFileName(file.name);
   };
 
-  const handleLongVideoFileSelect = (file?: File | null) => {
+  // Long Video Device Upload Handler
+  const handleLongVideoFileSelect = async (file?: File | null) => {
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setLongVideoPreview(url);
-    setLongVideoUrl(url);
+    if (!file.type.startsWith('video/')) {
+      setLongVideoError('Please select a valid video file (MP4, WebM, MOV, MKV, AVI)');
+      return;
+    }
+
+    setLongVideoError(null);
+    setIsProcessingLongVideo(true);
+    setLongVideoFileName(file.name);
+    setLongVideoFileSize(formatFileSize(file.size));
+
+    try {
+      const url = URL.createObjectURL(file);
+      setLongVideoPreview(url);
+      setLongVideoUrl(url);
+
+      // Auto-extract video duration and auto-generate video thumbnail frame
+      const frameInfo = await captureVideoFrame(file, 1.5);
+      if (frameInfo.durationFormatted && frameInfo.durationFormatted !== '00:00') {
+        setLongDuration(frameInfo.durationFormatted);
+      }
+      
+      // Auto-detect resolution quality
+      if (frameInfo.width >= 3840 || frameInfo.height >= 2160) {
+        setLongQuality('4K Ultra HD');
+      } else if (frameInfo.width >= 1920 || frameInfo.height >= 1080) {
+        setLongQuality('1080p 60fps');
+      } else if (frameInfo.width >= 1280 || frameInfo.height >= 720) {
+        setLongQuality('720p HD');
+      }
+
+      // If user hasn't manually picked a custom device thumbnail yet, set the auto-captured thumbnail
+      if (!longThumbnailPreview && frameInfo.thumbnailDataUrl) {
+        setLongThumbnailPreview(frameInfo.thumbnailDataUrl);
+        setLongThumbnailFileName(`Frame from ${file.name}`);
+        setLongThumbnailFileSize('Auto-captured frame');
+      }
+    } catch (err) {
+      console.error('Long video processing note:', err);
+      const url = URL.createObjectURL(file);
+      setLongVideoPreview(url);
+      setLongVideoUrl(url);
+    } finally {
+      setIsProcessingLongVideo(false);
+    }
+  };
+
+  // Long Thumbnail Device Upload Handler
+  const handleLongThumbnailFileSelect = async (file?: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setLongThumbnailError('Please select a valid image file (JPEG, PNG, WEBP, GIF, SVG)');
+      return;
+    }
+
+    setLongThumbnailError(null);
+    setIsProcessingLongThumbnail(true);
+    setLongThumbnailFileName(file.name);
+    setLongThumbnailFileSize((file.size / 1024).toFixed(1) + ' KB');
+
+    try {
+      const processedBase64 = await processImageFile(file);
+      setLongThumbnailPreview(processedBase64);
+      setLongThumbnailUrl(processedBase64);
+    } catch (err) {
+      console.error('Thumbnail upload failed:', err);
+      setLongThumbnailError('Failed to load thumbnail from device. Please try another image.');
+    } finally {
+      setIsProcessingLongThumbnail(false);
+    }
+  };
+
+  // Capture thumbnail from the currently playing/paused frame in preview
+  const handleCaptureCurrentFrame = () => {
+    if (!longVideoElementRef.current) return;
+    const video = longVideoElementRef.current;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 1280;
+      canvas.height = video.videoHeight || 720;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        setLongThumbnailPreview(dataUrl);
+        setLongThumbnailFileName(`Captured at ${formatDuration(video.currentTime || 0)}`);
+        setLongThumbnailFileSize('Live frame capture');
+        setLongThumbnailError(null);
+      }
+    } catch (err) {
+      console.warn('Frame capture error:', err);
+    }
+  };
+
+  const handleClearLongVideo = () => {
+    setLongVideoPreview(null);
+    setLongVideoUrl('');
+    setLongVideoFileName('');
+    setLongVideoFileSize('');
+    setLongVideoError(null);
+    if (longFileInputRef.current) longFileInputRef.current.value = '';
+  };
+
+  const handleClearLongThumbnail = () => {
+    setLongThumbnailPreview(null);
+    setLongThumbnailUrl('');
+    setLongThumbnailFileName('');
+    setLongThumbnailFileSize('');
+    setLongThumbnailError(null);
+    if (longThumbnailFileInputRef.current) longThumbnailFileInputRef.current.value = '';
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -186,8 +312,8 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
     } else if (mainTab === 'longs') {
       postData.type = 'video';
       postData.videoUrl = (longVideoPreview || longVideoUrl).trim() || 'https://assets.mixkit.co/videos/preview/mixkit-hands-typing-on-a-laptop-keyboard-42456-large.mp4';
-      postData.imageUrl = longThumbnailUrl.trim() || 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&auto=format&fit=crop&q=80';
-      postData.duration = longDuration;
+      postData.imageUrl = (longThumbnailPreview || longThumbnailUrl).trim() || 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&auto=format&fit=crop&q=80';
+      postData.duration = longDuration || '15:30';
     } else {
       postData.type = postType;
       if (postType === 'image') {
@@ -217,25 +343,49 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const longYtEmbedUrl = getYouTubeEmbedUrl(longVideoUrl);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md">
-      <div className="relative w-full max-w-2xl bg-slate-950 border border-violet-900/50 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-violet-900/30 bg-slate-900/60">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-pink-400" />
-            <h2 className="text-base font-bold text-slate-100">Create Buvaki Content</h2>
+    <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col w-full h-full min-h-screen overflow-hidden">
+      {/* Full-width Top Creator Bar */}
+      <header className="flex items-center justify-between px-4 sm:px-8 py-3.5 border-b border-violet-900/40 bg-slate-950/95 backdrop-blur-md shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-violet-600/20 border border-violet-500/40 flex items-center justify-center text-pink-400">
+            <Sparkles className="w-4 h-4" />
           </div>
+          <div>
+            <h2 className="text-sm sm:text-base font-bold text-slate-100 leading-tight">Create on Buvaki</h2>
+            <p className="text-[11px] text-slate-400 hidden sm:block">Publish threads, vertical shorts, or 16:9 widescreen videos</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 transition-colors"
+          >
+            Discard
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!title.trim() || isProcessingImage || isProcessingLongVideo}
+            className="px-4 sm:px-5 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-bold text-xs shadow-md shadow-violet-600/20 active:scale-95 transition-all flex items-center gap-1.5"
+          >
+            <span>{mainTab === 'shorts' ? 'Publish Short' : mainTab === 'longs' ? 'Publish Video' : 'Publish Post'}</span>
+          </button>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full text-slate-400 hover:text-white bg-slate-900"
+            aria-label="Close"
+            className="p-1.5 rounded-full text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 ml-1"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
+      </header>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-5 overflow-y-auto max-h-[80vh] custom-scrollbar">
+      {/* Full-width Scrollable Creator Canvas */}
+      <main className="flex-1 w-full overflow-y-auto custom-scrollbar bg-slate-950">
+        <div className="w-full max-w-4xl mx-auto px-4 sm:px-8 py-6 sm:py-8">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
           
           {/* 1. Sub-Buvaki Selector */}
           <div className="flex flex-col gap-1.5">
@@ -496,84 +646,380 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
           {/* TAB MODE: LONGS */}
           {mainTab === 'longs' && (
-            <div className="flex flex-col gap-4 p-4 rounded-2xl bg-slate-900/60 border border-violet-900/40">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-violet-300 flex items-center gap-1.5">
-                  <Tv className="w-4 h-4 text-violet-400" />
-                  <span>Long Video Source (16:9 Cinema / Masterclass)</span>
-                </label>
+            <div className="flex flex-col gap-5 p-4 sm:p-5 rounded-2xl bg-slate-900/60 border border-violet-900/40">
+              
+              {/* 1. Video File Source Section */}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-violet-300 flex items-center gap-1.5">
+                    <Tv className="w-4 h-4 text-violet-400" />
+                    <span>Long Video File (16:9 Cinema / Masterclass)</span>
+                  </label>
 
-                <div className="flex items-center p-0.5 rounded-lg bg-slate-900 border border-violet-900/40">
-                  <button
-                    type="button"
-                    onClick={() => setLongVideoMode('url')}
-                    className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
-                      longVideoMode === 'url'
-                        ? 'bg-violet-600 text-white shadow-sm'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    <Youtube className="w-3 h-3 text-rose-400" />
-                    <span>YouTube / Web URL</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLongVideoMode('upload')}
-                    className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
-                      longVideoMode === 'upload'
-                        ? 'bg-violet-600 text-white shadow-sm'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    <Smartphone className="w-3 h-3" />
-                    <span>Device Video</span>
-                  </button>
-                </div>
-              </div>
-
-              {longVideoMode === 'url' ? (
-                <div className="flex flex-col gap-2">
-                  <input
-                    type="url"
-                    value={longVideoUrl || ''}
-                    onChange={(e) => setLongVideoUrl(e.target.value)}
-                    placeholder="https://youtube.com/watch?v=... or direct 16:9 video URL"
-                    className="w-full p-3 rounded-xl bg-slate-900 border border-violet-900/40 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-violet-500"
-                  />
-                  {isLongYouTube && longYtEmbedUrl && (
-                    <div className="aspect-video w-full rounded-xl overflow-hidden bg-black border border-violet-900/40 mt-1">
-                      <iframe
-                        src={longYtEmbedUrl}
-                        title="YouTube Preview"
-                        className="w-full h-full"
-                        allowFullScreen
-                      />
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  <input
-                    ref={longFileInputRef}
-                    type="file"
-                    accept="video/*"
-                    onChange={(e) => handleLongVideoFileSelect(e.target.files?.[0])}
-                    className="hidden"
-                  />
-                  <div
-                    onClick={() => longFileInputRef.current?.click()}
-                    className="cursor-pointer p-6 rounded-2xl border-2 border-dashed border-violet-900/60 hover:border-violet-500 bg-slate-900/40 transition-all flex flex-col items-center justify-center gap-2 text-center"
-                  >
-                    <Tv className="w-8 h-8 text-violet-400" />
-                    <p className="text-xs font-bold text-slate-200">
-                      Upload full-length video file from device
-                    </p>
+                  <div className="flex items-center p-0.5 rounded-lg bg-slate-900 border border-violet-900/40">
+                    <button
+                      type="button"
+                      onClick={() => setLongVideoMode('upload')}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                        longVideoMode === 'upload'
+                          ? 'bg-violet-600 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <Smartphone className="w-3 h-3" />
+                      <span>From Device</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLongVideoMode('url')}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                        longVideoMode === 'url'
+                          ? 'bg-violet-600 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <Youtube className="w-3 h-3 text-rose-400" />
+                      <span>YouTube / Web URL</span>
+                    </button>
                   </div>
                 </div>
-              )}
 
-              {/* Video Attributes Grid: Duration, Quality, Category */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* OPTION 1: Upload Video from Device */}
+                {longVideoMode === 'upload' ? (
+                  <div className="flex flex-col gap-3">
+                    <input
+                      ref={longFileInputRef}
+                      type="file"
+                      accept="video/*"
+                      onChange={(e) => handleLongVideoFileSelect(e.target.files?.[0])}
+                      className="hidden"
+                    />
+
+                    {!longVideoPreview ? (
+                      <div
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setIsDraggingLongVideo(true);
+                        }}
+                        onDragLeave={(e) => {
+                          e.preventDefault();
+                          setIsDraggingLongVideo(false);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setIsDraggingLongVideo(false);
+                          const file = e.dataTransfer.files?.[0];
+                          handleLongVideoFileSelect(file);
+                        }}
+                        onClick={() => longFileInputRef.current?.click()}
+                        className={`cursor-pointer p-6 sm:p-8 rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center gap-3 text-center ${
+                          isDraggingLongVideo
+                            ? 'border-violet-400 bg-violet-950/40 scale-[1.01]'
+                            : 'border-violet-900/60 hover:border-violet-500 bg-slate-900/40 hover:bg-slate-900/80'
+                        }`}
+                      >
+                        <div className="w-12 h-12 rounded-2xl bg-violet-950 border border-violet-700/60 flex items-center justify-center text-violet-400 shadow-md">
+                          <Tv className="w-6 h-6" />
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                          <p className="text-xs sm:text-sm font-bold text-slate-200">
+                            {isDraggingLongVideo ? 'Drop video file here to upload' : 'Click to select video file from your phone or device'}
+                          </p>
+                          <p className="text-[11px] text-slate-400">
+                            Supports MP4, WebM, MOV, MKV, AVI • 16:9 Landscape recommended
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          className="mt-1 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold text-xs shadow-md shadow-violet-600/20 active:scale-95 transition-all flex items-center gap-1.5"
+                        >
+                          <Smartphone className="w-3.5 h-3.5" />
+                          <span>Browse Device Videos</span>
+                        </button>
+                      </div>
+                    ) : (
+                      /* Live Video Player Preview */
+                      <div className="relative rounded-2xl overflow-hidden border border-violet-800/60 bg-slate-950 flex flex-col">
+                        <div className="relative aspect-video w-full bg-black flex items-center justify-center">
+                          <video
+                            ref={longVideoElementRef}
+                            src={longVideoPreview}
+                            controls
+                            playsInline
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+
+                        {/* Video Info Bar */}
+                        <div className="p-3 bg-slate-900/90 border-t border-violet-900/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span className="text-xs font-semibold text-slate-200 truncate">
+                              {longVideoFileName || 'Device Video Loaded'}
+                            </span>
+                            {longVideoFileSize && (
+                              <span className="text-[10px] text-slate-400 font-mono shrink-0">
+                                ({longVideoFileSize})
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={handleCaptureCurrentFrame}
+                              className="px-2.5 py-1 rounded-lg text-xs font-medium text-pink-300 hover:text-white bg-pink-950/60 hover:bg-pink-900 border border-pink-700/50 transition-colors flex items-center gap-1"
+                              title="Capture current paused frame as video thumbnail"
+                            >
+                              <Camera className="w-3 h-3" />
+                              <span>Capture Frame as Thumbnail</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => longFileInputRef.current?.click()}
+                              className="px-2.5 py-1 rounded-lg text-xs font-medium text-violet-300 hover:text-white bg-slate-800 hover:bg-violet-900 transition-colors"
+                            >
+                              Change
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleClearLongVideo}
+                              className="p-1.5 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-950/50 transition-colors"
+                              title="Remove Video"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {isProcessingLongVideo && (
+                      <div className="flex items-center gap-2 text-xs text-violet-300">
+                        <div className="w-3.5 h-3.5 border-2 border-violet-400/30 border-t-violet-400 rounded-full animate-spin" />
+                        <span>Analyzing video metadata & extracting preview frame...</span>
+                      </div>
+                    )}
+
+                    {longVideoError && (
+                      <div className="flex items-center gap-2 text-xs text-rose-400 bg-rose-950/40 border border-rose-900/50 p-2.5 rounded-xl">
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        <span>{longVideoError}</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* OPTION 2: Enter YouTube or direct video URL */
+                  <div className="flex flex-col gap-2">
+                    <input
+                      type="url"
+                      value={longVideoUrl || ''}
+                      onChange={(e) => {
+                        setLongVideoUrl(e.target.value);
+                        setLongVideoPreview(e.target.value.trim() ? e.target.value.trim() : null);
+                      }}
+                      placeholder="https://youtube.com/watch?v=... or direct 16:9 MP4 video URL"
+                      className="w-full p-3 rounded-xl bg-slate-900 border border-violet-900/40 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-violet-500"
+                    />
+                    {isLongYouTube && longYtEmbedUrl && (
+                      <div className="aspect-video w-full rounded-xl overflow-hidden bg-black border border-violet-900/40 mt-1">
+                        <iframe
+                          src={longYtEmbedUrl}
+                          title="YouTube Preview"
+                          className="w-full h-full"
+                          allowFullScreen
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* 2. Video Thumbnail Source Section (Device Upload + Web URL + Auto Frame) */}
+              <div className="flex flex-col gap-3 pt-3 border-t border-violet-900/30">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-violet-300 flex items-center gap-1.5">
+                    <ImageIcon className="w-4 h-4 text-violet-400" />
+                    <span>Video Thumbnail Cover</span>
+                  </label>
+
+                  <div className="flex items-center p-0.5 rounded-lg bg-slate-900 border border-violet-900/40">
+                    <button
+                      type="button"
+                      onClick={() => setLongThumbnailMode('upload')}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                        longThumbnailMode === 'upload'
+                          ? 'bg-violet-600 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <Smartphone className="w-3 h-3" />
+                      <span>Upload from Device</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLongThumbnailMode('url')}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                        longThumbnailMode === 'url'
+                          ? 'bg-violet-600 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <Globe className="w-3 h-3" />
+                      <span>Image URL</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* THUMBNAIL OPTION 1: Upload from Device */}
+                {longThumbnailMode === 'upload' ? (
+                  <div className="flex flex-col gap-3">
+                    <input
+                      ref={longThumbnailFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleLongThumbnailFileSelect(e.target.files?.[0])}
+                      className="hidden"
+                    />
+
+                    {!longThumbnailPreview ? (
+                      <div
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setIsDraggingLongThumbnail(true);
+                        }}
+                        onDragLeave={(e) => {
+                          e.preventDefault();
+                          setIsDraggingLongThumbnail(false);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setIsDraggingLongThumbnail(false);
+                          const file = e.dataTransfer.files?.[0];
+                          handleLongThumbnailFileSelect(file);
+                        }}
+                        onClick={() => longThumbnailFileInputRef.current?.click()}
+                        className={`cursor-pointer p-5 sm:p-6 rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center gap-2 text-center ${
+                          isDraggingLongThumbnail
+                            ? 'border-violet-400 bg-violet-950/40 scale-[1.01]'
+                            : 'border-violet-900/60 hover:border-violet-500 bg-slate-900/40 hover:bg-slate-900/80'
+                        }`}
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-violet-950 border border-violet-700/60 flex items-center justify-center text-violet-400 shadow-md">
+                          <Upload className="w-5 h-5" />
+                        </div>
+
+                        <div className="flex flex-col gap-0.5">
+                          <p className="text-xs font-bold text-slate-200">
+                            {isDraggingLongThumbnail ? 'Drop thumbnail image here' : 'Click to select custom thumbnail from your device'}
+                          </p>
+                          <p className="text-[10px] text-slate-400">
+                            Supports JPG, PNG, WEBP • 1280x720 (16:9) recommended
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          className="mt-0.5 px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold text-xs shadow-md active:scale-95 transition-all flex items-center gap-1"
+                        >
+                          <Smartphone className="w-3 h-3" />
+                          <span>Browse Device Images</span>
+                        </button>
+                      </div>
+                    ) : (
+                      /* Thumbnail Image Preview */
+                      <div className="relative rounded-2xl overflow-hidden border border-violet-800/60 bg-slate-950 flex flex-col">
+                        <div className="relative aspect-video max-h-56 w-full bg-slate-950 flex items-center justify-center overflow-hidden">
+                          <img
+                            src={longThumbnailPreview}
+                            alt="Custom video thumbnail"
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-black/80 backdrop-blur-md text-[10px] font-mono text-pink-400 font-bold border border-pink-500/30">
+                            {longDuration || '15:30'}
+                          </div>
+                        </div>
+
+                        {/* Thumbnail Overlay Bar */}
+                        <div className="p-2.5 bg-slate-900/90 border-t border-violet-900/40 flex items-center justify-between">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span className="text-xs font-semibold text-slate-200 truncate">
+                              {longThumbnailFileName || 'Custom Thumbnail Selected'}
+                            </span>
+                            {longThumbnailFileSize && (
+                              <span className="text-[10px] text-slate-400 font-mono shrink-0">
+                                ({longThumbnailFileSize})
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => longThumbnailFileInputRef.current?.click()}
+                              className="px-2.5 py-1 rounded-lg text-xs font-medium text-violet-300 hover:text-white bg-slate-800 hover:bg-violet-900 transition-colors"
+                            >
+                              Change
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleClearLongThumbnail}
+                              className="p-1.5 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-950/50 transition-colors"
+                              title="Remove Thumbnail"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {isProcessingLongThumbnail && (
+                      <div className="flex items-center gap-2 text-xs text-violet-300">
+                        <div className="w-3.5 h-3.5 border-2 border-violet-400/30 border-t-violet-400 rounded-full animate-spin" />
+                        <span>Optimizing custom thumbnail image...</span>
+                      </div>
+                    )}
+
+                    {longThumbnailError && (
+                      <div className="flex items-center gap-2 text-xs text-rose-400 bg-rose-950/40 border border-rose-900/50 p-2.5 rounded-xl">
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        <span>{longThumbnailError}</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* THUMBNAIL OPTION 2: Web Image URL */
+                  <div className="flex flex-col gap-2">
+                    <input
+                      type="url"
+                      value={longThumbnailUrl || ''}
+                      onChange={(e) => {
+                        setLongThumbnailUrl(e.target.value);
+                        setLongThumbnailPreview(e.target.value.trim() ? e.target.value.trim() : null);
+                      }}
+                      placeholder="https://images.unsplash.com/... or any web image link for video cover"
+                      className="w-full p-2.5 rounded-xl bg-slate-900 border border-violet-900/40 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-violet-500"
+                    />
+                    {longThumbnailUrl.trim() && (
+                      <div className="aspect-video max-h-48 rounded-xl overflow-hidden border border-violet-900/40 bg-slate-950 mt-1">
+                        <img
+                          src={longThumbnailUrl}
+                          alt="Thumbnail Preview"
+                          className="w-full h-full object-cover"
+                          onError={() => setLongThumbnailError('Could not load image from this URL.')}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* 3. Video Attributes Grid: Duration, Quality, Category */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-violet-900/30">
                 <div className="flex flex-col gap-1">
                   <label className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
                     <Clock className="w-3 h-3 text-pink-400" /> Duration
@@ -616,19 +1062,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 </div>
               </div>
 
-              {/* Thumbnail URL */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-300">Custom Thumbnail URL (Optional)</label>
-                <input
-                  type="url"
-                  value={longThumbnailUrl || ''}
-                  onChange={(e) => setLongThumbnailUrl(e.target.value)}
-                  placeholder="https://images.unsplash.com/... for video cover image"
-                  className="w-full p-2.5 rounded-xl bg-slate-900 border border-violet-900/40 text-xs text-slate-100"
-                />
-              </div>
-
-              {/* Description */}
+              {/* 4. Description & Show Notes */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-slate-300">Video Description & Show Notes</label>
                 <textarea
@@ -636,7 +1070,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                   onChange={(e) => setContent(e.target.value)}
                   placeholder="Detailed summary of the topics discussed in this video..."
                   rows={3}
-                  className="w-full p-2.5 rounded-xl bg-slate-900 border border-violet-900/40 text-xs text-slate-100 placeholder-slate-500"
+                  className="w-full p-2.5 rounded-xl bg-slate-900 border border-violet-900/40 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-violet-500"
                 />
               </div>
             </div>
@@ -988,8 +1422,8 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
           </div>
 
         </form>
-
-      </div>
+        </div>
+      </main>
     </div>
   );
 };
