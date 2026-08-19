@@ -18,6 +18,7 @@ import {
   Layers
 } from 'lucide-react';
 import { CommunityIcon } from './CommunityIcon';
+import { resolvePlayableVideoUrl, FALLBACK_VIDEOS } from '../lib/mediaStorage';
 
 export interface ShortVideoItem {
   id: string;
@@ -38,142 +39,6 @@ export interface ShortVideoItem {
   subBuvaki: string;
   subBuvakiId: string;
 }
-
-const SAMPLE_SHORTS: ShortVideoItem[] = [
-  {
-    id: 'short_music_1',
-    title: 'Analog synth jam: crafting atmospheric ambient soundscapes & tape loops 🎹✨',
-    creator: {
-      name: 'Sarah Styles',
-      handle: 'u/sarahstyles',
-      avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=80',
-      isFollowing: true,
-    },
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-sound-control-console-41484-large.mp4',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
-    likesCount: 18400,
-    commentsCount: 920,
-    sharesCount: 1640,
-    tags: ['#Music', '#Synthesizer', '#LoFi', '#AnalogSound'],
-    musicTitle: 'Sarah Styles - Tape Warmth Session #4',
-    subBuvaki: 'b/music',
-    subBuvakiId: 'music'
-  },
-  {
-    id: 'short_music_2',
-    title: 'Acoustic fingerstyle guitar layering with custom open tuning 🎸🎶',
-    creator: {
-      name: 'Alex Rivera',
-      handle: 'u/alexrivera',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-      isFollowing: false,
-    },
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-hands-of-a-man-playing-the-guitar-42751-large.mp4',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=600&auto=format&fit=crop&q=80',
-    likesCount: 22600,
-    commentsCount: 1410,
-    sharesCount: 3100,
-    tags: ['#Acoustic', '#Fingerstyle', '#Guitar', '#MusicSession'],
-    musicTitle: 'Original Audio - Rainy Morning Melody',
-    subBuvaki: 'b/music',
-    subBuvakiId: 'music'
-  },
-  {
-    id: 'short_photography_1',
-    title: 'Cinematic Golden Hour lighting setup for urban street photography ✨📸',
-    creator: {
-      name: 'Alex Rivera',
-      handle: 'u/alexrivera',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-      isFollowing: false,
-    },
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-urban-street-fashion-shoot-41824-large.mp4',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=80',
-    likesCount: 14200,
-    commentsCount: 842,
-    sharesCount: 1240,
-    tags: ['#Photography', '#Urban', '#GoldenHour', '#Buvaki'],
-    musicTitle: 'Original Audio - Ambient Lo-Fi Beats',
-    subBuvaki: 'b/photography',
-    subBuvakiId: 'photography'
-  },
-  {
-    id: 'short_tech_1',
-    title: 'Building a fluid glassmorphism UI in React & Tailwind in 30 seconds ⚡️💻',
-    creator: {
-      name: 'Elena Tech',
-      handle: 'u/elenatech',
-      avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
-      isFollowing: true,
-    },
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-hands-typing-on-a-laptop-keyboard-42456-large.mp4',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&auto=format&fit=crop&q=80',
-    likesCount: 29400,
-    commentsCount: 1890,
-    sharesCount: 4520,
-    tags: ['#Coding', '#WebDev', '#ReactJS', '#TailwindCSS'],
-    musicTitle: 'CyberSynth Wave - High Velocity',
-    subBuvaki: 'b/tech',
-    subBuvakiId: 'tech'
-  },
-  {
-    id: 'short_design_1',
-    title: 'Futuristic Cyberpunk Neon Palette Breakdown 🎨 How colors tell stories',
-    creator: {
-      name: 'Sarah Styles',
-      handle: 'u/sarahstyles',
-      avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=80',
-      isFollowing: false,
-    },
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-screens-with-charts-and-data-42761-large.mp4',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=600&auto=format&fit=crop&q=80',
-    likesCount: 18700,
-    commentsCount: 920,
-    sharesCount: 2130,
-    tags: ['#DesignTrends', '#ColorPalette', '#Cyberpunk', '#Art'],
-    musicTitle: 'Neon Reverie - Retro Wave',
-    subBuvaki: 'b/design',
-    subBuvakiId: 'design'
-  },
-  {
-    id: 'short_gaming_1',
-    title: 'Speedrunning this hidden boss arena without taking any damage 🎮🔥',
-    creator: {
-      name: 'Liam Novak',
-      handle: 'u/liamnovak',
-      avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
-      isFollowing: false,
-    },
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-young-man-playing-a-video-game-with-a-controller-42861-large.mp4',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=600&auto=format&fit=crop&q=80',
-    likesCount: 35100,
-    commentsCount: 2410,
-    sharesCount: 6890,
-    tags: ['#Gaming', '#Speedrun', '#NoDamage', '#ProGamer'],
-    musicTitle: 'Electro Pulse Arena - Battle Mix',
-    subBuvaki: 'b/gaming',
-    subBuvakiId: 'gaming'
-  },
-  {
-    id: 'short_general_1',
-    title: 'Welcome to Buvaki Lounge: creative collaboration, ideas & daily coffee vibes ☕️✨',
-    creator: {
-      name: 'Maya Lin',
-      handle: 'u/mayalin',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-      isFollowing: false,
-    },
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-recording-herself-with-a-smartphone-camera-42858-large.mp4',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop&q=80',
-    likesCount: 42300,
-    commentsCount: 3120,
-    sharesCount: 8900,
-    tags: ['#Buvaki', '#CreatorHub', '#GeneralLounge'],
-    musicTitle: 'Upbeat Chill Hop - Summer Groove',
-    subBuvaki: 'b/general',
-    subBuvakiId: 'general'
-  }
-];
 
 interface ShortsFeedProps {
   posts?: Post[];
@@ -202,10 +67,10 @@ export const ShortsFeed: React.FC<ShortsFeedProps> = ({
 }) => {
   const [isSubDropdownOpen, setIsSubDropdownOpen] = useState(false);
 
-  // Combine sample shorts with any created short video posts
+  // Combine sample shorts with any created short video posts (strictly shorts, never longs or feed video posts)
   const allShorts: ShortVideoItem[] = useMemo(() => {
     const userShorts: ShortVideoItem[] = posts
-      .filter((p) => (p.type === 'short' || p.type === 'video') && p.videoUrl)
+      .filter((p) => (p.isShort === true || p.type === 'short') && !p.isLong && p.type !== 'long' && p.type !== 'video' && p.videoUrl)
       .map((p) => ({
         id: p.id,
         title: p.title,
@@ -216,7 +81,7 @@ export const ShortsFeed: React.FC<ShortsFeedProps> = ({
           isFollowing: false,
         },
         videoUrl: p.videoUrl!,
-        thumbnailUrl: p.imageUrl || 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=600&auto=format&fit=crop&q=80',
+        thumbnailUrl: (p.imageUrl && !p.imageUrl.includes('images.unsplash.com')) ? p.imageUrl : '',
         likesCount: p.score || 0,
         commentsCount: p.commentCount || 0,
         sharesCount: Math.floor((p.score || 0) * 0.3),
@@ -226,7 +91,7 @@ export const ShortsFeed: React.FC<ShortsFeedProps> = ({
         subBuvakiId: p.subBuvakiId || 'general'
       }));
 
-    return [...userShorts, ...SAMPLE_SHORTS];
+    return userShorts;
   }, [posts]);
 
   // Filter shorts strictly by active sub-buvaki
@@ -272,6 +137,32 @@ export const ShortsFeed: React.FC<ShortsFeedProps> = ({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const isWheelingRef = useRef(false);
   const lastTapRef = useRef<number>(0);
+  const [resolvedVideoUrl, setResolvedVideoUrl] = useState<string>('');
+
+  useEffect(() => {
+    let active = true;
+    if (currentShort?.videoUrl) {
+      resolvePlayableVideoUrl(currentShort.videoUrl, 'portrait').then((url) => {
+        if (active) setResolvedVideoUrl(url);
+      });
+    }
+    return () => { active = false; };
+  }, [currentShort?.videoUrl]);
+
+  // Robust play/pause synchronization for mobile and desktop video elements
+  useEffect(() => {
+    if (!videoRef.current) return;
+    if (isPlaying) {
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          console.warn('Shorts playback waiting for gesture or muted state:', err);
+        });
+      }
+    } else {
+      videoRef.current.pause();
+    }
+  }, [isPlaying, currentIndex, resolvedVideoUrl]);
 
   const handleNext = useCallback(() => {
     if (currentIndex < displayedShorts.length - 1) {
@@ -530,17 +421,23 @@ export const ShortsFeed: React.FC<ShortsFeedProps> = ({
               {/* Main Video Element */}
               <div 
                 onClick={handleVideoTap}
-                className="relative w-full h-full bg-slate-950 flex items-center justify-center overflow-hidden"
+                className="relative w-full h-full bg-black flex items-center justify-center overflow-hidden"
               >
                 <video
                   ref={videoRef}
-                  src={currentShort.videoUrl}
-                  poster={currentShort.thumbnailUrl}
+                  src={resolvedVideoUrl || currentShort.videoUrl}
+                  poster={currentShort.thumbnailUrl || undefined}
                   autoPlay={isPlaying}
                   loop
                   muted={isMuted}
                   playsInline
-                  className="w-full h-full object-cover pointer-events-none"
+                  onError={() => {
+                    if (videoRef.current) {
+                      videoRef.current.src = FALLBACK_VIDEOS.portrait;
+                      videoRef.current.load();
+                    }
+                  }}
+                  className="w-full h-full object-contain bg-black pointer-events-none"
                 />
 
                 {/* Pause Indicator overlay on pause */}

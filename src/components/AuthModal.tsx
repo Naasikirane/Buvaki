@@ -233,31 +233,33 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div 
-        dir={isRTL(selectedLanguage.code) ? 'rtl' : 'ltr'}
-        className="relative w-full max-w-md bg-slate-950 border border-violet-900/60 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] custom-scrollbar"
-      >
-        {/* Header Ribbon with Brand & Close Button */}
-        <div className="relative p-5 pb-3 flex items-center justify-between border-b border-violet-900/40 bg-gradient-to-r from-violet-950/80 via-slate-900/60 to-pink-950/40">
-          <div className="flex items-center gap-2.5">
-            <Logo size="sm" />
-            <span className="text-xs px-2 py-0.5 rounded-full bg-violet-900/60 border border-violet-700/50 text-violet-300 font-semibold">
-              Free Access
-            </span>
-          </div>
-
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-white bg-slate-900/80 hover:bg-slate-800 transition-colors"
-            aria-label="Close"
-          >
-            <X className="w-4 h-4" />
-          </button>
+    <div 
+      dir={isRTL(selectedLanguage.code) ? 'rtl' : 'ltr'}
+      className="fixed inset-0 z-50 w-full h-full min-h-screen bg-slate-950 flex flex-col overflow-hidden animate-in fade-in duration-200 m-0 p-0 rounded-none border-none"
+    >
+      {/* Full-width Header Ribbon with Brand & Close Button */}
+      <header className="relative w-full px-4 sm:px-8 py-3.5 flex items-center justify-between border-b border-violet-900/40 bg-slate-950/95 backdrop-blur-md shrink-0">
+        <div className="flex items-center gap-2.5">
+          <Logo size="sm" />
+          <span className="text-xs px-2.5 py-0.5 rounded-full bg-violet-900/60 border border-violet-700/50 text-violet-300 font-semibold">
+            Free Access
+          </span>
         </div>
 
-        {/* Modal Body */}
-        <div className="p-5 flex flex-col gap-4 overflow-y-auto">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-full text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 transition-colors"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      </header>
+
+      {/* Full-screen Scrollable Content Area */}
+      <main className="flex-1 w-full overflow-y-auto custom-scrollbar bg-slate-950">
+        <div className="w-full max-w-lg mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-4">
           {/* Prompt Reason Banner if triggered by an interaction */}
           {promptReason && (
             <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-pink-950/40 border border-pink-500/40 text-pink-200 text-xs">
@@ -505,8 +507,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </button>
           </div>
         </div>
-
-      </div>
+      </main>
     </div>
   );
 };

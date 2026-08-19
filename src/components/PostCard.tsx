@@ -15,10 +15,16 @@ import {
   Languages,
   RotateCcw,
   Youtube,
-  Play
+  Play,
+  Film,
+  Trash2,
+  Clock
 } from 'lucide-react';
 import { getYouTubeEmbedUrl, isYouTubeUrl } from '../lib/mediaUtils';
+import { BuvakiVideoPlayer } from './BuvakiVideoPlayer';
 import { CommunityIcon } from './CommunityIcon';
+import { DeletePostConfirmModal } from './DeletePostConfirmModal';
+import { formatRealTimestamp, formatFullExactDateTime } from '../lib/timeUtils';
 
 interface PostCardProps {
   post: Post;
@@ -28,6 +34,7 @@ interface PostCardProps {
   onSelectPost: (post: Post) => void;
   onToggleSave: (postId: string) => void;
   onVotePoll: (postId: string, optionId: string) => void;
+  onDeletePost?: (postId: string) => Promise<void> | void;
 }
 
 export const PostCard: React.FC<PostCardProps> = ({
@@ -38,10 +45,14 @@ export const PostCard: React.FC<PostCardProps> = ({
   onSelectPost,
   onToggleSave,
   onVotePoll,
+  onDeletePost,
 }) => {
   const t = getTranslation(selectedLanguage?.code || 'en');
   const [copied, setCopied] = useState(false);
   const [awarded, setAwarded] = useState(false);
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+
+  const isAuthor = currentUser && (currentUser.id === post.author.id || currentUser.handle === post.author.handle);
 
   // AI Translation state
   const [isTranslating, setIsTranslating] = useState(false);
@@ -182,7 +193,13 @@ export const PostCard: React.FC<PostCardProps> = ({
               </span>
             </div>
             <span className="text-slate-500">•</span>
-            <span className="text-slate-500 text-[11px]">{post.timestamp}</span>
+            <span 
+              className="text-slate-400 text-[11px] hover:text-slate-200 transition-colors cursor-help inline-flex items-center gap-1"
+              title={formatFullExactDateTime(post.createdAt || post.timestamp)}
+            >
+              <Clock className="w-3 h-3 text-slate-500" />
+              {formatRealTimestamp(post.createdAt || post.timestamp)}
+            </span>
 
             {/* Flair Badge */}
             {post.flair && (
@@ -228,6 +245,33 @@ export const PostCard: React.FC<PostCardProps> = ({
                 referrerPolicy="no-referrer"
                 loading="lazy"
               />
+            </div>
+          )}
+
+          {/* Video Type Attachment (Feed Post Video: supports both vertical/portrait and horizontal/landscape formats) */}
+          {post.type === 'video' && post.videoUrl && (
+            <div 
+              onClick={(e) => e.stopPropagation()} 
+              className="mt-2 rounded-2xl overflow-hidden border border-violet-900/40 bg-black shadow-lg flex flex-col items-center justify-center max-h-[520px]"
+            >
+              {isYouTubeUrl(post.videoUrl) && getYouTubeEmbedUrl(post.videoUrl) ? (
+                <div className="aspect-video w-full bg-black">
+                  <iframe
+                    src={getYouTubeEmbedUrl(post.videoUrl)!}
+                    title={post.title}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              ) : (
+                <BuvakiVideoPlayer
+                  src={post.videoUrl}
+                  poster={post.imageUrl}
+                  className="max-h-[500px] rounded-2xl"
+                  title={post.title}
+                />
+              )}
             </div>
           )}
 
@@ -419,6 +463,20 @@ export const PostCard: React.FC<PostCardProps> = ({
                 {copied && <span className="text-[10px] text-emerald-400 font-bold">Copied!</span>}
               </button>
 
+              {/* Author Delete Dustbin Button */}
+              {isAuthor && onDeletePost && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsConfirmDeleteOpen(true);
+                  }}
+                  className="flex items-center gap-1 text-slate-500 hover:text-rose-400 transition-colors"
+                  title="Delete your post"
+                >
+                  <Trash2 className="w-4 h-4 text-rose-400/80 hover:text-rose-400" />
+                </button>
+              )}
+
             </div>
 
           </div>
@@ -426,6 +484,21 @@ export const PostCard: React.FC<PostCardProps> = ({
         </div>
 
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {isAuthor && (
+        <DeletePostConfirmModal
+          post={post}
+          isOpen={isConfirmDeleteOpen}
+          onClose={() => setIsConfirmDeleteOpen(false)}
+          onConfirmDelete={async (postId) => {
+            if (onDeletePost) {
+              await onDeletePost(postId);
+            }
+            setIsConfirmDeleteOpen(false);
+          }}
+        />
+      )}
     </article>
   );
 };

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { CommunityIcon } from './CommunityIcon';
 import { isYouTubeUrl, getYouTubeEmbedUrl } from '../lib/mediaUtils';
+import { BuvakiVideoPlayer } from './BuvakiVideoPlayer';
 
 export interface LongVideoItem {
   id: string;
@@ -40,185 +41,6 @@ export interface LongVideoItem {
   subBuvakiId: string;
   quality: string;
 }
-
-const SAMPLE_LONGS: LongVideoItem[] = [
-  {
-    id: 'long_music_1',
-    title: 'Electronic Music Production: From Modular Synthesis to Analog Master Tape (Full Masterclass)',
-    description: 'Learn how modern electronic records are mixed and produced. We explore analog filters, polyphonic chord voicings, sidechain compression, and tape saturation.',
-    creator: {
-      name: 'Sarah Styles',
-      handle: 'u/sarahstyles',
-      avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=80',
-      subscribers: '142K',
-      isSubscribed: true,
-    },
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-sound-control-console-41484-large.mp4',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=1200&auto=format&fit=crop&q=80',
-    duration: '38:12',
-    viewsCount: 198000,
-    likesCount: 16400,
-    uploadedTime: '1 day ago',
-    category: 'creative',
-    subBuvaki: 'b/music',
-    subBuvakiId: 'music',
-    quality: '4K Ultra HD'
-  },
-  {
-    id: 'long_music_2',
-    title: 'Acoustic Guitar Recording Secrets: Stereo Mic Placement, Preamp Warmth & Room Acoustics',
-    description: 'A deep studio workshop on capturing rich acoustic guitar tones using XY pair condenser mics, tube preamps, and dynamic EQ shaping.',
-    creator: {
-      name: 'Alex Rivera',
-      handle: 'u/alexrivera',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-      subscribers: '92K',
-      isSubscribed: false,
-    },
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-hands-of-a-man-playing-the-guitar-42751-large.mp4',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=1200&auto=format&fit=crop&q=80',
-    duration: '29:45',
-    viewsCount: 84000,
-    likesCount: 7100,
-    uploadedTime: '3 days ago',
-    category: 'creative',
-    subBuvaki: 'b/music',
-    subBuvakiId: 'music',
-    quality: '1080p 60fps'
-  },
-  {
-    id: 'long_tech_1',
-    title: 'Complete Masterclass: Modern Full-Stack Web Architecture & Design Systems (2026)',
-    description: 'Learn how modern high-scale apps are built from ground zero. We cover TypeScript, reactive UI frameworks, real-time sync, state optimization, and clean typography layouts.',
-    creator: {
-      name: 'Elena Tech',
-      handle: 'u/elenatech',
-      avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
-      subscribers: '184K',
-      isSubscribed: false,
-    },
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-hands-typing-on-a-laptop-keyboard-42456-large.mp4',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&auto=format&fit=crop&q=80',
-    duration: '42:15',
-    viewsCount: 248000,
-    likesCount: 18400,
-    uploadedTime: '2 days ago',
-    category: 'tech',
-    subBuvaki: 'b/tech',
-    subBuvakiId: 'tech',
-    quality: '4K Ultra HD'
-  },
-  {
-    id: 'long_tech_2',
-    title: 'The Evolution of AI Robotics: Autonomous Quadruped Engineering & Neural Navigation',
-    description: 'Exploring modern robotics breakthroughs, sensor fusion with LiDAR, deep reinforcement learning, and the future of human-robot collaboration.',
-    creator: {
-      name: 'Cyber Nova',
-      handle: 'u/cybernova',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-      subscribers: '310K',
-      isSubscribed: false,
-    },
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-futuristic-robot-looking-around-42768-large.mp4',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=1200&auto=format&fit=crop&q=80',
-    duration: '35:10',
-    viewsCount: 389000,
-    likesCount: 31200,
-    uploadedTime: '1 week ago',
-    category: 'tech',
-    subBuvaki: 'b/tech',
-    subBuvakiId: 'tech',
-    quality: '1080p 60fps'
-  },
-  {
-    id: 'long_photography_1',
-    title: 'Cinematic Visual Storytelling: Lighting, Color Grading & Lens Selection Guide',
-    description: 'A deep dive into professional cinematography techniques using mirrorless rigs, anamorphic lenses, and DaVinci Resolve color pipelines.',
-    creator: {
-      name: 'Alex Rivera',
-      handle: 'u/alexrivera',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-      subscribers: '92K',
-      isSubscribed: true,
-    },
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-urban-street-fashion-shoot-41824-large.mp4',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&auto=format&fit=crop&q=80',
-    duration: '28:40',
-    viewsCount: 112000,
-    likesCount: 9200,
-    uploadedTime: '5 days ago',
-    category: 'creative',
-    subBuvaki: 'b/photography',
-    subBuvakiId: 'photography',
-    quality: '4K 60fps'
-  },
-  {
-    id: 'long_gaming_1',
-    title: 'Ultimate Pro Gaming Tier List & Competitive Esports Meta Breakdown (Season 12)',
-    description: 'Analyzing tournament champions, mechanics optimization, DPI benchmarks, and game sense strategies that dominate top leaderboard brackets.',
-    creator: {
-      name: 'Liam Novak',
-      handle: 'u/liamnovak',
-      avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
-      subscribers: '520K',
-      isSubscribed: false,
-    },
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-young-man-playing-a-video-game-with-a-controller-42861-large.mp4',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1200&auto=format&fit=crop&q=80',
-    duration: '51:04',
-    viewsCount: 620000,
-    likesCount: 48900,
-    uploadedTime: '2 weeks ago',
-    category: 'gaming',
-    subBuvaki: 'b/gaming',
-    subBuvakiId: 'gaming',
-    quality: '1440p 120fps'
-  },
-  {
-    id: 'long_design_1',
-    title: 'Modern Design Systems: Typography, Layout Grids & Motion Physics in 2026',
-    description: 'Masterclass on architecting multi-platform design systems with mathematical spacing scales, accessible contrast ratios, and buttery smooth animations.',
-    creator: {
-      name: 'Sarah Styles',
-      handle: 'u/sarahstyles',
-      avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=80',
-      subscribers: '142K',
-      isSubscribed: true,
-    },
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-screens-with-charts-and-data-42761-large.mp4',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=1200&auto=format&fit=crop&q=80',
-    duration: '32:18',
-    viewsCount: 145000,
-    likesCount: 12100,
-    uploadedTime: '1 week ago',
-    category: 'creative',
-    subBuvaki: 'b/design',
-    subBuvakiId: 'design',
-    quality: '4K Ultra HD'
-  },
-  {
-    id: 'long_general_1',
-    title: 'The Future of Online Creator Communities & Digital Social Lounges',
-    description: 'How modern digital spaces are evolving to support real-time audio rooms, community sub-spaces, shorts, and creator monetization.',
-    creator: {
-      name: 'Maya Lin',
-      handle: 'u/mayalin',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-      subscribers: '78K',
-      isSubscribed: false,
-    },
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-recording-herself-with-a-smartphone-camera-42858-large.mp4',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1200&auto=format&fit=crop&q=80',
-    duration: '24:50',
-    viewsCount: 96000,
-    likesCount: 8400,
-    uploadedTime: '4 days ago',
-    category: 'general',
-    subBuvaki: 'b/general',
-    subBuvakiId: 'general',
-    quality: '1080p HD'
-  }
-];
 
 interface LongsFeedProps {
   posts?: Post[];
@@ -254,10 +76,15 @@ export const LongsFeed: React.FC<LongsFeedProps> = ({
   const [subscribedMap, setSubscribedMap] = useState<Record<string, boolean>>({});
   const [isSubDropdownOpen, setIsSubDropdownOpen] = useState(false);
 
-  // Merge sample long videos with any user posts of type 'video' or 'long'
+  // Merge sample long videos with user posts created for Longs (strictly longs, never shorts or feed video posts)
   const allLongs: LongVideoItem[] = useMemo(() => {
     const userLongs: LongVideoItem[] = posts
-      .filter((p) => p.type === 'video' && p.videoUrl)
+      .filter((p) => (
+        p.isLong === true || 
+        p.type === 'long' || 
+        p.flair === 'Long Video' || 
+        p.tags?.some(t => t.toLowerCase().includes('longvideo'))
+      ) && !p.isShort && p.type !== 'short' && p.videoUrl)
       .map((p) => {
         const matchingCategory = (p.tags?.find(t => ['creative', 'tech', 'gaming', 'photography'].includes(t.replace('#', '').toLowerCase()))?.replace('#', '').toLowerCase()) || 'tech';
         return {
@@ -284,7 +111,7 @@ export const LongsFeed: React.FC<LongsFeedProps> = ({
         };
       });
 
-    return [...userLongs, ...SAMPLE_LONGS];
+    return userLongs;
   }, [posts]);
 
   const activeSubObj = subBuvakis.find((s) => s.id === activeSubBuvakiId);
@@ -607,13 +434,15 @@ export const LongsFeed: React.FC<LongsFeedProps> = ({
                   allowFullScreen
                 />
               ) : (
-                <video
+                <BuvakiVideoPlayer
                   src={activePlayingVideo.videoUrl}
                   poster={activePlayingVideo.thumbnailUrl}
-                  controls
-                  autoPlay
-                  playsInline
+                  autoPlay={true}
+                  controls={true}
+                  playsInline={true}
+                  isLong={true}
                   className="w-full h-full object-contain bg-black"
+                  title={activePlayingVideo.title}
                 />
               )}
               <div className="absolute top-3 left-3 z-10 flex items-center gap-2 pointer-events-none">

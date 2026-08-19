@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChatChannel, ChatMessage, User, SupportedLanguage } from '../types';
 import { getTranslation } from '../lib/translations';
+import { formatRealTimestamp, formatFullExactDateTime } from '../lib/timeUtils';
 import { 
   Hash, 
   Volume2, 
@@ -175,8 +176,11 @@ export const LiveChatView: React.FC<LiveChatViewProps> = ({
                   <span className="font-bold text-xs text-violet-200">
                     {msg.author.handle}
                   </span>
-                  <span className="text-[10px] text-slate-500">
-                    {msg.timestamp}
+                  <span 
+                    className="text-[10px] text-slate-500 hover:text-slate-300 transition-colors cursor-help"
+                    title={formatFullExactDateTime(msg.timestamp)}
+                  >
+                    {formatRealTimestamp(msg.timestamp)}
                   </span>
                 </div>
 

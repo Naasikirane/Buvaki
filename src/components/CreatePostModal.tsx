@@ -26,6 +26,7 @@ import {
   Film
 } from 'lucide-react';
 import { getYouTubeEmbedUrl, isYouTubeUrl, processImageFile, captureVideoFrame, formatFileSize, formatDuration } from '../lib/mediaUtils';
+import { saveLocalMediaBlob } from '../lib/mediaStorage';
 import { CommunityIcon } from './CommunityIcon';
 
 interface CreatePostModalProps {
@@ -43,7 +44,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 }) => {
   const [mainTab, setMainTab] = useState<'posts' | 'shorts' | 'longs'>('posts');
   const [subId, setSubId] = useState(selectedSubId || subBuvakis[0]?.id || 'general');
-  const [postType, setPostType] = useState<'text' | 'image' | 'link' | 'poll'>('text');
+  const [postType, setPostType] = useState<'text' | 'image' | 'video' | 'link' | 'poll'>('text');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   
@@ -57,6 +58,18 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [imageError, setImageError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Feed Post Video state (Videos published under Posts appear in Feed view)
+  const [postVideoMode, setPostVideoMode] = useState<'upload' | 'url'>('upload');
+  const [postVideoUrl, setPostVideoUrl] = useState('');
+  const [postVideoPreview, setPostVideoPreview] = useState<string | null>(null);
+  const [postVideoFileName, setPostVideoFileName] = useState<string>('');
+  const [postVideoFileSize, setPostVideoFileSize] = useState<string>('');
+  const [isProcessingPostVideo, setIsProcessingPostVideo] = useState<boolean>(false);
+  const [postVideoError, setPostVideoError] = useState<string | null>(null);
+  const [isDraggingPostVideo, setIsDraggingPostVideo] = useState<boolean>(false);
+  const [postThumbnailPreview, setPostThumbnailPreview] = useState<string | null>(null);
+  const postFileInputRef = useRef<HTMLInputElement>(null);
 
   // Shorts state
   const [shortVideoMode, setShortVideoMode] = useState<'upload' | 'url'>('upload');
@@ -126,12 +139,48 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
     }
   };
 
-  const handleShortVideoFileSelect = (file?: File | null) => {
+  const handleShortVideoFileSelect = async (file?: File | null) => {
     if (!file) return;
+    const key = `short_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    await saveLocalMediaBlob(key, file).catch(e => console.warn('Cache error:', e));
     const url = URL.createObjectURL(file);
     setShortVideoPreview(url);
-    setShortVideoUrl(url);
+    setShortVideoUrl(`local-media:${key}`);
     setShortVideoFileName(file.name);
+  };
+
+  // Feed Post Video Device Upload Handler
+  const handlePostVideoFileSelect = async (file?: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith('video/')) {
+      setPostVideoError('Please select a valid video file (MP4, WebM, MOV, MKV, AVI)');
+      return;
+    }
+
+    setPostVideoError(null);
+    setIsProcessingPostVideo(true);
+    setPostVideoFileName(file.name);
+    setPostVideoFileSize(formatFileSize(file.size));
+
+    try {
+      const key = `feed_vid_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      await saveLocalMediaBlob(key, file).catch(e => console.warn('Cache error:', e));
+      const url = URL.createObjectURL(file);
+      setPostVideoPreview(url);
+      setPostVideoUrl(`local-media:${key}`);
+
+      const frameInfo = await captureVideoFrame(file, 1.0);
+      if (frameInfo.thumbnailDataUrl) {
+        setPostThumbnailPreview(frameInfo.thumbnailDataUrl);
+      }
+    } catch (err) {
+      console.error('Post video processing note:', err);
+      const url = URL.createObjectURL(file);
+      setPostVideoPreview(url);
+      setPostVideoUrl(url);
+    } finally {
+      setIsProcessingPostVideo(false);
+    }
   };
 
   // Long Video Device Upload Handler
@@ -148,9 +197,11 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
     setLongVideoFileSize(formatFileSize(file.size));
 
     try {
+      const key = `long_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      await saveLocalMediaBlob(key, file).catch(e => console.warn('Cache error:', e));
       const url = URL.createObjectURL(file);
       setLongVideoPreview(url);
-      setLongVideoUrl(url);
+      setLongVideoUrl(`local-media:${key}`);
 
       // Auto-extract video duration and auto-generate video thumbnail frame
       const frameInfo = await captureVideoFrame(file, 1.5);
@@ -307,17 +358,27 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
     if (mainTab === 'shorts') {
       postData.type = 'short';
-      postData.videoUrl = (shortVideoPreview || shortVideoUrl).trim() || 'https://assets.mixkit.co/videos/preview/mixkit-urban-street-fashion-shoot-41824-large.mp4';
+      postData.isShort = true;
+      postData.isLong = false;
+      postData.videoUrl = (shortVideoUrl || shortVideoPreview).trim() || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
       postData.imageUrl = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=80';
     } else if (mainTab === 'longs') {
-      postData.type = 'video';
-      postData.videoUrl = (longVideoPreview || longVideoUrl).trim() || 'https://assets.mixkit.co/videos/preview/mixkit-hands-typing-on-a-laptop-keyboard-42456-large.mp4';
-      postData.imageUrl = (longThumbnailPreview || longThumbnailUrl).trim() || 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&auto=format&fit=crop&q=80';
+      postData.type = 'long';
+      postData.isLong = true;
+      postData.isShort = false;
+      postData.videoUrl = (longVideoUrl || longVideoPreview).trim() || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+      postData.imageUrl = (longThumbnailUrl || longThumbnailPreview).trim() || 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&auto=format&fit=crop&q=80';
       postData.duration = longDuration || '15:30';
     } else {
       postData.type = postType;
+      postData.isShort = false;
+      postData.isLong = false;
       if (postType === 'image') {
-        postData.imageUrl = (imagePreview || imageUrl).trim() || 'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=1200&auto=format&fit=crop&q=80';
+        postData.imageUrl = (imageUrl || imagePreview).trim() || 'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=1200&auto=format&fit=crop&q=80';
+      } else if (postType === 'video') {
+        postData.type = 'video';
+        postData.videoUrl = (postVideoUrl || postVideoPreview).trim() || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+        postData.imageUrl = postThumbnailPreview || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=1200&auto=format&fit=crop&q=80';
       } else if (postType === 'link') {
         postData.linkUrl = linkUrl.trim() || 'https://buvaki.net';
       } else if (postType === 'poll') {
@@ -457,14 +518,14 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             </div>
           </div>
 
-          {/* 3. Sub-tabs (Text | Photo / Media | Link / YouTube | Poll) - shown when in Posts mode */}
+          {/* 3. Sub-tabs (Text | Photo | Video | Link | Poll) - shown when in Posts mode */}
           {mainTab === 'posts' && (
-            <div className="flex rounded-xl bg-slate-900 p-1 border border-violet-900/40">
+            <div className="flex flex-wrap sm:flex-nowrap rounded-xl bg-slate-900 p-1 border border-violet-900/40 gap-1">
               <button
                 type="button"
                 onClick={() => setPostType('text')}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${
-                  postType === 'text' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                className={`flex-1 min-w-[65px] flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${
+                  postType === 'text' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <FileText className="w-3.5 h-3.5" /> Text
@@ -472,26 +533,35 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
               <button
                 type="button"
                 onClick={() => setPostType('image')}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${
-                  postType === 'image' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                className={`flex-1 min-w-[65px] flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${
+                  postType === 'image' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <ImageIcon className="w-3.5 h-3.5" /> Photo / Media
+                <ImageIcon className="w-3.5 h-3.5" /> Photo
+              </button>
+              <button
+                type="button"
+                onClick={() => setPostType('video')}
+                className={`flex-1 min-w-[65px] flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${
+                  postType === 'video' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Film className="w-3.5 h-3.5 text-pink-400" /> Video
               </button>
               <button
                 type="button"
                 onClick={() => setPostType('link')}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${
-                  postType === 'link' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                className={`flex-1 min-w-[65px] flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${
+                  postType === 'link' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <Link2 className="w-3.5 h-3.5" /> Link / YouTube
+                <Link2 className="w-3.5 h-3.5" /> Link
               </button>
               <button
                 type="button"
                 onClick={() => setPostType('poll')}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${
-                  postType === 'poll' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                className={`flex-1 min-w-[65px] flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${
+                  postType === 'poll' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <BarChart2 className="w-3.5 h-3.5" /> Poll
@@ -1265,6 +1335,200 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   placeholder="Add a caption or tell the story behind this shot..."
+                  rows={2}
+                  className="w-full p-2.5 rounded-xl bg-slate-900 border border-violet-900/40 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-violet-500"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Feed Post Video Uploading (Upload portrait or landscape videos to appear in the Feed view) */}
+          {mainTab === 'posts' && postType === 'video' && (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-violet-300 flex items-center gap-1.5">
+                  <Film className="w-4 h-4 text-pink-400" />
+                  <span>Feed Video Source (Portrait or Landscape)</span>
+                </label>
+                
+                <div className="flex items-center p-0.5 rounded-lg bg-slate-900 border border-violet-900/40">
+                  <button
+                    type="button"
+                    onClick={() => setPostVideoMode('upload')}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                      postVideoMode === 'upload'
+                        ? 'bg-violet-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <Smartphone className="w-3 h-3" />
+                    <span>Device Video</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPostVideoMode('url')}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                      postVideoMode === 'url'
+                        ? 'bg-violet-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <Globe className="w-3 h-3" />
+                    <span>Video URL</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Feed Destination Info Banner */}
+              <div className="px-3 py-2 rounded-xl bg-violet-950/40 border border-violet-800/40 text-[11px] text-violet-200 flex items-center gap-2">
+                <Sparkles className="w-3.5 h-3.5 text-pink-400 shrink-0" />
+                <span>
+                  This video will publish directly to the <strong>Feed View</strong>. Both vertical and landscape formats are supported in feed cards.
+                </span>
+              </div>
+
+              {/* Option 1: Upload from Device */}
+              {postVideoMode === 'upload' && (
+                <div className="flex flex-col gap-3">
+                  <input
+                    ref={postFileInputRef}
+                    type="file"
+                    accept="video/mp4,video/webm,video/quicktime,video/*"
+                    onChange={(e) => handlePostVideoFileSelect(e.target.files?.[0])}
+                    className="hidden"
+                  />
+
+                  {!postVideoPreview ? (
+                    <div
+                      onDragOver={(e) => { e.preventDefault(); setIsDraggingPostVideo(true); }}
+                      onDragLeave={(e) => { e.preventDefault(); setIsDraggingPostVideo(false); }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setIsDraggingPostVideo(false);
+                        handlePostVideoFileSelect(e.dataTransfer.files?.[0]);
+                      }}
+                      onClick={() => postFileInputRef.current?.click()}
+                      className={`cursor-pointer p-6 sm:p-8 rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center gap-3 text-center ${
+                        isDraggingPostVideo
+                          ? 'border-pink-400 bg-pink-950/40 scale-[1.01]'
+                          : 'border-violet-900/60 hover:border-pink-500 bg-slate-900/40 hover:bg-slate-900/80'
+                      }`}
+                    >
+                      <div className="w-12 h-12 rounded-2xl bg-violet-950 border border-pink-700/60 flex items-center justify-center text-pink-400 shadow-md">
+                        <Film className="w-6 h-6" />
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <p className="text-xs sm:text-sm font-bold text-slate-200">
+                          {isDraggingPostVideo ? 'Drop video here' : 'Click to select video from your phone or computer'}
+                        </p>
+                        <p className="text-[11px] text-slate-400">
+                          Supports MP4, WebM, MOV • Portrait or Landscape formats
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="mt-1 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold text-xs shadow-md shadow-violet-600/20 active:scale-95 transition-all flex items-center gap-1.5"
+                      >
+                        <Smartphone className="w-3.5 h-3.5" />
+                        <span>Browse Device Storage</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative rounded-2xl overflow-hidden border border-violet-800/60 bg-slate-950 p-3 flex flex-col gap-3">
+                      <div className="relative max-h-56 rounded-xl overflow-hidden bg-black flex items-center justify-center">
+                        <video
+                          src={postVideoPreview}
+                          controls
+                          className="max-h-56 w-full object-contain"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs text-slate-200">
+                        <div className="flex items-center gap-2 truncate">
+                          <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <span className="truncate font-semibold">{postVideoFileName || 'Video Selected'}</span>
+                          {postVideoFileSize && (
+                            <span className="text-[10px] text-slate-400 font-mono">({postVideoFileSize})</span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => postFileInputRef.current?.click()}
+                            className="px-2.5 py-1 rounded-lg text-xs font-medium text-violet-300 hover:text-white bg-slate-800 hover:bg-violet-900 transition-colors"
+                          >
+                            Change
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPostVideoPreview(null);
+                              setPostVideoUrl('');
+                              setPostVideoFileName('');
+                              setPostThumbnailPreview(null);
+                            }}
+                            className="p-1.5 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-950/50 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {isProcessingPostVideo && (
+                    <div className="flex items-center gap-2 text-xs text-violet-300">
+                      <div className="w-3.5 h-3.5 border-2 border-violet-400/30 border-t-violet-400 rounded-full animate-spin" />
+                      <span>Processing video & extracting frame...</span>
+                    </div>
+                  )}
+
+                  {postVideoError && (
+                    <div className="flex items-center gap-2 text-xs text-rose-400 bg-rose-950/40 border border-rose-900/50 p-2.5 rounded-xl">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                      <span>{postVideoError}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Option 2: Video URL */}
+              {postVideoMode === 'url' && (
+                <div className="flex flex-col gap-2">
+                  <input
+                    type="url"
+                    value={postVideoUrl || ''}
+                    onChange={(e) => {
+                      setPostVideoUrl(e.target.value);
+                      setPostVideoPreview(e.target.value.trim() ? e.target.value.trim() : null);
+                    }}
+                    placeholder="https://assets.mixkit.co/... or direct video URL"
+                    className="w-full p-3 rounded-xl bg-slate-900 border border-violet-900/40 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-violet-500"
+                  />
+
+                  {postVideoUrl.trim() && (
+                    <div className="rounded-xl overflow-hidden border border-violet-900/40 max-h-48 bg-black flex items-center justify-center mt-1">
+                      <video
+                        src={postVideoUrl}
+                        controls
+                        className="max-h-48 w-full object-contain"
+                        onError={() => setPostVideoError('Could not load video from this URL. Please check the link.')}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Video Description / Context */}
+              <div className="flex flex-col gap-1.5 mt-1">
+                <label className="text-xs font-bold text-violet-300">Video Description / Post Text (Optional)</label>
+                <textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="Add context, commentary, or a description for your feed video..."
                   rows={2}
                   className="w-full p-2.5 rounded-xl bg-slate-900 border border-violet-900/40 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-violet-500"
                 />

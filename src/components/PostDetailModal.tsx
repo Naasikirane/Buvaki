@@ -18,10 +18,16 @@ import {
   RotateCcw,
   Youtube,
   ExternalLink,
-  Maximize2
+  Maximize2,
+  Film,
+  Trash2,
+  Clock
 } from 'lucide-react';
 import { getYouTubeEmbedUrl, isYouTubeUrl } from '../lib/mediaUtils';
+import { BuvakiVideoPlayer } from './BuvakiVideoPlayer';
 import { CommunityIcon } from './CommunityIcon';
+import { DeletePostConfirmModal } from './DeletePostConfirmModal';
+import { formatRealTimestamp, formatFullExactDateTime } from '../lib/timeUtils';
 
 interface PostDetailModalProps {
   post: Post | null;
@@ -34,6 +40,7 @@ interface PostDetailModalProps {
   onAddComment: (postId: string, content: string, parentId?: string) => void;
   onToggleSave: (postId: string) => void;
   onVotePoll: (postId: string, optionId: string) => void;
+  onDeletePost?: (postId: string) => Promise<void> | void;
 }
 
 export const PostDetailModal: React.FC<PostDetailModalProps> = ({
@@ -47,9 +54,13 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
   onAddComment,
   onToggleSave,
   onVotePoll,
+  onDeletePost,
 }) => {
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+
   if (!post) return null;
 
+  const isAuthor = currentUser && (currentUser.id === post.author.id || currentUser.handle === post.author.handle);
   const t = getTranslation(selectedLanguage?.code || 'en');
   const [newCommentText, setNewCommentText] = useState('');
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
@@ -132,7 +143,13 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
               />
               <span className="font-bold text-violet-200">{comment.author.handle}</span>
               <span className="text-slate-500">•</span>
-              <span className="text-[10px] text-slate-400">{comment.timestamp}</span>
+              <span 
+                className="text-[10px] text-slate-400 hover:text-slate-200 transition-colors cursor-help inline-flex items-center gap-1"
+                title={formatFullExactDateTime(comment.createdAt || comment.timestamp)}
+              >
+                <Clock className="w-2.5 h-2.5 text-slate-500" />
+                {formatRealTimestamp(comment.createdAt || comment.timestamp)}
+              </span>
             </div>
 
             {/* Comment Voting */}
@@ -207,28 +224,28 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md">
-      <div className="relative w-full max-w-3xl max-h-[90vh] bg-slate-950 border border-violet-900/50 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
-        
-        {/* Header Bar */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-violet-900/30 bg-slate-900/50">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-violet-300 text-sm px-2.5 py-1 rounded-xl bg-violet-950 border border-violet-800/40 flex items-center gap-2">
-              <CommunityIcon subId={post.subBuvakiId} name={post.subBuvakiName} size="xs" containerClassName="w-4 h-4 rounded-sm border-none bg-transparent" />
-              <span>{post.subBuvakiName}</span>
-            </span>
-            <span className="text-xs text-slate-400">Thread Discussion</span>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-full text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+    <div className="fixed inset-0 z-50 w-full h-full min-h-screen bg-slate-950 flex flex-col overflow-hidden m-0 p-0 rounded-none border-none">
+      {/* Full-width Header Bar */}
+      <header className="flex items-center justify-between px-4 sm:px-8 py-3.5 border-b border-violet-900/40 bg-slate-950/95 backdrop-blur-md shrink-0">
+        <div className="flex items-center gap-2.5">
+          <span className="font-bold text-violet-300 text-xs sm:text-sm px-2.5 py-1 rounded-xl bg-violet-950 border border-violet-800/40 flex items-center gap-2">
+            <CommunityIcon subId={post.subBuvakiId} name={post.subBuvakiName} size="xs" containerClassName="w-4 h-4 rounded-sm border-none bg-transparent" />
+            <span>{post.subBuvakiName}</span>
+          </span>
+          <span className="text-xs text-slate-400 hidden sm:inline">Thread Discussion</span>
         </div>
+        <button
+          onClick={onClose}
+          className="p-1.5 rounded-full text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 transition-colors"
+          aria-label="Close"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </header>
 
-        {/* Main Body Content Scrollable */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar">
+      {/* Main Body Content Scrollable Canvas */}
+      <main className="flex-1 w-full overflow-y-auto custom-scrollbar bg-slate-950">
+        <div className="w-full max-w-4xl mx-auto px-4 sm:px-8 py-6 sm:py-8 space-y-6">
           
           {/* Main Post Section */}
           <div className="flex gap-4">
@@ -260,32 +277,52 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                   />
                   <span className="font-bold text-violet-200">{post.author.handle}</span>
                   <span>•</span>
-                  <span>{post.timestamp}</span>
+                  <span 
+                    className="hover:text-slate-200 transition-colors cursor-help inline-flex items-center gap-1"
+                    title={formatFullExactDateTime(post.createdAt || post.timestamp)}
+                  >
+                    <Clock className="w-3 h-3 text-slate-500" />
+                    {formatRealTimestamp(post.createdAt || post.timestamp)}
+                  </span>
                 </div>
 
-                <button
-                  onClick={handleTranslate}
-                  disabled={isTranslating}
-                  className={`flex items-center gap-1.5 transition-all text-xs font-medium px-2.5 py-1 rounded-xl border ${
-                    isTranslated
-                      ? 'bg-indigo-950/80 border-indigo-700/80 text-indigo-300'
-                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-indigo-300'
-                  }`}
-                >
-                  {isTranslating ? (
-                    <div className="w-3.5 h-3.5 border-2 border-indigo-400/30 border-t-indigo-400 rounded-full animate-spin" />
-                  ) : isTranslated ? (
-                    <>
-                      <RotateCcw className="w-3.5 h-3.5 text-indigo-400" />
-                      <span>Original Text</span>
-                    </>
-                  ) : (
-                    <>
-                      <Languages className="w-3.5 h-3.5 text-indigo-400" />
-                      <span>AI Translate</span>
-                    </>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleTranslate}
+                    disabled={isTranslating}
+                    className={`flex items-center gap-1.5 transition-all text-xs font-medium px-2.5 py-1 rounded-xl border ${
+                      isTranslated
+                        ? 'bg-indigo-950/80 border-indigo-700/80 text-indigo-300'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-indigo-300'
+                    }`}
+                  >
+                    {isTranslating ? (
+                      <div className="w-3.5 h-3.5 border-2 border-indigo-400/30 border-t-indigo-400 rounded-full animate-spin" />
+                    ) : isTranslated ? (
+                      <>
+                        <RotateCcw className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>Original Text</span>
+                      </>
+                    ) : (
+                      <>
+                        <Languages className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>AI Translate</span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* Dustbin Delete Button for Author */}
+                  {isAuthor && onDeletePost && (
+                    <button
+                      onClick={() => setIsConfirmDeleteOpen(true)}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-rose-950/40 hover:bg-rose-900/80 border border-rose-800/60 text-rose-300 hover:text-rose-100 text-xs font-bold transition-all"
+                      title="Delete this post"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Delete</span>
+                    </button>
                   )}
-                </button>
+                </div>
               </div>
 
               {isTranslated && (
@@ -325,6 +362,48 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
                       <span>Open Full Size</span>
                       <ExternalLink className="w-3 h-3" />
                     </a>
+                  </div>
+                </div>
+              )}
+
+              {/* Video Player Rendering for Feed Video Posts */}
+              {post.type === 'video' && post.videoUrl && (
+                <div className="rounded-2xl overflow-hidden border border-violet-900/40 bg-black flex flex-col shadow-lg">
+                  {isYouTubeUrl(post.videoUrl) && getYouTubeEmbedUrl(post.videoUrl) ? (
+                    <div className="aspect-video w-full bg-black">
+                      <iframe
+                        src={getYouTubeEmbedUrl(post.videoUrl)!}
+                        title={post.title}
+                        className="w-full h-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
+                  ) : (
+                    <div className="relative w-full bg-black flex items-center justify-center max-h-[640px]">
+                      <BuvakiVideoPlayer
+                        src={post.videoUrl}
+                        poster={post.imageUrl}
+                        className="max-h-[640px] rounded-2xl"
+                        title={post.title}
+                      />
+                    </div>
+                  )}
+                  <div className="p-2.5 bg-slate-900/60 border-t border-violet-900/30 flex items-center justify-between text-xs text-slate-400">
+                    <span className="text-[11px] font-medium text-pink-300 flex items-center gap-1.5">
+                      <Film className="w-3.5 h-3.5" /> Video Post
+                    </span>
+                    {post.videoUrl && (
+                      <a
+                        href={post.videoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] text-violet-400 hover:text-white flex items-center gap-1 font-semibold"
+                      >
+                        <span>Open Source Media</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
                   </div>
                 </div>
               )}
@@ -420,8 +499,23 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
           </div>
 
         </div>
+      </main>
 
-      </div>
+      {/* Delete Confirmation Modal */}
+      {isAuthor && isConfirmDeleteOpen && (
+        <DeletePostConfirmModal
+          post={post}
+          isOpen={isConfirmDeleteOpen}
+          onClose={() => setIsConfirmDeleteOpen(false)}
+          onConfirmDelete={async (postId) => {
+            if (onDeletePost) {
+              await onDeletePost(postId);
+            }
+            setIsConfirmDeleteOpen(false);
+            onClose();
+          }}
+        />
+      )}
     </div>
   );
 };

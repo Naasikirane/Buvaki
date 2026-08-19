@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { User, Post } from '../types';
-import { X, Award, Flame, Calendar, Edit3, Bookmark, ShieldCheck, Sparkles, Check, LogOut, Camera, Upload } from 'lucide-react';
+import { X, Award, Flame, Calendar, Edit3, Bookmark, ShieldCheck, Sparkles, Check, LogOut, Camera, Upload, Trash2, Clock } from 'lucide-react';
+import { DeletePostConfirmModal } from './DeletePostConfirmModal';
+import { formatRealTimestamp, formatFullExactDateTime } from '../lib/timeUtils';
 
 interface UserProfileModalProps {
   user: User;
@@ -10,6 +12,7 @@ interface UserProfileModalProps {
   onUpdateBio: (newBio: string) => void;
   onUpdateAvatar?: (newAvatar: string) => void;
   onSelectPost: (post: Post) => void;
+  onDeletePost?: (postId: string) => Promise<void> | void;
   onLogout?: () => void;
 }
 
@@ -21,12 +24,14 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   onUpdateBio,
   onUpdateAvatar,
   onSelectPost,
+  onDeletePost,
   onLogout,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<'posts' | 'saved' | 'badges'>('posts');
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [bioText, setBioText] = useState(user?.bio || '');
+  const [postToDelete, setPostToDelete] = useState<Post | null>(null);
 
   const handleSaveBio = () => {
     onUpdateBio(bioText);
@@ -81,30 +86,55 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md">
-      <div className="relative w-full max-w-xl bg-slate-950 border border-violet-900/50 rounded-3xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
-        
-        {/* Hidden File Input for Phone / Storage Upload */}
-        <input 
-          type="file" 
-          ref={fileInputRef} 
-          accept="image/*" 
-          onChange={handleFileUpload} 
-          className="hidden" 
-        />
+    <div className="fixed inset-0 z-50 w-full h-full min-h-screen bg-slate-950 flex flex-col overflow-hidden m-0 p-0 rounded-none border-none">
+      {/* Hidden File Input for Phone / Storage Upload */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        accept="image/*" 
+        onChange={handleFileUpload} 
+        className="hidden" 
+      />
 
-        {/* Banner backdrop */}
-        <div className="h-28 bg-violet-950 border-b border-violet-900/40 relative p-4 flex items-end">
-          <button
-            onClick={onClose}
-            className="absolute top-3 right-3 p-1.5 rounded-full text-slate-300 hover:text-white bg-slate-950/60 backdrop-blur-md"
-          >
-            <X className="w-4 h-4" />
-          </button>
+      {/* Full-width Top Bar */}
+      <header className="px-4 sm:px-8 py-3.5 border-b border-violet-900/40 bg-slate-950/95 backdrop-blur-md flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2.5">
+          <span className="text-sm sm:text-base font-bold text-slate-100">User Profile</span>
+          <span className="text-xs px-2.5 py-0.5 rounded-full bg-violet-900/60 border border-violet-700/50 text-violet-300 font-semibold">
+            {user.username}
+          </span>
         </div>
 
-        {/* Profile Card Header */}
-        <div className="px-6 pb-4 relative flex flex-col gap-3 -mt-12">
+        <div className="flex items-center gap-2">
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="px-3 py-1.5 rounded-xl bg-rose-950/80 hover:bg-rose-900 border border-rose-800/80 text-rose-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-all"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Log Out</span>
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-full text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 transition-colors"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      </header>
+
+      {/* Full-screen Scrollable Content */}
+      <main className="flex-1 w-full overflow-y-auto custom-scrollbar bg-slate-950">
+        <div className="w-full max-w-2xl mx-auto flex flex-col pb-8">
+          
+          {/* Banner backdrop */}
+          <div className="h-32 sm:h-40 bg-gradient-to-r from-violet-950 via-purple-950 to-pink-950 border-b border-violet-900/40 relative p-4 flex items-end">
+          </div>
+
+          {/* Profile Card Header */}
+          <div className="px-4 sm:px-8 pb-4 relative flex flex-col gap-3 -mt-14">
           <div className="flex items-end justify-between">
             <div 
               onClick={() => fileInputRef.current?.click()}
@@ -249,11 +279,40 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                     onSelectPost(post);
                     onClose();
                   }}
-                  className="p-3 rounded-xl bg-slate-900/80 border border-violet-900/30 hover:border-violet-600/50 cursor-pointer flex flex-col gap-1"
+                  className="group/item p-3.5 rounded-xl bg-slate-900/80 border border-violet-900/30 hover:border-violet-600/50 cursor-pointer flex items-center justify-between gap-3 transition-all"
                 >
-                  <span className="text-[10px] text-violet-400 font-bold">{post.subBuvakiName}</span>
-                  <h4 className="text-xs font-bold text-slate-200">{post.title}</h4>
-                  <span className="text-[10px] text-slate-500">{post.score} upvotes • {post.timestamp}</span>
+                  <div className="flex flex-col gap-1 min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-violet-400 font-bold">{post.subBuvakiName}</span>
+                      {post.flair && (
+                        <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-violet-950/80 text-violet-300 border border-violet-800/40">
+                          {post.flair}
+                        </span>
+                      )}
+                    </div>
+                    <h4 className="text-xs font-bold text-slate-200 truncate group-hover/item:text-violet-200 transition-colors">
+                      {post.title}
+                    </h4>
+                    <span 
+                      className="text-[10px] text-slate-400 hover:text-slate-200 transition-colors cursor-help inline-flex items-center gap-1"
+                      title={formatFullExactDateTime(post.createdAt || post.timestamp)}
+                    >
+                      <Clock className="w-2.5 h-2.5 text-slate-500" />
+                      {post.score} upvotes • {formatRealTimestamp(post.createdAt || post.timestamp)}
+                    </span>
+                  </div>
+
+                  {/* Dustbin Delete Button (Matching User's Pink Marker Diagram) */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPostToDelete(post);
+                    }}
+                    className="w-9 h-9 rounded-xl bg-rose-950/40 hover:bg-rose-900/80 border border-rose-800/40 hover:border-rose-500 text-rose-400 hover:text-rose-200 flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-sm"
+                    title="Delete this post"
+                  >
+                    <Trash2 className="w-4 h-4 text-rose-400" />
+                  </button>
                 </div>
               ))
             )
@@ -276,7 +335,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 >
                   <span className="text-[10px] text-emerald-400 font-bold">{post.subBuvakiName}</span>
                   <h4 className="text-xs font-bold text-slate-200">{post.title}</h4>
-                  <span className="text-[10px] text-slate-500">{post.score} upvotes • {post.timestamp}</span>
+                  <span 
+                    className="text-[10px] text-slate-400 hover:text-slate-200 transition-colors cursor-help inline-flex items-center gap-1"
+                    title={formatFullExactDateTime(post.createdAt || post.timestamp)}
+                  >
+                    <Clock className="w-2.5 h-2.5 text-slate-500" />
+                    {post.score} upvotes • {formatRealTimestamp(post.createdAt || post.timestamp)}
+                  </span>
                 </div>
               ))
             )
@@ -299,23 +364,39 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           )}
         </div>
 
-        {/* Modal Footer with Logout */}
-        {onLogout && (
-          <div className="p-4 bg-slate-900/90 border-t border-violet-900/40 flex items-center justify-between gap-3">
-            <span className="text-[11px] text-slate-400">
-              Logged in as <strong className="text-slate-200">{user.username}</strong>
-            </span>
-            <button
-              onClick={onLogout}
-              className="px-4 py-2 rounded-xl bg-rose-950/90 hover:bg-rose-900 border border-rose-800/80 text-rose-300 hover:text-white text-xs font-bold flex items-center gap-2 transition-all shadow-md"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Log Out</span>
-            </button>
-          </div>
-        )}
+          {/* Modal Footer with Logout */}
+          {onLogout && (
+            <div className="p-4 bg-slate-900/90 border border-violet-900/40 rounded-2xl flex items-center justify-between gap-3 mt-4">
+              <span className="text-[11px] text-slate-400">
+                Logged in as <strong className="text-slate-200">{user.username}</strong>
+              </span>
+              <button
+                onClick={onLogout}
+                className="px-4 py-2 rounded-xl bg-rose-950/90 hover:bg-rose-900 border border-rose-800/80 text-rose-300 hover:text-white text-xs font-bold flex items-center gap-2 transition-all shadow-md"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Log Out</span>
+              </button>
+            </div>
+          )}
 
-      </div>
+        </div>
+      </main>
+
+      {/* Post Delete Confirmation Modal */}
+      {postToDelete && (
+        <DeletePostConfirmModal
+          post={postToDelete}
+          isOpen={!!postToDelete}
+          onClose={() => setPostToDelete(null)}
+          onConfirmDelete={async (postId) => {
+            if (onDeletePost) {
+              await onDeletePost(postId);
+            }
+            setPostToDelete(null);
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -173,8 +173,13 @@ export const ensureSeeded = async () => {
       await batch.commit();
     }
 
-    // Clean up any legacy mock posts from Firestore
-    const legacyMockPostIds = ['post_1', 'post_2', 'post_3', 'post_4', 'post_5'];
+    // Clean up any legacy mock posts and chat messages from Firestore
+    const legacyMockPostIds = [
+      'post_1', 'post_2', 'post_3', 'post_4', 'post_5',
+      'post_music_1', 'post_music_2', 'post_tech_1', 'post_photography_1', 'post_design_1', 'post_gaming_1', 'post_general_1',
+      'short_music_1', 'short_music_2', 'short_photography_1', 'short_tech_1', 'short_design_1', 'short_gaming_1', 'short_general_1',
+      'long_music_1', 'long_music_2', 'long_tech_1', 'long_tech_2', 'long_photography_1', 'long_gaming_1', 'long_design_1', 'long_general_1'
+    ];
     for (const legacyId of legacyMockPostIds) {
       try {
         const legacyRef = doc(db, 'posts', legacyId);
@@ -184,6 +189,19 @@ export const ensureSeeded = async () => {
         }
       } catch (err) {
         // Silently skip if not found or already removed
+      }
+    }
+
+    const legacyMockMsgIds = ['m1', 'm2', 'm3', 'm4', 'm5'];
+    for (const msgId of legacyMockMsgIds) {
+      try {
+        const msgRef = doc(db, 'chatMessages', msgId);
+        const msgDoc = await getDoc(msgRef);
+        if (msgDoc.exists()) {
+          await deleteDoc(msgRef);
+        }
+      } catch (err) {
+        // Silently skip
       }
     }
 
@@ -229,6 +247,13 @@ export const subscribeToSubBuvakis = (onData: (subs: SubBuvaki[]) => void) => {
   });
 };
 
+const MOCK_POST_IDS = new Set([
+  'post_1', 'post_2', 'post_3', 'post_4', 'post_5',
+  'post_music_1', 'post_music_2', 'post_tech_1', 'post_photography_1', 'post_design_1', 'post_gaming_1', 'post_general_1',
+  'short_music_1', 'short_music_2', 'short_photography_1', 'short_tech_1', 'short_design_1', 'short_gaming_1', 'short_general_1',
+  'long_music_1', 'long_music_2', 'long_tech_1', 'long_tech_2', 'long_photography_1', 'long_gaming_1', 'long_design_1', 'long_general_1'
+]);
+
 export const subscribeToPosts = (onData: (posts: Post[]) => void) => {
   const q = collection(db, 'posts');
   return onSnapshot(q, (snapshot) => {
@@ -240,7 +265,7 @@ export const subscribeToPosts = (onData: (posts: Post[]) => void) => {
           ...data,
         } as Post;
       })
-      .filter((p) => !['post_1', 'post_2', 'post_3', 'post_4', 'post_5'].includes(p.id));
+      .filter((p) => !MOCK_POST_IDS.has(p.id));
     // Sort in client if timestamp format varies
     onData(list);
   }, (err) => {
@@ -324,19 +349,23 @@ export const subscribeToUserMemberships = (userId: string, onData: (subIds: stri
 // MUTATION FUNCTIONS
 
 export const dbCreatePost = async (postData: Omit<Post, 'id' | 'score' | 'commentCount' | 'timestamp' | 'userVote'> & { userVote?: 'up' | 'down' | null }) => {
-  const id = 'post_' + Date.now();
+  const now = new Date();
+  const id = 'post_' + now.getTime();
+  const nowIso = now.toISOString();
   const postRef = doc(db, 'posts', id);
   const newPost: Post = {
     ...postData,
     id,
     score: 1,
     commentCount: 0,
-    timestamp: 'Just now',
+    timestamp: nowIso,
+    createdAt: nowIso,
+    createdAtEpoch: now.getTime(),
     userVote: postData.userVote ?? 'up'
   };
   await setDoc(postRef, sanitizeForFirestore({
     ...newPost,
-    createdAt: new Date().toISOString()
+    createdAt: nowIso
   }));
 
   // Also record author's initial upvote
@@ -348,6 +377,18 @@ export const dbCreatePost = async (postData: Omit<Post, 'id' | 'score' | 'commen
   }));
 
   return newPost;
+};
+
+export const dbDeletePost = async (postId: string) => {
+  try {
+    const postRef = doc(db, 'posts', postId);
+    await deleteDoc(postRef);
+    console.log(`Post ${postId} successfully deleted from Firestore.`);
+    return true;
+  } catch (err) {
+    console.error(`Error deleting post ${postId}:`, err);
+    throw err;
+  }
 };
 
 export const dbCreateSubBuvaki = async (subData: Omit<SubBuvaki, 'id' | 'memberCount' | 'isJoined'>) => {
@@ -373,7 +414,9 @@ export const dbCreateSubBuvaki = async (subData: Omit<SubBuvaki, 'id' | 'memberC
 };
 
 export const dbAddComment = async (postId: string, content: string, author: User, parentId: string | null = null) => {
-  const id = 'comm_' + Date.now();
+  const now = new Date();
+  const id = 'comm_' + now.getTime();
+  const nowIso = now.toISOString();
   const commRef = doc(db, 'comments', id);
   
   const newComment: Comment = {
@@ -381,7 +424,9 @@ export const dbAddComment = async (postId: string, content: string, author: User
     postId,
     author,
     content,
-    timestamp: 'Just now',
+    timestamp: nowIso,
+    createdAt: nowIso,
+    createdAtEpoch: now.getTime(),
     score: 1,
     userVote: 'up',
     parentId
@@ -389,7 +434,7 @@ export const dbAddComment = async (postId: string, content: string, author: User
 
   await setDoc(commRef, sanitizeForFirestore({
     ...newComment,
-    createdAt: new Date().toISOString()
+    createdAt: nowIso
   }));
 
   // Increment comment count on post

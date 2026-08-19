@@ -62,6 +62,8 @@ export interface Comment {
   author: User;
   content: string;
   timestamp: string;
+  createdAt?: string;
+  createdAtEpoch?: number;
   score: number;
   userVote: 'up' | 'down' | null;
   parentId?: string | null;
@@ -75,11 +77,13 @@ export interface Post {
   author: User;
   title: string;
   content: string;
-  type: 'text' | 'image' | 'link' | 'poll' | 'short' | 'video';
+  type: 'text' | 'image' | 'link' | 'poll' | 'short' | 'video' | 'long';
   imageUrl?: string;
   videoUrl?: string;
   duration?: string;
   viewsCount?: number;
+  isShort?: boolean;
+  isLong?: boolean;
   linkUrl?: string;
   poll?: Poll;
   flair?: string;
@@ -87,6 +91,8 @@ export interface Post {
   userVote: 'up' | 'down' | null;
   commentCount: number;
   timestamp: string;
+  createdAt?: string;
+  createdAtEpoch?: number;
   isPinned?: boolean;
   isSaved?: boolean;
   tags: string[];

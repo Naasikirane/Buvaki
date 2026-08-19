@@ -33,15 +33,16 @@ import {
 import { getTranslation, isRTL } from './lib/translations';
 
 import { 
-  CURRENT_USER, 
   SEED_SUB_BUVAKIS, 
-  SEED_POSTS, 
-  SEED_COMMENTS, 
-  SEED_CHANNELS, 
-  SEED_MESSAGES, 
-  SEED_NOTIFICATIONS, 
-  SEED_USERS 
+  SEED_CHANNELS 
 } from './data/mockData';
+
+const MOCK_POST_IDS = new Set([
+  'post_1', 'post_2', 'post_3', 'post_4', 'post_5',
+  'post_music_1', 'post_music_2', 'post_tech_1', 'post_photography_1', 'post_design_1', 'post_gaming_1', 'post_general_1',
+  'short_music_1', 'short_music_2', 'short_photography_1', 'short_tech_1', 'short_design_1', 'short_gaming_1', 'short_general_1',
+  'long_music_1', 'long_music_2', 'long_tech_1', 'long_tech_2', 'long_photography_1', 'long_gaming_1', 'long_design_1', 'long_general_1'
+]);
 
 import { 
   initAuth, 
@@ -57,6 +58,7 @@ import {
   subscribeToUserVotes, 
   subscribeToUserMemberships,
   dbCreatePost, 
+  dbDeletePost,
   dbCreateSubBuvaki, 
   dbAddComment, 
   dbVote, 
@@ -65,6 +67,7 @@ import {
   dbToggleJoinSub,
   dbSaveUserProfile
 } from './lib/firebase';
+import { getTimestampEpoch } from './lib/timeUtils';
 
 import { Flame, Sparkles, TrendingUp, MessageSquare, Compass, Radio, ShieldCheck } from 'lucide-react';
 
@@ -88,13 +91,13 @@ export default function App() {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.filter(p => !['post_1', 'post_2', 'post_3', 'post_4', 'post_5'].includes(p.id));
+          return parsed.filter(p => !MOCK_POST_IDS.has(p.id));
         }
       } catch (err) {
-        return SEED_POSTS;
+        return [];
       }
     }
-    return SEED_POSTS;
+    return [];
   });
 
   const [subBuvakis, setSubBuvakis] = useState<SubBuvaki[]>(() => {
@@ -109,16 +112,16 @@ export default function App() {
         const parsed = JSON.parse(saved);
         const cleaned: Record<string, Comment[]> = {};
         for (const [k, v] of Object.entries(parsed)) {
-          if (!['post_1', 'post_2', 'post_3', 'post_4', 'post_5'].includes(k)) {
+          if (!MOCK_POST_IDS.has(k)) {
             cleaned[k] = v as Comment[];
           }
         }
         return cleaned;
       } catch (err) {
-        return SEED_COMMENTS;
+        return {};
       }
     }
-    return SEED_COMMENTS;
+    return {};
   });
 
   const [channels, setChannels] = useState<ChatChannel[]>(() => {
@@ -128,12 +131,12 @@ export default function App() {
 
   const [messagesMap, setMessagesMap] = useState<Record<string, ChatMessage[]>>(() => {
     const saved = localStorage.getItem('buvaki_messages');
-    return saved ? JSON.parse(saved) : SEED_MESSAGES;
+    return saved ? JSON.parse(saved) : {};
   });
 
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
     const saved = localStorage.getItem('buvaki_notifs');
-    return saved ? JSON.parse(saved) : SEED_NOTIFICATIONS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [selectedLanguage, setSelectedLanguage] = useState<SupportedLanguage>(() => {
@@ -545,6 +548,9 @@ export default function App() {
       title: postData.title || 'Untitled Post',
       content: postData.content || '',
       type: postData.type || 'text',
+      isShort: postData.isShort ?? (postData.type === 'short'),
+      isLong: postData.isLong ?? (postData.type === 'long'),
+      duration: postData.duration,
       imageUrl: postData.imageUrl,
       videoUrl: postData.videoUrl,
       linkUrl: postData.linkUrl,
@@ -557,6 +563,26 @@ export default function App() {
     const created = await dbCreatePost(postPayload);
     setPosts((prev) => [created, ...prev.filter(p => p.id !== created.id)]);
     setCurrentUser((u) => u ? ({ ...u, karma: u.karma + 10 }) : null);
+  };
+
+  // Delete Post with Firestore and State synchronization
+  const handleDeletePost = async (postId: string) => {
+    try {
+      await dbDeletePost(postId);
+    } catch (err) {
+      console.warn('Firestore post deletion note:', err);
+    }
+    
+    // Update active memory state
+    setPosts((prev) => {
+      const updated = prev.filter((p) => p.id !== postId);
+      localStorage.setItem('buvaki_posts', JSON.stringify(updated));
+      return updated;
+    });
+
+    if (selectedPost && selectedPost.id === postId) {
+      setSelectedPost(null);
+    }
   };
 
   // Create Sub Buvaki
@@ -632,6 +658,19 @@ export default function App() {
 
   // Filter & Search Logic
   const filteredPosts = posts.filter((p) => {
+    // Strict separation: Feed contains items published under Posts (text, image, feed video, link, poll)
+    // Exclude Shorts and Longs from Feed view (including by flag, type, flair, or tag)
+    if (
+      p.isShort === true || 
+      p.isLong === true || 
+      p.type === 'short' || 
+      p.type === 'long' ||
+      p.flair === 'Long Video' ||
+      p.flair === 'Short Video' ||
+      p.tags?.some(t => t.toLowerCase().includes('longvideo') || t.toLowerCase() === '#shorts' || t.toLowerCase() === '##shorts')
+    ) {
+      return false;
+    }
     if (showSavedOnly && !p.isSaved) return false;
     if (activeSubBuvakiId && activeSubBuvakiId !== 'general' && p.subBuvakiId !== activeSubBuvakiId) return false;
 
@@ -649,7 +688,9 @@ export default function App() {
   // Sorting
   const sortedPosts = [...filteredPosts].sort((a, b) => {
     if (activeFilter === 'hot') return b.score - a.score;
-    if (activeFilter === 'new') return b.id.localeCompare(a.id);
+    if (activeFilter === 'new') {
+      return getTimestampEpoch(b.createdAt || b.timestamp) - getTimestampEpoch(a.createdAt || a.timestamp);
+    }
     if (activeFilter === 'top') return b.score - a.score;
     if (activeFilter === 'discussed') return b.commentCount - a.commentCount;
     return 0;
@@ -852,6 +893,7 @@ export default function App() {
                         onSelectPost={(p) => setSelectedPost(p)}
                         onToggleSave={handleToggleSavePost}
                         onVotePoll={handleVotePoll}
+                        onDeletePost={handleDeletePost}
                       />
                     ))
                   )}
@@ -864,7 +906,7 @@ export default function App() {
                       channel={activeChannel}
                       messages={activeChannelMessages}
                       currentUser={currentUser}
-                      onlineMembers={Object.values(SEED_USERS)}
+                      onlineMembers={currentUser ? [currentUser] : []}
                       onSendMessage={handleSendMessage}
                       onAddReaction={handleAddReaction}
                       isInVoiceRoom={isInVoiceRoom}
@@ -920,7 +962,7 @@ export default function App() {
               channel={activeChannel}
               messages={activeChannelMessages}
               currentUser={currentUser}
-              onlineMembers={Object.values(SEED_USERS)}
+              onlineMembers={currentUser ? [currentUser] : []}
               onSendMessage={handleSendMessage}
               onAddReaction={handleAddReaction}
               isInVoiceRoom={isInVoiceRoom}
@@ -963,7 +1005,7 @@ export default function App() {
       {/* Voice Channel Floating Controller Bar */}
       {isInVoiceRoom && (
         <VoiceRoomBar
-          activeVoiceUsers={[currentUser || SEED_USERS.u1, SEED_USERS.u1, SEED_USERS.u2]}
+          activeVoiceUsers={currentUser ? [currentUser] : []}
           onDisconnect={() => setIsInVoiceRoom(false)}
         />
       )}
@@ -981,6 +1023,7 @@ export default function App() {
           onAddComment={handleAddComment}
           onToggleSave={handleToggleSavePost}
           onVotePoll={handleVotePoll}
+          onDeletePost={handleDeletePost}
         />
       )}
 
@@ -1017,6 +1060,7 @@ export default function App() {
             dbSaveUserProfile(updated).catch(console.error);
           }}
           onSelectPost={(p) => setSelectedPost(p)}
+          onDeletePost={handleDeletePost}
           onLogout={handleLogout}
         />
       )}
