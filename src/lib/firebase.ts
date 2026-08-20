@@ -2,6 +2,7 @@ import { initializeApp, getApps } from 'firebase/app';
 import { 
   getFirestore, 
   initializeFirestore,
+  setLogLevel,
   collection, 
   doc, 
   getDocs, 
@@ -63,14 +64,21 @@ export const sanitizeForFirestore = <T>(obj: T): T => {
 // Initialize Firebase App
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
-// Initialize Firestore with forced long-polling to prevent proxy/iframe connection timeouts
+// Set log level to error to avoid noisy offline/reconnect console warnings
+try {
+  setLogLevel('error');
+} catch (e) {
+  // Ignore
+}
+
+// Initialize Firestore with auto-detect long polling to handle both WebSockets and restricted proxies gracefully
 export const db = firebaseConfig.firestoreDatabaseId 
   ? initializeFirestore(app, {
-      experimentalForceLongPolling: true,
+      experimentalAutoDetectLongPolling: true,
       ignoreUndefinedProperties: true,
     }, firebaseConfig.firestoreDatabaseId)
   : initializeFirestore(app, {
-      experimentalForceLongPolling: true,
+      experimentalAutoDetectLongPolling: true,
       ignoreUndefinedProperties: true,
     });
 
@@ -157,6 +165,9 @@ export const initAuth = (): Promise<FirebaseUser | null> => {
 
 // Seeding logic to populate Firestore when collections are empty
 export const ensureSeeded = async () => {
+  if (typeof window !== 'undefined' && sessionStorage.getItem('buvaki_seeded_session')) {
+    return;
+  }
   try {
     // Check if subBuvakis exist
     const subSnap = await getDocs(collection(db, 'subBuvakis'));
@@ -173,62 +184,11 @@ export const ensureSeeded = async () => {
       await batch.commit();
     }
 
-    // Clean up any legacy mock posts and chat messages from Firestore
-    const legacyMockPostIds = [
-      'post_1', 'post_2', 'post_3', 'post_4', 'post_5',
-      'post_music_1', 'post_music_2', 'post_tech_1', 'post_photography_1', 'post_design_1', 'post_gaming_1', 'post_general_1',
-      'short_music_1', 'short_music_2', 'short_photography_1', 'short_tech_1', 'short_design_1', 'short_gaming_1', 'short_general_1',
-      'long_music_1', 'long_music_2', 'long_tech_1', 'long_tech_2', 'long_photography_1', 'long_gaming_1', 'long_design_1', 'long_general_1'
-    ];
-    for (const legacyId of legacyMockPostIds) {
-      try {
-        const legacyRef = doc(db, 'posts', legacyId);
-        const legacyDoc = await getDoc(legacyRef);
-        if (legacyDoc.exists()) {
-          await deleteDoc(legacyRef);
-        }
-      } catch (err) {
-        // Silently skip if not found or already removed
-      }
-    }
-
-    const legacyMockMsgIds = ['m1', 'm2', 'm3', 'm4', 'm5'];
-    for (const msgId of legacyMockMsgIds) {
-      try {
-        const msgRef = doc(db, 'chatMessages', msgId);
-        const msgDoc = await getDoc(msgRef);
-        if (msgDoc.exists()) {
-          await deleteDoc(msgRef);
-        }
-      } catch (err) {
-        // Silently skip
-      }
-    }
-
-    // Check channels
-    const chanSnap = await getDocs(collection(db, 'chatChannels'));
-    if (chanSnap.empty) {
-      console.log('Seeding initial Chat Channels to Firestore...');
-      for (const chan of SEED_CHANNELS) {
-        const chanRef = doc(db, 'chatChannels', chan.id);
-        await setDoc(chanRef, sanitizeForFirestore({
-          ...chan,
-          createdAt: new Date().toISOString()
-        }));
-
-        if (SEED_MESSAGES[chan.id]) {
-          for (const msg of SEED_MESSAGES[chan.id]) {
-            const msgRef = doc(db, 'chatMessages', msg.id);
-            await setDoc(msgRef, sanitizeForFirestore({
-              ...msg,
-              createdAt: new Date().toISOString()
-            }));
-          }
-        }
-      }
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('buvaki_seeded_session', 'true');
     }
   } catch (err) {
-    console.error('Error seeding Firebase data:', err);
+    console.warn('Firebase seeding notice (operating with local state):', err);
   }
 };
 

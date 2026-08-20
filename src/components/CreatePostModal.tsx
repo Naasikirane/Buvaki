@@ -360,27 +360,27 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
       postData.type = 'short';
       postData.isShort = true;
       postData.isLong = false;
-      postData.videoUrl = (shortVideoUrl || shortVideoPreview).trim() || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
-      postData.imageUrl = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=80';
+      postData.videoUrl = (shortVideoUrl || shortVideoPreview || '').trim();
+      postData.imageUrl = undefined;
     } else if (mainTab === 'longs') {
       postData.type = 'long';
       postData.isLong = true;
       postData.isShort = false;
-      postData.videoUrl = (longVideoUrl || longVideoPreview).trim() || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
-      postData.imageUrl = (longThumbnailUrl || longThumbnailPreview).trim() || 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&auto=format&fit=crop&q=80';
+      postData.videoUrl = (longVideoUrl || longVideoPreview || '').trim();
+      postData.imageUrl = (longThumbnailUrl || longThumbnailPreview || '').trim() || undefined;
       postData.duration = longDuration || '15:30';
     } else {
       postData.type = postType;
       postData.isShort = false;
       postData.isLong = false;
       if (postType === 'image') {
-        postData.imageUrl = (imageUrl || imagePreview).trim() || 'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=1200&auto=format&fit=crop&q=80';
+        postData.imageUrl = (imageUrl || imagePreview || '').trim() || undefined;
       } else if (postType === 'video') {
         postData.type = 'video';
-        postData.videoUrl = (postVideoUrl || postVideoPreview).trim() || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
-        postData.imageUrl = postThumbnailPreview || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=1200&auto=format&fit=crop&q=80';
+        postData.videoUrl = (postVideoUrl || postVideoPreview || '').trim();
+        postData.imageUrl = postThumbnailPreview || undefined;
       } else if (postType === 'link') {
-        postData.linkUrl = linkUrl.trim() || 'https://buvaki.net';
+        postData.linkUrl = linkUrl.trim() || undefined;
       } else if (postType === 'poll') {
         postData.poll = {
           question: pollQuestion.trim() || title.trim(),
