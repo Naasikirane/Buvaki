@@ -1,24 +1,23 @@
 import React from 'react';
-import { ViewMode, SubBuvaki, ChatChannel, FilterSort, NotificationItem, SupportedLanguage, Theme, User } from '../types';
+import { ViewMode, SupportedLanguage, Theme, User } from '../types';
 import { getTranslation } from '../lib/translations';
 import { FlagIcon } from './FlagIcon';
-import { CommunityIcon } from './CommunityIcon';
 import { 
-  Layers, 
+  Home,
   Plus, 
-  User as UserIcon, 
   X, 
-  Compass, 
   Bookmark, 
   Flame, 
-  ShieldCheck,
-  Moon,
-  Eye,
-  Sun,
-  Globe,
-  Clapperboard,
-  Tv,
-  LogIn
+  Sparkles,
+  Moon, 
+  Eye, 
+  Sun, 
+  Globe, 
+  Clapperboard, 
+  Tv, 
+  LogIn,
+  User as UserIcon,
+  MessageSquare
 } from 'lucide-react';
 
 interface MobileNavProps {
@@ -28,16 +27,8 @@ interface MobileNavProps {
   onOpenCreatePost: () => void;
   onOpenNotifications: () => void;
   onOpenProfile: () => void;
-  notifications: NotificationItem[];
   isMobileSidebarOpen: boolean;
   onCloseMobileSidebar: () => void;
-  subBuvakis: SubBuvaki[];
-  activeSubBuvakiId: string | null;
-  onSelectSubBuvaki: (id: string | null) => void;
-  channels?: ChatChannel[];
-  activeChannelId?: string;
-  onSelectChannel?: (id: string) => void;
-  onOpenCreateSub: () => void;
   showSavedOnly: boolean;
   onToggleSavedOnly: (saved: boolean) => void;
   selectedLanguage: SupportedLanguage;
@@ -54,10 +45,6 @@ export const MobileNav: React.FC<MobileNavProps> = ({
   onOpenProfile,
   isMobileSidebarOpen,
   onCloseMobileSidebar,
-  subBuvakis,
-  activeSubBuvakiId,
-  onSelectSubBuvaki,
-  onOpenCreateSub,
   showSavedOnly,
   onToggleSavedOnly,
   selectedLanguage,
@@ -75,25 +62,31 @@ export const MobileNav: React.FC<MobileNavProps> = ({
 
   return (
     <>
-      {/* Bottom Navigation Bar */}
-      <nav className={`${viewMode === 'shorts' ? 'flex' : 'lg:hidden flex'} fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 border-t border-violet-900/40 backdrop-blur-lg px-2 py-1.5 items-center justify-around shadow-2xl max-w-md mx-auto sm:rounded-t-2xl`}>
+      {/* Bottom Navigation Bar (Matching Screenshot 1) */}
+      <nav className={`${viewMode === 'shorts' ? 'flex' : 'lg:hidden flex'} fixed bottom-0 left-0 right-0 z-40 bg-[#0f0f0f]/95 border-t border-white/10 backdrop-blur-lg px-2 py-1.5 items-center justify-around shadow-2xl max-w-md mx-auto`}>
         
-        {/* Feed Tab */}
+        {/* Home / Feed Tab */}
         <button
-          onClick={() => setViewMode('feed')}
+          onClick={() => {
+            onToggleSavedOnly(false);
+            setViewMode('feed');
+          }}
           className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
-            viewMode === 'feed' ? 'text-violet-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+            viewMode === 'feed' && !showSavedOnly ? 'text-white font-bold' : 'text-neutral-400 hover:text-white'
           }`}
         >
-          <Layers className="w-5 h-5" />
-          <span className="text-[10px]">{t.feedView}</span>
+          <Home className="w-5 h-5" />
+          <span className="text-[10px]">Home</span>
         </button>
 
-        {/* Shorts (Short Videos) Tab - Replaced Live Chat */}
+        {/* Shorts Tab */}
         <button
-          onClick={() => setViewMode('shorts')}
+          onClick={() => {
+            onToggleSavedOnly(false);
+            setViewMode('shorts');
+          }}
           className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
-            viewMode === 'shorts' ? 'text-pink-400 font-bold scale-105' : 'text-slate-400 hover:text-slate-200'
+            viewMode === 'shorts' ? 'text-pink-400 font-bold' : 'text-neutral-400 hover:text-white'
           }`}
         >
           <Clapperboard className="w-5 h-5" />
@@ -103,113 +96,116 @@ export const MobileNav: React.FC<MobileNavProps> = ({
         {/* Center Floating (+) Post Button */}
         <button
           onClick={onOpenCreatePost}
-          className="flex items-center justify-center w-12 h-12 -mt-5 rounded-full bg-violet-600 hover:bg-violet-500 text-white shadow-lg shadow-violet-600/30 active:scale-90 transition-all border-2 border-slate-950"
+          className="flex items-center justify-center w-11 h-11 -mt-4 rounded-full bg-white hover:bg-neutral-200 text-black shadow-lg active:scale-95 transition-all border-2 border-black"
           aria-label={t.createPost}
         >
           <Plus className="w-6 h-6 stroke-[3]" />
         </button>
 
-        {/* Longs (Long Videos) Tab - Replaced Notifications */}
+        {/* Longs Tab */}
         <button
-          onClick={() => setViewMode('longs')}
+          onClick={() => {
+            onToggleSavedOnly(false);
+            setViewMode('longs');
+          }}
           className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
-            viewMode === 'longs' ? 'text-violet-400 font-bold scale-105' : 'text-slate-400 hover:text-slate-200'
+            viewMode === 'longs' ? 'text-violet-400 font-bold' : 'text-neutral-400 hover:text-white'
           }`}
         >
           <Tv className="w-5 h-5" />
           <span className="text-[10px]">Longs</span>
         </button>
 
-        {/* Profile / Sign In Tab */}
+        {/* You / Profile Tab */}
         <button
           onClick={onOpenProfile}
-          className="flex flex-col items-center gap-1 p-2 rounded-xl text-slate-400 hover:text-slate-200 transition-all"
+          className="flex flex-col items-center gap-1 p-2 rounded-xl text-neutral-400 hover:text-white transition-all"
         >
           {currentUser ? (
             <>
               <img
                 src={currentUser.avatar}
                 alt={currentUser.username}
-                className="w-5 h-5 rounded-full object-cover ring-1 ring-violet-500"
+                className="w-5 h-5 rounded-full object-cover ring-1 ring-white/20"
                 referrerPolicy="no-referrer"
               />
-              <span className="text-[10px] truncate max-w-[60px]">{currentUser.username}</span>
+              <span className="text-[10px] truncate max-w-[60px]">You</span>
             </>
           ) : (
             <>
-              <LogIn className="w-5 h-5 text-pink-400" />
-              <span className="text-[10px] text-pink-300 font-semibold">Sign In</span>
+              <LogIn className="w-5 h-5 text-neutral-400" />
+              <span className="text-[10px]">Sign In</span>
             </>
           )}
         </button>
 
       </nav>
 
-      {/* Slide-over Mobile & Tablet Sidebar Drawer */}
+      {/* Slide-over Mobile Sidebar Drawer */}
       {isMobileSidebarOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           {/* Backdrop */}
           <div
             onClick={onCloseMobileSidebar}
-            className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 bg-black/80 backdrop-blur-xs transition-opacity"
           />
 
           {/* Drawer Content */}
-          <div className="relative w-4/5 max-w-xs bg-slate-950 border-r border-violet-900/40 p-5 flex flex-col gap-5 overflow-y-auto z-10">
-            <div className="flex items-center justify-between border-b border-violet-900/30 pb-3">
-              <span className="font-bold text-violet-300 text-sm flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" /> Navigation
+          <div className="relative w-4/5 max-w-xs bg-[#0f0f0f] border-r border-white/10 p-5 flex flex-col gap-5 overflow-y-auto z-10 text-left">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <span className="font-bold text-white text-sm">
+                Navigation
               </span>
               <button
                 onClick={onCloseMobileSidebar}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-900"
+                className="p-1.5 rounded-full text-neutral-400 hover:text-white bg-neutral-900"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Translation Flag and Theme Switcher - Lined Horizontally */}
+            {/* Translation Flag and Theme Switcher */}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => {
                   onOpenLanguage();
                   onCloseMobileSidebar();
                 }}
-                className="flex-1 flex items-center justify-between gap-1 px-3 py-2 rounded-xl bg-slate-900 border border-violet-900/40 text-slate-200 text-xs font-semibold hover:border-violet-500/50 transition-all"
+                className="flex-1 flex items-center justify-between gap-1 px-3 py-2 rounded-xl bg-neutral-900 border border-white/10 text-neutral-200 text-xs font-semibold hover:border-white/30 transition-all"
               >
                 <div className="flex items-center gap-1.5">
                   <FlagIcon code={selectedLanguage.code} size="sm" />
                   <span>{selectedLanguage.code.toUpperCase()}</span>
                 </div>
-                <Globe className="w-3.5 h-3.5 text-violet-400 opacity-70" />
+                <Globe className="w-3.5 h-3.5 text-neutral-400" />
               </button>
 
               <button
                 onClick={toggleTheme}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 border border-violet-900/40 text-slate-200 text-xs font-semibold hover:border-violet-500/50 transition-all"
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-neutral-900 border border-white/10 text-neutral-200 text-xs font-semibold hover:border-white/30 transition-all"
               >
                 {theme === 'dark' && <Moon className="w-3.5 h-3.5 text-violet-300" />}
-                {theme === 'stealth' && <Eye className="w-3.5 h-3.5 text-pink-400" />}
+                {theme === 'stealth' && <Eye className="w-3.5 h-3.5 text-emerald-400" />}
                 {theme === 'light' && <Sun className="w-3.5 h-3.5 text-amber-400" />}
                 <span className="capitalize">{theme}</span>
               </button>
             </div>
 
-            {/* Feeds */}
+            {/* Navigation items */}
             <div className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider">
-                Feeds & Media
+              <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+                Explore
               </span>
+              
               <button
                 onClick={() => {
-                  onSelectSubBuvaki(null);
                   onToggleSavedOnly(false);
                   setViewMode('feed');
                   onCloseMobileSidebar();
                 }}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-200 bg-slate-900/80"
+                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-neutral-200 bg-neutral-900"
               >
-                <Compass className="w-4 h-4 text-violet-400" /> {t.allSubBuvakis}
+                <Home className="w-4 h-4 text-white" /> Home
               </button>
               
               <button
@@ -217,9 +213,9 @@ export const MobileNav: React.FC<MobileNavProps> = ({
                   setViewMode('shorts');
                   onCloseMobileSidebar();
                 }}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-pink-300 bg-slate-900/80"
+                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-pink-300 bg-neutral-900"
               >
-                <Clapperboard className="w-4 h-4 text-pink-400" /> Shorts (Short Videos)
+                <Clapperboard className="w-4 h-4 text-pink-400" /> Shorts
               </button>
 
               <button
@@ -227,9 +223,9 @@ export const MobileNav: React.FC<MobileNavProps> = ({
                   setViewMode('longs');
                   onCloseMobileSidebar();
                 }}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-violet-300 bg-slate-900/80"
+                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-violet-300 bg-neutral-900"
               >
-                <Tv className="w-4 h-4 text-violet-400" /> Longs (Long Videos)
+                <Tv className="w-4 h-4 text-violet-400" /> Longs
               </button>
 
               <button
@@ -238,56 +234,10 @@ export const MobileNav: React.FC<MobileNavProps> = ({
                   setViewMode('feed');
                   onCloseMobileSidebar();
                 }}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-200 bg-slate-900/80"
+                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-neutral-200 bg-neutral-900"
               >
-                <Bookmark className="w-4 h-4 text-emerald-400" /> {t.savedPosts}
+                <Bookmark className="w-4 h-4 text-emerald-400" /> Saved Posts
               </button>
-            </div>
-
-            {/* Sub-buvakis */}
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider">
-                  {t.subBuvakisHeader}
-                </span>
-                <button
-                  onClick={() => {
-                    onOpenCreateSub();
-                    onCloseMobileSidebar();
-                  }}
-                  className="text-xs text-emerald-400 font-medium"
-                >
-                  {t.createCommunity}
-                </button>
-              </div>
-              {subBuvakis.map((sub) => {
-                const isGeneral = sub.id === 'general';
-                const isActive = activeSubBuvakiId === sub.id || (isGeneral && (!activeSubBuvakiId || activeSubBuvakiId === 'general'));
-                return (
-                  <button
-                    key={sub.id}
-                    onClick={() => {
-                      onSelectSubBuvaki(isGeneral ? null : sub.id);
-                      onToggleSavedOnly(false);
-                      if (viewMode !== 'feed' && viewMode !== 'shorts' && viewMode !== 'longs') {
-                        setViewMode('feed');
-                      }
-                      onCloseMobileSidebar();
-                    }}
-                    className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-                      isActive
-                        ? 'bg-violet-900/80 text-white font-bold'
-                        : 'text-slate-300 bg-slate-900/40 hover:bg-slate-900/80'
-                    }`}
-                  >
-                    <CommunityIcon 
-                      sub={sub}
-                      size="xs" 
-                    />
-                    <span>{sub.displayName}</span>
-                  </button>
-                );
-              })}
             </div>
 
           </div>

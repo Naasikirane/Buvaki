@@ -448,33 +448,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         <div className="w-full max-w-4xl mx-auto px-4 sm:px-8 py-6 sm:py-8">
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
           
-          {/* 1. Sub-Buvaki Selector */}
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-violet-300">Choose Community</label>
-              {subBuvakis.find(s => s.id === subId) && (
-                <div className="flex items-center gap-1.5 text-xs text-slate-300">
-                  <CommunityIcon sub={subBuvakis.find(s => s.id === subId)} size="xs" />
-                  <span className="font-semibold text-violet-300">
-                    {subBuvakis.find(s => s.id === subId)?.displayName}
-                  </span>
-                </div>
-              )}
-            </div>
-            <select
-              value={subId || ''}
-              onChange={(e) => setSubId(e.target.value)}
-              className="w-full p-2.5 rounded-xl bg-slate-900 border border-violet-900/40 text-xs font-semibold text-slate-200 focus:outline-none focus:border-violet-500"
-            >
-              {subBuvakis.map((sub) => (
-                <option key={sub.id} value={sub.id}>
-                  {sub.displayName} — {sub.description.slice(0, 50)}...
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* 2. NEW ROW OF PRIMARY TABS: Posts, Shorts, Longs */}
+          {/* 1. PRIMARY TABS: Posts, Shorts, Longs */}
           <div className="flex flex-col gap-1.5">
             <div className="grid grid-cols-3 p-1 rounded-2xl bg-slate-900 border border-violet-900/40 shadow-inner">
               <button

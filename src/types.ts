@@ -79,6 +79,7 @@ export interface Post {
   content: string;
   type: 'text' | 'image' | 'link' | 'poll' | 'short' | 'video' | 'long';
   imageUrl?: string;
+  images?: string[];
   videoUrl?: string;
   duration?: string;
   viewsCount?: number;
@@ -95,6 +96,7 @@ export interface Post {
   createdAtEpoch?: number;
   isPinned?: boolean;
   isSaved?: boolean;
+  isSubscribed?: boolean;
   tags: string[];
 }
 

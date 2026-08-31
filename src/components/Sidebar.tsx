@@ -1,51 +1,44 @@
 import React from 'react';
-import { SubBuvaki, ChatChannel, FilterSort, ViewMode, SupportedLanguage, Theme } from '../types';
+import { FilterSort, ViewMode, SupportedLanguage, Theme } from '../types';
 import { getTranslation } from '../lib/translations';
 import { FlagIcon } from './FlagIcon';
-import { CommunityIcon } from './CommunityIcon';
 import { 
+  Home,
   Flame, 
   Sparkles, 
   Bookmark, 
-  PlusCircle, 
-  Compass, 
   Globe, 
   Moon, 
   Eye, 
   Sun,
   Clapperboard,
-  Tv
+  Tv,
+  Users,
+  BarChart2,
+  TrendingUp,
+  MessageSquare
 } from 'lucide-react';
 
 interface SidebarProps {
-  subBuvakis: SubBuvaki[];
-  activeSubBuvakiId: string | null;
-  onSelectSubBuvaki: (id: string | null) => void;
   activeFilter: FilterSort;
   onChangeFilter: (filter: FilterSort) => void;
   showSavedOnly: boolean;
   onToggleSavedOnly: (saved: boolean) => void;
-  channels?: ChatChannel[];
-  activeChannelId?: string;
-  onSelectChannel?: (id: string) => void;
-  onOpenCreateSub: () => void;
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
   selectedLanguage: SupportedLanguage;
   onOpenLanguage: () => void;
   theme: Theme;
   setTheme: (theme: Theme) => void;
+  activeTab?: string;
+  onSelectTab?: (tab: string) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
-  subBuvakis,
-  activeSubBuvakiId,
-  onSelectSubBuvaki,
   activeFilter,
   onChangeFilter,
   showSavedOnly,
   onToggleSavedOnly,
-  onOpenCreateSub,
   viewMode,
   setViewMode,
   selectedLanguage,
@@ -62,192 +55,213 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <aside className="w-64 flex-shrink-0 hidden lg:flex flex-col gap-5 py-2 sm:py-3 pr-4 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto custom-scrollbar">
+    <aside className="w-60 flex-shrink-0 hidden lg:flex flex-col gap-5 py-3 pr-3 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto custom-scrollbar text-left select-none">
       
       {/* Navigation Section with Language and Theme */}
       <div className="flex flex-col gap-2">
-        <div className="px-3 text-[11px] font-bold text-violet-400 uppercase tracking-wider">
-          Navigation
-        </div>
-
-        {/* Translation Flag and Dark/Light Mode Switcher - Lined Horizontally */}
-        <div className="flex items-center gap-2 px-3">
-          {/* Language Selector Pill */}
+        {/* Translation Flag and Dark/Light Mode Switcher */}
+        <div className="flex items-center gap-2">
+          {/* Language Selector */}
           <button
             onClick={onOpenLanguage}
-            className="flex-1 flex items-center justify-between gap-1.5 px-2.5 py-2 rounded-xl bg-slate-900/90 border border-violet-900/40 hover:border-violet-500/60 text-slate-200 text-xs font-semibold transition-all hover:bg-slate-800/80 shadow-sm"
+            className="flex-1 flex items-center justify-between gap-1.5 px-3 py-2 rounded-xl bg-neutral-900 border border-white/10 hover:border-white/30 text-neutral-200 text-xs font-semibold transition-all hover:bg-neutral-800"
             title={`Selected Language: ${selectedLanguage.name} (${selectedLanguage.nativeName})`}
           >
             <div className="flex items-center gap-1.5 min-w-0">
               <FlagIcon code={selectedLanguage.code} size="sm" />
               <span className="text-xs font-bold">{selectedLanguage.code.toUpperCase()}</span>
             </div>
-            <Globe className="w-3.5 h-3.5 text-violet-400 opacity-70" />
+            <Globe className="w-3.5 h-3.5 text-neutral-400" />
           </button>
 
           {/* Theme Switcher */}
           <button
             onClick={toggleTheme}
-            className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl bg-slate-900/90 border border-violet-900/40 hover:border-violet-500/60 text-slate-200 text-xs font-semibold transition-all hover:bg-slate-800/80 shadow-sm"
-            title={`Current Theme: ${theme.toUpperCase()} (Click to toggle)`}
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-neutral-900 border border-white/10 hover:border-white/30 text-neutral-200 text-xs font-semibold transition-all hover:bg-neutral-800"
+            title={`Current Theme: ${theme.toUpperCase()}`}
           >
             {theme === 'dark' && <Moon className="w-3.5 h-3.5 text-violet-300" />}
-            {theme === 'stealth' && <Eye className="w-3.5 h-3.5 text-pink-400" />}
+            {theme === 'stealth' && <Eye className="w-3.5 h-3.5 text-emerald-400" />}
             {theme === 'light' && <Sun className="w-3.5 h-3.5 text-amber-400" />}
             <span className="capitalize text-xs">{theme}</span>
           </button>
         </div>
       </div>
 
-      {/* Feeds Section */}
-      <div className="flex flex-col gap-1">
-        <div className="px-3 text-[11px] font-bold text-violet-400 uppercase tracking-wider mb-1">
-          {t.feedsAndDiscover}
-        </div>
-
+      {/* Main Navigation (YouTube Style) */}
+      <div className="flex flex-col gap-1 border-b border-white/10 pb-4">
+        
+        {/* Home / Community Posts Feed */}
         <button
           onClick={() => {
-            onSelectSubBuvaki(null);
             onToggleSavedOnly(false);
             setViewMode('feed');
           }}
-          className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
-            activeSubBuvakiId === null && !showSavedOnly && viewMode === 'feed'
-              ? 'bg-violet-950/80 border border-violet-800/50 text-white shadow-sm'
-              : 'text-slate-300 hover:text-white hover:bg-slate-900/60'
+          className={`flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+            viewMode === 'feed' && !showSavedOnly
+              ? 'bg-neutral-800 text-white font-bold'
+              : 'text-neutral-300 hover:text-white hover:bg-neutral-900'
           }`}
         >
-          <Compass className="w-4 h-4 text-violet-400" />
-          {t.allSubBuvakis}
+          <Home className={`w-5 h-5 ${viewMode === 'feed' && !showSavedOnly ? 'text-white stroke-[2.5]' : 'text-neutral-400'}`} />
+          <span>Home</span>
         </button>
 
+        {/* Shorts */}
         <button
           onClick={() => {
-            onSelectSubBuvaki(null);
+            onToggleSavedOnly(false);
+            setViewMode('shorts');
+          }}
+          className={`flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+            viewMode === 'shorts'
+              ? 'bg-neutral-800 text-white font-bold'
+              : 'text-neutral-300 hover:text-white hover:bg-neutral-900'
+          }`}
+        >
+          <Clapperboard className={`w-5 h-5 ${viewMode === 'shorts' ? 'text-pink-400 stroke-[2.5]' : 'text-neutral-400'}`} />
+          <span>Shorts</span>
+        </button>
+
+        {/* Longs */}
+        <button
+          onClick={() => {
+            onToggleSavedOnly(false);
+            setViewMode('longs');
+          }}
+          className={`flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+            viewMode === 'longs'
+              ? 'bg-neutral-800 text-white font-bold'
+              : 'text-neutral-300 hover:text-white hover:bg-neutral-900'
+          }`}
+        >
+          <Tv className={`w-5 h-5 ${viewMode === 'longs' ? 'text-violet-400 stroke-[2.5]' : 'text-neutral-400'}`} />
+          <span>Longs</span>
+        </button>
+
+      </div>
+
+      {/* Explore & Filters Section */}
+      <div className="flex flex-col gap-1 border-b border-white/10 pb-4">
+        <span className="px-3.5 text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1">
+          Explore
+        </span>
+
+        {/* Trending */}
+        <button
+          onClick={() => {
             onChangeFilter('hot');
             onToggleSavedOnly(false);
             setViewMode('feed');
           }}
-          className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
-            activeFilter === 'hot' && !showSavedOnly && activeSubBuvakiId === null && viewMode === 'feed'
-              ? 'bg-violet-950/80 border border-violet-800/50 text-white shadow-sm'
-              : 'text-slate-300 hover:text-white hover:bg-slate-900/60'
+          className={`flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+            activeFilter === 'hot' && !showSavedOnly && viewMode === 'feed'
+              ? 'bg-neutral-800 text-white font-bold'
+              : 'text-neutral-300 hover:text-white hover:bg-neutral-900'
           }`}
         >
-          <Flame className="w-4 h-4 text-orange-400" />
-          {t.popularHotFeeds}
+          <Flame className="w-5 h-5 text-orange-400" />
+          <span>Trending</span>
         </button>
 
-        {/* Shorts (Short Videos) */}
+        {/* Newest */}
         <button
           onClick={() => {
-            setViewMode('shorts');
+            onChangeFilter('new');
             onToggleSavedOnly(false);
+            setViewMode('feed');
           }}
-          className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
-            viewMode === 'shorts'
-              ? 'bg-violet-950/80 border border-violet-800/50 text-pink-300 shadow-sm font-bold'
-              : 'text-slate-300 hover:text-white hover:bg-slate-900/60'
+          className={`flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+            activeFilter === 'new' && !showSavedOnly && viewMode === 'feed'
+              ? 'bg-neutral-800 text-white font-bold'
+              : 'text-neutral-300 hover:text-white hover:bg-neutral-900'
           }`}
         >
-          <Clapperboard className="w-4 h-4 text-pink-400" />
-          <span>Shorts (Short Videos)</span>
+          <Sparkles className="w-5 h-5 text-emerald-400" />
+          <span>Newest</span>
         </button>
 
-        {/* Longs (Long Videos) */}
+        {/* Top Discussions */}
         <button
           onClick={() => {
-            setViewMode('longs');
+            onChangeFilter('discussed');
             onToggleSavedOnly(false);
+            setViewMode('feed');
           }}
-          className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
-            viewMode === 'longs'
-              ? 'bg-violet-950/80 border border-violet-800/50 text-violet-300 shadow-sm font-bold'
-              : 'text-slate-300 hover:text-white hover:bg-slate-900/60'
+          className={`flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+            activeFilter === 'discussed' && !showSavedOnly && viewMode === 'feed'
+              ? 'bg-neutral-800 text-white font-bold'
+              : 'text-neutral-300 hover:text-white hover:bg-neutral-900'
           }`}
         >
-          <Tv className="w-4 h-4 text-violet-400" />
-          <span>Longs (Long Videos)</span>
+          <MessageSquare className="w-5 h-5 text-sky-400" />
+          <span>Discussions</span>
         </button>
 
+        {/* Saved / Bookmarks */}
         <button
           onClick={() => {
             onToggleSavedOnly(true);
             setViewMode('feed');
           }}
-          className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+          className={`flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
             showSavedOnly
-              ? 'bg-violet-950/80 border border-violet-800/50 text-white shadow-sm'
-              : 'text-slate-300 hover:text-white hover:bg-slate-900/60'
+              ? 'bg-neutral-800 text-white font-bold'
+              : 'text-neutral-300 hover:text-white hover:bg-neutral-900'
           }`}
         >
-          <Bookmark className="w-4 h-4 text-emerald-400" />
-          {t.savedBookmarks}
+          <Bookmark className={`w-5 h-5 ${showSavedOnly ? 'text-emerald-400 fill-emerald-400' : 'text-neutral-400'}`} />
+          <span>Saved</span>
         </button>
+
       </div>
 
-      {/* Sub-Buvakis Section */}
+      {/* Channels / Creators Sample Highlights */}
       <div className="flex flex-col gap-1">
-        <div className="flex items-center justify-between px-3 mb-1">
-          <span className="text-[11px] font-bold text-violet-400 uppercase tracking-wider">
-            {t.subBuvakisHeader}
-          </span>
-          <button
-            onClick={onOpenCreateSub}
-            className="p-1 text-violet-400 hover:text-emerald-400 transition-colors"
-            title={t.createSubBuvaki}
-          >
-            <PlusCircle className="w-4 h-4" />
-          </button>
+        <span className="px-3.5 text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1">
+          Subscriptions
+        </span>
+        
+        <div className="flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs text-neutral-300 hover:bg-neutral-900 transition-colors cursor-pointer">
+          <img
+            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
+            alt="Anidong_Manhwa"
+            className="w-6 h-6 rounded-full object-cover"
+            referrerPolicy="no-referrer"
+          />
+          <span className="truncate font-medium">Anidong_Manhwa</span>
         </div>
 
-        {subBuvakis.map((sub) => {
-          const isGeneral = sub.id === 'general';
-          const isActive = activeSubBuvakiId === sub.id || (isGeneral && (!activeSubBuvakiId || activeSubBuvakiId === 'general'));
-          return (
-            <button
-              key={sub.id}
-              onClick={() => {
-                onSelectSubBuvaki(isGeneral ? null : sub.id);
-                onToggleSavedOnly(false);
-                if (viewMode !== 'feed' && viewMode !== 'shorts' && viewMode !== 'longs') {
-                  setViewMode('feed');
-                }
-              }}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all group ${
-                isActive
-                  ? 'bg-violet-900/80 border border-violet-700/60 text-white shadow-sm'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-900/60'
-              }`}
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <CommunityIcon 
-                  sub={sub}
-                  size="xs" 
-                />
-                <span className="truncate">{sub.displayName}</span>
-              </div>
-              <span className="text-[10px] text-slate-500 group-hover:text-violet-300">
-                {(sub.memberCount / 1000).toFixed(1)}k
-              </span>
-            </button>
-          );
-        })}
+        <div className="flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs text-neutral-300 hover:bg-neutral-900 transition-colors cursor-pointer">
+          <img
+            src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80"
+            alt="TechChronicles"
+            className="w-6 h-6 rounded-full object-cover"
+            referrerPolicy="no-referrer"
+          />
+          <span className="truncate font-medium">TechChronicles</span>
+        </div>
+
+        <div className="flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs text-neutral-300 hover:bg-neutral-900 transition-colors cursor-pointer">
+          <img
+            src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80"
+            alt="VisualStudio"
+            className="w-6 h-6 rounded-full object-cover"
+            referrerPolicy="no-referrer"
+          />
+          <span className="truncate font-medium">VisualStories</span>
+        </div>
       </div>
 
-      {/* Buvaki Platform Footer Card */}
-      <div className="mt-auto p-4 rounded-2xl bg-slate-900/90 border border-violet-900/30 text-slate-300 text-xs flex flex-col gap-2">
-        <div className="flex items-center gap-2 font-bold text-violet-300">
-          <Sparkles className="w-4 h-4 text-pink-400" />
+      {/* Buvaki Footer */}
+      <div className="mt-auto p-3.5 rounded-2xl bg-neutral-900 border border-white/10 text-neutral-400 text-xs flex flex-col gap-1.5">
+        <div className="flex items-center gap-2 font-bold text-white">
+          <Sparkles className="w-4 h-4 text-violet-400" />
           <span>Buvaki Community</span>
         </div>
-        <p className="text-[11px] text-slate-400 leading-relaxed">
-          Modern social media for community stories, shorts reels, long videos & vibrant discussions.
+        <p className="text-[11px] text-neutral-400 leading-relaxed">
+          Community posts, photos, polls, shorts reels, and long videos.
         </p>
-        <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1 border-t border-violet-900/20 font-mono">
-          <span>v2.5 Social</span>
-          <span className="text-pink-400">● Active Feeds</span>
-        </div>
       </div>
 
     </aside>

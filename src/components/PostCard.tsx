@@ -1,71 +1,102 @@
-import React, { useState } from 'react';
-import { Post, User, SupportedLanguage } from '../types';
-import { getTranslation } from '../lib/translations';
+import React, { useState, useRef } from 'react';
+import { Post, User, SupportedLanguage, Comment } from '../types';
 import { 
-  ArrowBigUp, 
-  ArrowBigDown, 
-  MessageSquare, 
+  ThumbsUp, 
+  ThumbsDown, 
   Share2, 
+  MessageSquare, 
+  MoreVertical, 
+  Sparkles, 
   Bookmark, 
-  ExternalLink, 
-  CheckCircle2, 
-  Award,
-  Pin,
-  Sparkles,
-  Languages,
-  RotateCcw,
-  Youtube,
-  Play,
-  Film,
-  Trash2,
-  Clock
+  Trash2, 
+  Pin
 } from 'lucide-react';
-import { getYouTubeEmbedUrl, isYouTubeUrl } from '../lib/mediaUtils';
-import { BuvakiVideoPlayer } from './BuvakiVideoPlayer';
-import { CommunityIcon } from './CommunityIcon';
+import { formatRealTimestamp } from '../lib/timeUtils';
 import { DeletePostConfirmModal } from './DeletePostConfirmModal';
-import { formatRealTimestamp, formatFullExactDateTime } from '../lib/timeUtils';
 
 interface PostCardProps {
   post: Post;
   currentUser: User | null;
   selectedLanguage?: SupportedLanguage;
+  topComment?: Comment | null;
   onVote: (postId: string, direction: 'up' | 'down') => void;
   onSelectPost: (post: Post) => void;
   onToggleSave: (postId: string) => void;
   onVotePoll: (postId: string, optionId: string) => void;
   onDeletePost?: (postId: string) => Promise<void> | void;
+  onOpenComments?: (post: Post) => void;
+  onOpenShare?: (post: Post) => void;
+  onSubscribeToggle?: (authorId: string) => void;
+  isSubscribed?: boolean;
 }
 
 export const PostCard: React.FC<PostCardProps> = ({
   post,
   currentUser,
   selectedLanguage,
+  topComment,
   onVote,
   onSelectPost,
   onToggleSave,
   onVotePoll,
   onDeletePost,
+  onOpenComments,
+  onOpenShare,
 }) => {
-  const t = getTranslation(selectedLanguage?.code || 'en');
-  const [copied, setCopied] = useState(false);
-  const [awarded, setAwarded] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const sliderRef = useRef<HTMLDivElement>(null);
 
-  const isAuthor = currentUser && (currentUser.id === post.author.id || currentUser.handle === post.author.handle);
+  // Mouse Drag to Scroll State for Desktop/Touch
+  const isDraggingRef = useRef(false);
+  const startXRef = useRef(0);
+  const scrollLeftRef = useRef(0);
+  const hasMovedRef = useRef(false);
 
-  // AI Translation state
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!sliderRef.current) return;
+    isDraggingRef.current = true;
+    hasMovedRef.current = false;
+    startXRef.current = e.pageX - sliderRef.current.offsetLeft;
+    scrollLeftRef.current = sliderRef.current.scrollLeft;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingRef.current || !sliderRef.current) return;
+    const x = e.pageX - sliderRef.current.offsetLeft;
+    const walk = (x - startXRef.current);
+    if (Math.abs(walk) > 4) {
+      hasMovedRef.current = true;
+    }
+    sliderRef.current.scrollLeft = scrollLeftRef.current - walk;
+  };
+
+  const handleMouseUpOrLeave = (e: React.MouseEvent) => {
+    if (isDraggingRef.current && hasMovedRef.current) {
+      e.stopPropagation();
+    }
+    isDraggingRef.current = false;
+  };
+
+  // Translation State
   const [isTranslating, setIsTranslating] = useState(false);
   const [isTranslated, setIsTranslated] = useState(false);
   const [translatedTitle, setTranslatedTitle] = useState('');
   const [translatedContent, setTranslatedContent] = useState('');
-  const [translatedLang, setTranslatedLang] = useState('');
+
+  const isAuthor = currentUser && (currentUser.id === post.author.id || currentUser.handle === post.author.handle);
+
+  // Normalize images array
+  const postImages: string[] = post.images && post.images.length > 0 
+    ? post.images 
+    : post.imageUrl 
+    ? [post.imageUrl] 
+    : [];
 
   const handleTranslate = async (e: React.MouseEvent) => {
     e.stopPropagation();
-
     if (isTranslated) {
-      // Toggle back to original
       setIsTranslated(false);
       return;
     }
@@ -86,419 +117,459 @@ export const PostCard: React.FC<PostCardProps> = ({
         }),
       });
       const data = await res.json();
-
       setTranslatedTitle(data.translatedTitle || data.translatedText || post.title);
       setTranslatedContent(data.translatedContent || post.content || '');
-      setTranslatedLang(targetLang);
       setIsTranslated(true);
     } catch (err) {
       console.error('Translation error:', err);
-      // Fallback
       setTranslatedTitle(`[${targetLang}] ${post.title}`);
       setTranslatedContent(post.content ? `[${targetLang}] ${post.content}` : '');
-      setTranslatedLang(targetLang);
       setIsTranslated(true);
     } finally {
       setIsTranslating(false);
     }
   };
 
-  const handleShare = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(`${window.location.origin}/post/${post.id}`);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  // Format vote count e.g. 1k, 274, 48, 13
+  const formatScore = (num: number): string => {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) {
+      const val = (num / 1000);
+      return val % 1 === 0 ? val.toFixed(0) + 'k' : val.toFixed(1) + 'k';
+    }
+    return num > 0 ? num.toString() : '0';
   };
 
-  const handleAward = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setAwarded(true);
-    setTimeout(() => setAwarded(false), 2500);
-  };
+  // Fallback top comment preview text if not provided in props
+  const resolvedTopComment = topComment || (post.id === 'post_ojisan_brothers' ? {
+    id: 'c_council',
+    postId: post.id,
+    author: {
+      id: 'u_gojo_fan',
+      username: 'ShadowNinja',
+      handle: '@ShadowNinja',
+      avatar: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&auto=format&fit=crop&q=80',
+      bio: '',
+      karma: 0,
+      badges: [],
+      joinedDate: '',
+      status: 'online' as const
+    },
+    content: 'NARUTO WILL TALK NO JUTSU YOU A COUNCIL MEMBER',
+    timestamp: '7 hours ago',
+    score: 15,
+    replies: []
+  } : post.id === 'post_nothing_wrestler' ? {
+    id: 'c_ryan',
+    postId: post.id,
+    author: {
+      id: 'u_ryan',
+      username: 'Ryan_G',
+      handle: '@Ryan_G',
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
+      bio: '',
+      karma: 0,
+      badges: [],
+      joinedDate: '',
+      status: 'online' as const
+    },
+    content: 'Holy comeback',
+    timestamp: '3 hours ago',
+    score: 48,
+    replies: []
+  } : post.id === 'post_yuji_fight' ? {
+    id: 'c_mojang',
+    postId: post.id,
+    author: {
+      id: 'u_mojang',
+      username: 'BedrockGamer',
+      handle: '@BedrockGamer',
+      avatar: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=100&auto=format&fit=crop&q=80',
+      bio: '',
+      karma: 0,
+      badges: [],
+      joinedDate: '',
+      status: 'online' as const
+    },
+    content: 'FIX MOJANG BEDROCK',
+    timestamp: '16 hours ago',
+    score: 19,
+    replies: []
+  } : null);
+
+  const displayContent = post.content || post.title;
 
   return (
     <article 
-      onClick={() => onSelectPost(post)}
-      className="group relative rounded-2xl bg-slate-900/80 border border-violet-900/30 hover:border-violet-600/50 p-4 sm:p-5 transition-all duration-200 hover:shadow-xl hover:shadow-violet-950/20 cursor-pointer overflow-hidden"
+      onClick={() => {
+        if (onOpenComments) onOpenComments(post);
+        else onSelectPost(post);
+      }}
+      className="group w-full max-w-xl mx-auto bg-[#0f0f0f] pb-5 transition-all duration-200 cursor-pointer overflow-hidden text-left"
     >
-      {/* Pinned Indicator */}
+      {/* Pinned Badge if any */}
       {post.isPinned && (
-        <div className="flex items-center gap-1.5 text-[11px] font-bold text-pink-400 mb-2">
-          <Pin className="w-3.5 h-3.5 fill-pink-400" />
-          <span>Pinned Post</span>
+        <div className="px-4 pt-2 flex items-center gap-1.5 text-xs font-bold text-sky-400">
+          <Pin className="w-3.5 h-3.5 fill-sky-400" />
+          <span>Pinned community post</span>
         </div>
       )}
 
-      <div className="flex gap-3 sm:gap-4">
+      {/* Main Row: Left Avatar + Right Indented Content Column (Identical to Green Line Indentation) */}
+      <div className="px-4 pt-3.5 flex items-start gap-3 sm:gap-3.5">
         
-        {/* Voting Pillar (Desktop/Tablet) */}
-        <div 
-          onClick={(e) => e.stopPropagation()} 
-          className="flex flex-col items-center justify-start gap-1 p-1 rounded-xl bg-slate-950/60 border border-violet-900/30 w-9 sm:w-10 h-fit"
-        >
-          <button
-            onClick={() => onVote(post.id, 'up')}
-            className={`p-1 rounded-lg transition-colors ${
-              post.userVote === 'up'
-                ? 'text-pink-400 bg-pink-950/60'
-                : 'text-slate-400 hover:text-pink-400 hover:bg-slate-800/50'
-            }`}
-            aria-label="Upvote"
-          >
-            <ArrowBigUp className={`w-5 h-5 ${post.userVote === 'up' ? 'fill-pink-400' : ''}`} />
-          </button>
-
-          <span className={`text-xs font-black font-mono ${
-            post.userVote === 'up' 
-              ? 'text-pink-400' 
-              : post.userVote === 'down' 
-              ? 'text-rose-400' 
-              : 'text-slate-200'
-          }`}>
-            {post.score}
-          </span>
-
-          <button
-            onClick={() => onVote(post.id, 'down')}
-            className={`p-1 rounded-lg transition-colors ${
-              post.userVote === 'down'
-                ? 'text-rose-400 bg-rose-950/60'
-                : 'text-slate-400 hover:text-rose-400 hover:bg-slate-800/50'
-            }`}
-            aria-label="Downvote"
-          >
-            <ArrowBigDown className={`w-5 h-5 ${post.userVote === 'down' ? 'fill-rose-400' : ''}`} />
-          </button>
+        {/* Left Column: Creator Avatar */}
+        <div className="shrink-0 pt-0.5">
+          <img
+            src={post.author.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
+            alt={post.author.username}
+            className="w-10 h-10 rounded-full object-cover ring-1 ring-white/10"
+            referrerPolicy="no-referrer"
+          />
         </div>
 
-        {/* Post Main Body */}
-        <div className="flex-1 min-w-0 flex flex-col gap-2.5">
+        {/* Right Column: ALL items indented and vertically aligned together */}
+        <div className="flex-1 min-w-0">
           
-          {/* Header Metadata */}
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="font-bold text-violet-300 hover:underline px-2 py-0.5 rounded-md bg-violet-950/80 border border-violet-800/40 flex items-center gap-1.5">
-              <CommunityIcon subId={post.subBuvakiId} name={post.subBuvakiName} size="xs" containerClassName="w-4 h-4 rounded-sm border-none bg-transparent" />
-              <span>{post.subBuvakiName}</span>
-            </span>
-            <span className="text-slate-500">•</span>
-            <div className="flex items-center gap-1.5 text-slate-400">
-              <img
-                src={post.author.avatar}
-                alt={post.author.username}
-                className="w-4 h-4 rounded-full object-cover"
-                referrerPolicy="no-referrer"
-              />
-              <span className="font-medium hover:text-violet-300 transition-colors">
-                {post.author.handle}
-              </span>
-            </div>
-            <span className="text-slate-500">•</span>
-            <span 
-              className="text-slate-400 text-[11px] hover:text-slate-200 transition-colors cursor-help inline-flex items-center gap-1"
-              title={formatFullExactDateTime(post.createdAt || post.timestamp)}
-            >
-              <Clock className="w-3 h-3 text-slate-500" />
-              {formatRealTimestamp(post.createdAt || post.timestamp)}
-            </span>
-
-            {/* Flair Badge */}
-            {post.flair && (
-              <span className="ml-auto px-2 py-0.5 rounded-full bg-violet-950/80 border border-violet-700/50 text-pink-300 text-[10px] font-semibold">
-                {post.flair}
-              </span>
-            )}
-          </div>
-
-          {/* Title */}
-          <div className="space-y-1">
-            {isTranslated && (
-              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-950/80 border border-indigo-700/60 text-indigo-300 text-[10px] font-semibold mb-1">
-                <Sparkles className="w-3 h-3 text-indigo-400 animate-pulse" />
-                <span>AI Translated ({translatedLang})</span>
-              </div>
-            )}
-
-            <h2 className="text-base sm:text-lg font-bold text-slate-100 group-hover:text-violet-200 transition-colors leading-snug">
-              {isTranslated ? translatedTitle : post.title}
-            </h2>
-          </div>
-
-          {/* Body Content */}
-          {post.content && (
-            <p className="text-xs sm:text-sm text-slate-300 line-clamp-3 leading-relaxed">
-              {isTranslated ? translatedContent : post.content}
-            </p>
-          )}
-
-          {/* Image Type Attachment */}
-          {post.type === 'image' && post.imageUrl && (
-            <div 
-              onClick={(e) => {
-                // If user clicks image, let it open detail modal
-              }}
-              className="mt-1 rounded-2xl overflow-hidden border border-violet-900/40 bg-slate-950 max-h-[440px] flex items-center justify-center"
-            >
-              <img
-                src={post.imageUrl}
-                alt={post.title}
-                className="w-full max-h-[440px] object-contain group-hover:scale-[1.01] transition-transform duration-300 bg-slate-950"
-                referrerPolicy="no-referrer"
-                loading="lazy"
-              />
-            </div>
-          )}
-
-          {/* Video Type Attachment (Feed Post Video: supports both vertical/portrait and horizontal/landscape formats) */}
-          {post.type === 'video' && post.videoUrl && (
-            <div 
-              onClick={(e) => e.stopPropagation()} 
-              className="mt-2 rounded-2xl overflow-hidden border border-violet-900/40 bg-black shadow-lg flex flex-col items-center justify-center max-h-[520px]"
-            >
-              {isYouTubeUrl(post.videoUrl) && getYouTubeEmbedUrl(post.videoUrl) ? (
-                <div className="aspect-video w-full bg-black">
-                  <iframe
-                    src={getYouTubeEmbedUrl(post.videoUrl)!}
-                    title={post.title}
-                    className="w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
-              ) : (
-                <BuvakiVideoPlayer
-                  src={post.videoUrl}
-                  poster={post.imageUrl}
-                  className="max-h-[500px] rounded-2xl"
-                  title={post.title}
-                />
-              )}
-            </div>
-          )}
-
-          {/* Link Type Attachment - Handles both YouTube Embeds & External URLs */}
-          {post.type === 'link' && post.linkUrl && (
-            isYouTubeUrl(post.linkUrl) && getYouTubeEmbedUrl(post.linkUrl) ? (
-              <div 
-                onClick={(e) => e.stopPropagation()} 
-                className="mt-2 rounded-2xl overflow-hidden border border-violet-900/50 bg-slate-950 shadow-md"
-              >
-                <div className="aspect-video w-full bg-black">
-                  <iframe
-                    src={getYouTubeEmbedUrl(post.linkUrl)!}
-                    title={post.title}
-                    className="w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
-                <div className="p-2.5 bg-slate-900/80 border-t border-violet-900/40 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-xs text-pink-400 font-bold">
-                    <Youtube className="w-4 h-4 text-rose-500" />
-                    <span>YouTube Video</span>
-                  </div>
-                  <a
-                    href={post.linkUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[11px] text-violet-300 hover:text-white flex items-center gap-1 font-semibold"
-                  >
-                    <span>Open on YouTube</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
-              </div>
-            ) : (
-              <a
-                href={post.linkUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="mt-1 flex items-center justify-between p-3.5 rounded-2xl bg-slate-950 border border-violet-900/40 hover:border-violet-500/60 group/link transition-colors"
-              >
-                <div className="flex flex-col min-w-0 pr-2">
-                  <span className="text-xs font-semibold text-violet-300 truncate">
-                    {post.linkUrl}
-                  </span>
-                  <span className="text-[10px] text-slate-400">External Web Resource / Article</span>
-                </div>
-                <ExternalLink className="w-4 h-4 text-violet-400 group-hover/link:text-pink-400 transition-colors flex-shrink-0" />
-              </a>
-            )
-          )}
-
-          {/* Poll Type Attachment */}
-          {post.type === 'poll' && post.poll && (
-            <div 
-              onClick={(e) => e.stopPropagation()} 
-              className="mt-2 p-3 sm:p-4 rounded-xl bg-slate-950/90 border border-violet-900/40 flex flex-col gap-2.5"
-            >
-              <span className="text-xs font-bold text-violet-200">
-                {post.poll.question}
-              </span>
-              <div className="flex flex-col gap-2">
-                {post.poll.options.map((option) => {
-                  const isVoted = post.poll?.userVotedOptionId === option.id;
-                  const total = post.poll?.totalVotes || 1;
-                  const pct = Math.round((option.votes / total) * 100);
-
-                  return (
-                    <button
-                      key={option.id}
-                      onClick={() => onVotePoll(post.id, option.id)}
-                      className={`relative w-full text-left p-2.5 rounded-lg border transition-all overflow-hidden flex items-center justify-between ${
-                        isVoted
-                          ? 'border-emerald-500 bg-emerald-950/30'
-                          : 'border-violet-900/40 hover:border-violet-600/60 bg-slate-900/60'
-                      }`}
-                    >
-                      {/* Percentage fill bar */}
-                      <div
-                        className="absolute left-0 top-0 bottom-0 bg-violet-600/20 transition-all duration-500"
-                        style={{ width: `${pct}%` }}
-                      />
-                      
-                      <div className="relative z-10 flex items-center gap-2">
-                        {isVoted && <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />}
-                        <span className="text-xs font-medium text-slate-200">
-                          {option.text}
-                        </span>
-                      </div>
-
-                      <span className="relative z-10 text-[11px] font-bold font-mono text-violet-300">
-                        {pct}% ({option.votes})
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              <span className="text-[10px] text-slate-500 self-end font-mono">
-                {post.poll.totalVotes} total votes
-              </span>
-            </div>
-          )}
-
-          {/* Tags */}
-          {post.tags && post.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-1">
-              {post.tags.map((tag) => (
-                <span key={tag} className="text-[10px] text-slate-400 bg-slate-950 px-2 py-0.5 rounded-md border border-slate-800">
-                  #{tag}
+          {/* 1. Header Row: Author Username Pill & Timestamp + 3-dots Menu */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex flex-col min-w-0">
+              <div className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors w-fit">
+                <span className="text-xs font-semibold text-white truncate">
+                  {post.author.username || post.author.handle.replace(/^@/, '')}
                 </span>
-              ))}
+              </div>
+              <span className="text-[11px] sm:text-xs text-neutral-400 mt-1">
+                {formatRealTimestamp(post.createdAt || post.timestamp)}
+              </span>
+            </div>
+
+            {/* 3 dots menu button */}
+            <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
+              <button
+                onClick={() => setShowOptionsMenu(!showOptionsMenu)}
+                className="p-1 rounded-full hover:bg-white/10 text-neutral-400 hover:text-white transition-colors"
+                aria-label="More options"
+              >
+                <MoreVertical className="w-5 h-5" />
+              </button>
+
+              {showOptionsMenu && (
+                <div className="absolute right-0 mt-1 w-48 rounded-xl bg-neutral-900 border border-white/10 shadow-2xl py-1.5 z-30 animate-in fade-in zoom-in-95">
+                  <button
+                    onClick={(e) => {
+                      handleTranslate(e);
+                      setShowOptionsMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-xs text-neutral-200 hover:bg-white/10 flex items-center gap-2.5 font-medium"
+                  >
+                    <Sparkles className="w-4 h-4 text-violet-400" />
+                    <span>{isTranslated ? 'Show Original' : 'Translate post'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      onToggleSave(post.id);
+                      setShowOptionsMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-xs text-neutral-200 hover:bg-white/10 flex items-center gap-2.5 font-medium"
+                  >
+                    <Bookmark className={`w-4 h-4 ${post.isSaved ? 'fill-emerald-400 text-emerald-400' : ''}`} />
+                    <span>{post.isSaved ? 'Remove from saved' : 'Save post'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (onOpenShare) onOpenShare(post);
+                      setShowOptionsMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-xs text-neutral-200 hover:bg-white/10 flex items-center gap-2.5 font-medium"
+                  >
+                    <Share2 className="w-4 h-4 text-neutral-300" />
+                    <span>Share post</span>
+                  </button>
+
+                  {isAuthor && onDeletePost && (
+                    <button
+                      onClick={() => {
+                        setIsConfirmDeleteOpen(true);
+                        setShowOptionsMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-xs text-rose-400 hover:bg-rose-950/40 flex items-center gap-2.5 font-medium border-t border-white/10"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Delete post</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 2. Text / Caption: Statement + ...more occupying exactly two lines */}
+          {displayContent && (
+            <div className="mt-2">
+              {isTranslated && (
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-violet-950/80 border border-violet-700/60 text-violet-300 text-[10px] font-semibold mb-1">
+                  <Sparkles className="w-3 h-3 text-violet-400 animate-pulse" />
+                  <span>AI Translated</span>
+                </div>
+              )}
+              {(() => {
+                const fullText = isTranslated ? (translatedContent || translatedTitle) : displayContent;
+                
+                if (isExpanded) {
+                  return (
+                    <p className="text-sm text-neutral-100 whitespace-pre-wrap leading-relaxed">
+                      <span>{fullText}</span>{' '}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsExpanded(false);
+                        }}
+                        className="text-neutral-400 hover:text-white font-medium text-xs ml-1 inline-block transition-colors"
+                      >
+                        Show less
+                      </button>
+                    </p>
+                  );
+                }
+
+                // Check if text exceeds two lines
+                const lines = fullText.split('\n').filter(l => l.trim().length > 0);
+                const isMultiLine = lines.length > 2;
+                const isLong = fullText.length > 75;
+                const shouldTruncate = isMultiLine || isLong;
+
+                if (!shouldTruncate) {
+                  return (
+                    <p className="text-sm text-neutral-100 whitespace-pre-wrap leading-relaxed">
+                      {fullText}
+                    </p>
+                  );
+                }
+
+                // Truncate to word boundary around ~74 characters to fit exactly in 2 lines with ...more
+                let snippet = fullText;
+                if (isMultiLine) {
+                  snippet = lines.slice(0, 2).join(' ');
+                }
+                if (snippet.length > 74) {
+                  const lastSpace = snippet.lastIndexOf(' ', 74);
+                  snippet = snippet.slice(0, lastSpace > 35 ? lastSpace : 74).trim();
+                }
+
+                return (
+                  <p className="text-sm text-neutral-100 leading-relaxed">
+                    <span>{snippet}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsExpanded(true);
+                      }}
+                      className="text-neutral-400 hover:text-white font-medium text-xs ml-0.5 inline-flex items-center transition-colors"
+                    >
+                      ...more
+                    </button>
+                  </p>
+                );
+              })()}
             </div>
           )}
 
-          {/* Footer Action Bar */}
-          <div className="flex items-center justify-between pt-2 mt-1 border-t border-violet-900/20 text-xs text-slate-400">
-            
-            {/* Comments trigger */}
-            <div className="flex items-center gap-1.5 hover:text-violet-300 font-medium">
-              <MessageSquare className="w-4 h-4" />
-              <span>{post.commentCount} {t.comments}</span>
+          {/* 3. Media Content: Natural Horizontal Sliding Carousel for Multiple Images, or Single Image */}
+          {/* Single Image (Bigger in size and dimension as default 1:1 aspect-square format) */}
+          {postImages.length === 1 && (
+            <div className="mt-2.5" onClick={(e) => e.stopPropagation()}>
+              <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-neutral-900 border border-white/5 shadow-md flex items-center justify-center">
+                <img
+                  src={postImages[0]}
+                  alt="Community post media"
+                  className="w-full h-full object-cover rounded-2xl select-none"
+                  referrerPolicy="no-referrer"
+                  loading="lazy"
+                />
+              </div>
             </div>
+          )}
 
-            <div className="flex items-center gap-3">
-              
-              {/* AI Translate Button */}
-              <button
-                onClick={handleTranslate}
-                disabled={isTranslating}
-                className={`flex items-center gap-1.5 transition-all text-xs font-medium px-2 py-0.5 rounded-lg border ${
-                  isTranslated
-                    ? 'bg-indigo-950/80 border-indigo-700/80 text-indigo-300'
-                    : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-indigo-300 hover:border-indigo-800/60'
-                }`}
-                title="Translate post"
+          {/* Multiple Images: Natural Horizontal Sliding Carousel (Previous image stays visible on the left, active image aligns, next image peeks on right) */}
+          {postImages.length > 1 && (
+            <div 
+              className="mt-2.5 -ml-[68px] sm:-ml-[70px] -mr-4 overflow-hidden" 
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div 
+                ref={sliderRef}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUpOrLeave}
+                onMouseLeave={handleMouseUpOrLeave}
+                className="flex gap-2.5 overflow-x-auto snap-x snap-mandatory no-scrollbar pl-[68px] sm:pl-[70px] pr-4 pb-1 cursor-grab active:cursor-grabbing select-none"
+                style={{ scrollPaddingLeft: '68px' }}
               >
-                {isTranslating ? (
-                  <div className="w-3.5 h-3.5 border-2 border-indigo-400/30 border-t-indigo-400 rounded-full animate-spin" />
-                ) : isTranslated ? (
-                  <>
-                    <RotateCcw className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>{t.originalText}</span>
-                  </>
-                ) : (
-                  <>
-                    <Languages className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>{t.translatePost}</span>
-                  </>
-                )}
-              </button>
-
-              {/* Award button */}
-              <button
-                onClick={handleAward}
-                className="flex items-center gap-1 hover:text-amber-400 transition-colors relative"
-                title="Award post"
-              >
-                <Award className={`w-4 h-4 ${awarded ? 'text-amber-400 animate-bounce' : ''}`} />
-                {awarded && (
-                  <span className="absolute -top-6 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded bg-amber-500 text-slate-950 text-[10px] font-bold shadow">
-                    {t.awarded}!
-                  </span>
-                )}
-              </button>
-
-              {/* Bookmark Save */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleSave(post.id);
-                }}
-                className={`flex items-center gap-1 transition-colors ${
-                  post.isSaved ? 'text-emerald-400' : 'hover:text-emerald-300'
-                }`}
-                title="Save Post"
-              >
-                <Bookmark className={`w-4 h-4 ${post.isSaved ? 'fill-emerald-400' : ''}`} />
-              </button>
-
-              {/* Share button */}
-              <button
-                onClick={handleShare}
-                className="flex items-center gap-1 hover:text-violet-300 transition-colors"
-                title="Share link"
-              >
-                <Share2 className="w-4 h-4" />
-                {copied && <span className="text-[10px] text-emerald-400 font-bold">Copied!</span>}
-              </button>
-
-              {/* Author Delete Dustbin Button */}
-              {isAuthor && onDeletePost && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsConfirmDeleteOpen(true);
-                  }}
-                  className="flex items-center gap-1 text-slate-500 hover:text-rose-400 transition-colors"
-                  title="Delete your post"
-                >
-                  <Trash2 className="w-4 h-4 text-rose-400/80 hover:text-rose-400" />
-                </button>
-              )}
-
+                {postImages.map((imgUrl, idx) => (
+                  <div 
+                    key={idx} 
+                    className="relative flex-shrink-0 w-[78%] sm:w-[320px] aspect-square rounded-2xl overflow-hidden bg-neutral-900 snap-start border border-white/5 shadow-md"
+                  >
+                    <img
+                      src={imgUrl}
+                      alt={`Post media ${idx + 1}`}
+                      className="w-full h-full object-cover rounded-2xl select-none pointer-events-none"
+                      referrerPolicy="no-referrer"
+                      loading="lazy"
+                      draggable={false}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
+          )}
 
+          {/* Poll Type Post Support */}
+          {post.type === 'poll' && post.poll && (
+            <div className="mt-2.5" onClick={(e) => e.stopPropagation()}>
+              <div className="p-3.5 rounded-2xl bg-neutral-900 border border-white/10 space-y-2">
+                <h4 className="text-xs sm:text-sm font-bold text-white">{post.poll.question}</h4>
+                <div className="space-y-1.5">
+                  {post.poll.options.map((opt) => {
+                    const total = post.poll?.totalVotes || 1;
+                    const percentage = Math.round((opt.votes / (total || 1)) * 100);
+                    const isSelected = post.poll?.userVotedOptionId === opt.id;
+
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => onVotePoll(post.id, opt.id)}
+                        className={`w-full relative overflow-hidden p-2.5 rounded-xl border text-left text-xs font-semibold transition-all ${
+                          isSelected
+                            ? 'border-sky-500 bg-sky-950/40 text-white'
+                            : 'border-white/10 bg-neutral-800/80 text-neutral-200 hover:bg-neutral-800'
+                        }`}
+                      >
+                        <div 
+                          className={`absolute top-0 bottom-0 left-0 transition-all duration-500 ${
+                            isSelected ? 'bg-sky-600/30' : 'bg-white/10'
+                          }`}
+                          style={{ width: `${percentage}%` }}
+                        />
+                        <div className="relative z-10 flex items-center justify-between">
+                          <span className="truncate">{opt.text}</span>
+                          <span className="font-mono text-[11px] text-neutral-400 font-bold ml-2">
+                            {percentage}%
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 4. Action Row (Aligned with the green indentation line: 👍 [count]  👎  💬 [count]  ↪️) */}
+          <div 
+            className="mt-3 flex items-center gap-6 sm:gap-7 text-neutral-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Like / Upvote */}
+            <button
+              onClick={() => onVote(post.id, 'up')}
+              className={`flex items-center gap-2 py-1 hover:text-white transition-colors ${
+                post.userVote === 'up' ? 'text-white font-bold' : 'text-neutral-300'
+              }`}
+              aria-label="Like"
+            >
+              <ThumbsUp className={`w-5 h-5 ${post.userVote === 'up' ? 'fill-white text-white' : ''}`} />
+              <span className="text-xs sm:text-sm font-semibold">
+                {formatScore(post.score)}
+              </span>
+            </button>
+
+            {/* Dislike / Downvote */}
+            <button
+              onClick={() => onVote(post.id, 'down')}
+              className={`flex items-center py-1 hover:text-white transition-colors ${
+                post.userVote === 'down' ? 'text-white font-bold' : 'text-neutral-300'
+              }`}
+              aria-label="Dislike"
+            >
+              <ThumbsDown className={`w-5 h-5 ${post.userVote === 'down' ? 'fill-white text-white' : ''}`} />
+            </button>
+
+            {/* Comments Count */}
+            <button
+              onClick={() => {
+                if (onOpenComments) onOpenComments(post);
+                else onSelectPost(post);
+              }}
+              className="flex items-center gap-2 py-1 text-neutral-300 hover:text-white transition-colors"
+              aria-label="Comments"
+            >
+              <MessageSquare className="w-5 h-5" />
+              <span className="text-xs sm:text-sm font-semibold">
+                {post.commentCount || 0}
+              </span>
+            </button>
+
+            {/* Share Arrow (Matching Screenshot) */}
+            <button
+              onClick={() => {
+                if (onOpenShare) onOpenShare(post);
+              }}
+              className="flex items-center py-1 text-neutral-300 hover:text-white transition-colors"
+              aria-label="Share"
+            >
+              <Share2 className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* 5. Highlighted Comments Box (Aligned with the green indentation line) */}
+          <div 
+            className="mt-3"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onOpenComments) onOpenComments(post);
+              else onSelectPost(post);
+            }}
+          >
+            <div className="p-3 rounded-2xl bg-[#212121] hover:bg-[#282828] transition-colors cursor-pointer border border-white/5">
+              <div className="text-xs font-semibold text-neutral-300 mb-1.5">
+                Comments
+              </div>
+              <div className="flex items-center gap-2.5">
+                <img
+                  src={resolvedTopComment?.author?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'}
+                  alt="Commenter"
+                  className="w-5 h-5 rounded-full object-cover shrink-0"
+                  referrerPolicy="no-referrer"
+                />
+                <p className="text-xs text-neutral-200 truncate font-normal">
+                  {resolvedTopComment?.content || 'Add a comment...'}
+                </p>
+              </div>
+            </div>
           </div>
 
         </div>
-
       </div>
 
       {/* Delete Confirmation Modal */}
-      {isAuthor && (
+      {isConfirmDeleteOpen && onDeletePost && (
         <DeletePostConfirmModal
-          post={post}
           isOpen={isConfirmDeleteOpen}
+          postTitle={post.title || post.content}
           onClose={() => setIsConfirmDeleteOpen(false)}
-          onConfirmDelete={async (postId) => {
-            if (onDeletePost) {
-              await onDeletePost(postId);
-            }
+          onConfirm={async () => {
+            await onDeletePost(post.id);
             setIsConfirmDeleteOpen(false);
           }}
         />
       )}
+
     </article>
   );
 };

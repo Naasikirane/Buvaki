@@ -38,6 +38,7 @@ import {
 
 import firebaseConfig from '../../firebase-applet-config.json';
 import { Post, SubBuvaki, Comment, ChatMessage, User, ChatChannel } from '../types';
+import { autoIndexer } from './indexer';
 import { SEED_POSTS, SEED_SUB_BUVAKIS, SEED_CHANNELS, SEED_MESSAGES, SEED_COMMENTS, CURRENT_USER } from '../data/mockData';
 
 // Helper to recursively remove undefined properties before sending to Firestore
@@ -201,6 +202,8 @@ export const subscribeToSubBuvakis = (onData: (subs: SubBuvaki[]) => void) => {
       id: doc.id,
       ...doc.data()
     } as SubBuvaki));
+    // Auto-index all incoming Sub-Buvakis in the search and SEO engine
+    list.forEach((sub) => autoIndexer.indexSubBuvaki(sub));
     onData(list);
   }, (err) => {
     handleFirestoreError(err, OperationType.LIST, 'subBuvakis');
@@ -226,7 +229,10 @@ export const subscribeToPosts = (onData: (posts: Post[]) => void) => {
         } as Post;
       })
       .filter((p) => !MOCK_POST_IDS.has(p.id));
-    // Sort in client if timestamp format varies
+    
+    // Auto-index all posts, shorts, and longs immediately
+    list.forEach((post) => autoIndexer.indexPost(post));
+
     onData(list);
   }, (err) => {
     handleFirestoreError(err, OperationType.LIST, 'posts');
@@ -336,6 +342,9 @@ export const dbCreatePost = async (postData: Omit<Post, 'id' | 'score' | 'commen
     vote: 'up'
   }));
 
+  // Auto-index newly created post (standard post, short video, or long video)
+  autoIndexer.indexPost(newPost);
+
   return newPost;
 };
 
@@ -369,6 +378,9 @@ export const dbCreateSubBuvaki = async (subData: Omit<SubBuvaki, 'id' | 'memberC
     ...newSub,
     createdAt: new Date().toISOString()
   }));
+
+  // Auto-index newly created Sub-Buvaki community
+  autoIndexer.indexSubBuvaki(newSub);
 
   return newSub;
 };

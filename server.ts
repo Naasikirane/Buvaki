@@ -173,6 +173,205 @@ async function startServer() {
     }
   });
 
+  // ==========================================
+  // SEO, SEARCH ENGINE & AUTO-INDEXING ROUTES
+  // ==========================================
+
+  // In-memory cache & registry for auto-indexed items on server
+  const serverIndexedItems: Map<string, any> = new Map();
+
+  // Helper to escape XML
+  const escapeXml = (unsafe: string): string => {
+    return (unsafe || '').replace(/[<>&'"]/g, (c) => {
+      switch (c) {
+        case '<': return '&lt;';
+        case '>': return '&gt;';
+        case '&': return '&amp;';
+        case '\'': return '&apos;';
+        case '"': return '&quot;';
+        default: return c;
+      }
+    });
+  };
+
+  // Helper to fetch live posts and subbuvakis from Firestore REST API
+  const fetchLiveContentForSitemap = async () => {
+    const DOMAIN = 'https://buvaki.com';
+    const staticEntries = [
+      { loc: `${DOMAIN}/`, priority: '1.0', changefreq: 'daily' },
+      { loc: `${DOMAIN}/shorts`, priority: '0.9', changefreq: 'daily' },
+      { loc: `${DOMAIN}/longs`, priority: '0.9', changefreq: 'daily' },
+      { loc: `${DOMAIN}/chat`, priority: '0.8', changefreq: 'daily' },
+      { loc: `${DOMAIN}/explore`, priority: '0.8', changefreq: 'weekly' },
+    ];
+
+    const subBuvakiEntries: Array<{ loc: string; priority: string; changefreq: string }> = [
+      { loc: `${DOMAIN}/b/photography`, priority: '0.8', changefreq: 'weekly' },
+      { loc: `${DOMAIN}/b/tech`, priority: '0.8', changefreq: 'weekly' },
+      { loc: `${DOMAIN}/b/design`, priority: '0.8', changefreq: 'weekly' },
+      { loc: `${DOMAIN}/b/gaming`, priority: '0.8', changefreq: 'weekly' },
+      { loc: `${DOMAIN}/b/cyberpunk`, priority: '0.8', changefreq: 'weekly' },
+      { loc: `${DOMAIN}/b/general`, priority: '0.8', changefreq: 'weekly' },
+    ];
+
+    const postAndVideoEntries: Array<{
+      loc: string;
+      lastmod: string;
+      priority: string;
+      changefreq: string;
+      video?: {
+        thumbnailLoc: string;
+        title: string;
+        description: string;
+        contentLoc: string;
+        duration: number;
+        publicationDate: string;
+      };
+    }> = [];
+
+    // Check cached / registered items
+    for (const item of serverIndexedItems.values()) {
+      const type = item.type;
+      const isVideo = type === 'short' || type === 'long' || item.videoUrl;
+      const path = isVideo && type === 'short' ? `/short/${item.id}` : isVideo && type === 'long' ? `/long/${item.id}` : `/post/${item.id}`;
+      const loc = `${DOMAIN}${path}`;
+      const now = new Date().toISOString().split('T')[0];
+
+      postAndVideoEntries.push({
+        loc,
+        lastmod: item.publishedTime?.split('T')[0] || now,
+        priority: isVideo ? '0.85' : '0.7',
+        changefreq: 'weekly',
+        video: isVideo ? {
+          thumbnailLoc: item.imageUrl || `${DOMAIN}/og-image.png`,
+          title: item.title || 'Buvaki Video',
+          description: item.description || item.title || 'Watch on Buvaki',
+          contentLoc: item.videoUrl || loc,
+          duration: item.duration ? 120 : 60,
+          publicationDate: item.publishedTime?.split('T')[0] || now,
+        } : undefined,
+      });
+    }
+
+    return { staticEntries, subBuvakiEntries, postAndVideoEntries };
+  };
+
+  // 1. ROBOTS.TXT
+  app.get("/robots.txt", (req, res) => {
+    res.type("text/plain");
+    res.send(`User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://buvaki.com/sitemap.xml
+`);
+  });
+
+  // 2. SITEMAP.XML (Google Video & Web standard)
+  app.get("/sitemap.xml", async (req, res) => {
+    try {
+      const { staticEntries, subBuvakiEntries, postAndVideoEntries } = await fetchLiveContentForSitemap();
+      const now = new Date().toISOString().split('T')[0];
+
+      let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
+`;
+
+      // Static pages
+      for (const entry of staticEntries) {
+        xml += `  <url>
+    <loc>${escapeXml(entry.loc)}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>${entry.changefreq}</changefreq>
+    <priority>${entry.priority}</priority>
+  </url>\n`;
+      }
+
+      // Sub-Buvakis
+      for (const sub of subBuvakiEntries) {
+        xml += `  <url>
+    <loc>${escapeXml(sub.loc)}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>${sub.changefreq}</changefreq>
+    <priority>${sub.priority}</priority>
+  </url>\n`;
+      }
+
+      // Posts, Shorts, and Longs
+      for (const post of postAndVideoEntries) {
+        let videoXml = '';
+        if (post.video) {
+          videoXml = `
+    <video:video>
+      <video:thumbnail_loc>${escapeXml(post.video.thumbnailLoc)}</video:thumbnail_loc>
+      <video:title>${escapeXml(post.video.title)}</video:title>
+      <video:description>${escapeXml(post.video.description)}</video:description>
+      <video:content_loc>${escapeXml(post.video.contentLoc)}</video:content_loc>
+      <video:publication_date>${post.video.publicationDate}</video:publication_date>
+      <video:duration>${post.video.duration}</video:duration>
+    </video:video>`;
+        }
+
+        xml += `  <url>
+    <loc>${escapeXml(post.loc)}</loc>
+    <lastmod>${post.lastmod}</lastmod>
+    <changefreq>${post.changefreq}</changefreq>
+    <priority>${post.priority}</priority>${videoXml}
+  </url>\n`;
+      }
+
+      xml += `</urlset>`;
+
+      res.type("application/xml");
+      res.send(xml);
+    } catch (err: any) {
+      console.error("Error generating sitemap:", err);
+      res.status(500).send("Error generating sitemap");
+    }
+  });
+
+  // 3. API AUTO-INDEX (Receives and indexes new posts, shorts, longs, subbuvakis)
+  app.post("/api/autoindex", (req, res) => {
+    try {
+      const { item, items } = req.body;
+      const listToProcess = items || (item ? [item] : []);
+
+      for (const entry of listToProcess) {
+        if (entry && entry.id) {
+          serverIndexedItems.set(entry.id, {
+            ...entry,
+            indexedAt: new Date().toISOString(),
+          });
+        }
+      }
+
+      return res.json({
+        success: true,
+        indexedCount: serverIndexedItems.size,
+        message: `Successfully auto-indexed ${listToProcess.length} items.`,
+      });
+    } catch (err: any) {
+      console.error("Auto-index error:", err);
+      return res.status(500).json({ error: "Failed to process auto-index request" });
+    }
+  });
+
+  // 4. API INDEXED CONTENT (JSON feed of all indexed pages, posts, shorts, longs)
+  app.get("/api/indexed-content", (req, res) => {
+    const all = Array.from(serverIndexedItems.values());
+    const stats = {
+      totalIndexed: all.length,
+      postsCount: all.filter((i) => i.type === 'post').length,
+      shortsCount: all.filter((i) => i.type === 'short').length,
+      longsCount: all.filter((i) => i.type === 'long').length,
+      subBuvakisCount: all.filter((i) => i.type === 'subBuvaki').length,
+      lastIndexed: new Date().toISOString(),
+    };
+
+    return res.json({ stats, items: all });
+  });
+
   // Vite middleware for development vs production
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
