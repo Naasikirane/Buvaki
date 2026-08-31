@@ -145,21 +145,33 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="flex items-center gap-2 text-white hover:opacity-90 transition-opacity focus:outline-none py-1 -ml-1 group"
             aria-label="buvaki home"
           >
-            {/* Custom Thumbs-Up Icon matching screenshot */}
-            <div className="relative flex items-center justify-center shrink-0 w-7 h-7 text-neutral-200 group-hover:text-white transition-colors">
+            {/* Custom Thumbs-Up Icon with ocean blue fill */}
+            <div className="relative flex items-center justify-center shrink-0 w-7 h-7">
               <svg
                 viewBox="0 0 24 24"
-                fill="none"
                 xmlns="http://www.w3.org/2000/svg"
-                className="w-6 h-6 stroke-current"
-                strokeWidth="2.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+                className="w-6 h-6 transform transition-transform duration-200 group-hover:scale-105"
               >
+                <defs>
+                  <linearGradient id="ocean_blue_thumbs" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#38bdf8" />
+                    <stop offset="100%" stopColor="#0284c7" />
+                  </linearGradient>
+                </defs>
                 {/* Left cuff vertical pill */}
-                <rect x="2.5" y="9.5" width="4" height="11.5" rx="1.8" />
-                {/* Main thumb & hand contour */}
-                <path d="M6.5 10.5L10.2 3.2C11 1.8 13.2 2.1 13.4 3.9L13.5 9.5H19C20.8 9.5 22.1 11.2 21.7 13L20.3 18.8C19.9 20.4 18.5 21.5 16.9 21.5H6.5" />
+                <rect 
+                  x="2" 
+                  y="9.5" 
+                  width="4.5" 
+                  height="12" 
+                  rx="1.8" 
+                  fill="url(#ocean_blue_thumbs)" 
+                />
+                {/* Main thumb & hand body */}
+                <path 
+                  d="M7.5 10.2L11 2.8C11.8 1.4 13.8 1.8 14 3.5L14 9.2H19.5C21.2 9.2 22.5 10.8 22.1 12.5L20.6 18.5C20.2 20 18.8 21.2 17.2 21.2H7.5V10.2Z" 
+                  fill="url(#ocean_blue_thumbs)"
+                />
               </svg>
             </div>
 
