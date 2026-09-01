@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { ViewMode, User, NotificationItem, SupportedLanguage } from '../types';
 import { getTranslation } from '../lib/translations';
 import { 
@@ -48,87 +48,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   const unreadCount = notifications.filter((n) => !n.read).length;
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isVisible, setIsVisible] = useState(true);
-  const lastScrollY = useRef(0);
-  const touchStartY = useRef<number | null>(null);
-
-  useEffect(() => {
-    const getScrollY = () => {
-      return (
-        window.scrollY ||
-        window.pageYOffset ||
-        document.documentElement.scrollTop ||
-        document.body.scrollTop ||
-        0
-      );
-    };
-
-    const handleScroll = () => {
-      const currentScrollY = getScrollY();
-
-      // Always show at top of page or when search/dropdown is active
-      if (currentScrollY <= 15 || isSearchExpanded || isMenuOpen) {
-        setIsVisible(true);
-        lastScrollY.current = currentScrollY;
-        return;
-      }
-
-      const diff = currentScrollY - lastScrollY.current;
-
-      if (diff > 4 && currentScrollY > 40) {
-        // Scrolling downwards -> hide
-        setIsVisible(false);
-      } else if (diff < -4) {
-        // Scrolling upwards -> show
-        setIsVisible(true);
-      }
-
-      lastScrollY.current = Math.max(0, currentScrollY);
-    };
-
-    const handleTouchStart = (e: TouchEvent) => {
-      touchStartY.current = e.touches[0]?.clientY ?? null;
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (touchStartY.current === null) return;
-      const currentTouchY = e.touches[0]?.clientY ?? 0;
-      const deltaY = currentTouchY - touchStartY.current;
-      const currentScrollY = getScrollY();
-
-      if (currentScrollY <= 15 || isSearchExpanded || isMenuOpen) {
-        setIsVisible(true);
-        return;
-      }
-
-      if (deltaY < -8 && currentScrollY > 40) {
-        // Swiping finger upwards = scrolling downwards -> hide
-        setIsVisible(false);
-      } else if (deltaY > 8) {
-        // Swiping finger downwards = scrolling upwards -> show
-        setIsVisible(true);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    document.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('touchstart', handleTouchStart, { passive: true });
-    window.addEventListener('touchmove', handleTouchMove, { passive: true });
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      document.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('touchmove', handleTouchMove);
-    };
-  }, [isSearchExpanded, isMenuOpen]);
 
   return (
-    <header 
-      className={`sticky top-0 z-50 w-full border-b border-white/10 bg-[#0f0f0f] backdrop-blur-xl transition-all duration-300 ease-out will-change-transform ${
-        isVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
-      }`}
-    >
+    <>
+      <header className="fixed top-0 inset-x-0 z-50 w-full border-b border-white/10 bg-[#0f0f0f] backdrop-blur-xl">
       <div className="max-w-2xl mx-auto px-3 sm:px-4 h-14 flex items-center justify-between gap-3">
         
         {/* Left: Thumbs-Up Icon & Brand Title "buvaki" */}
@@ -315,5 +238,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       </div>
     </header>
+    {/* Permanent spacer matching fixed navbar height */}
+    <div className="h-14 w-full shrink-0" aria-hidden="true" />
+  </>
   );
 };
