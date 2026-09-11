@@ -176,6 +176,16 @@ export default function App() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  // Auto-collapse left sidebar by default, matching YouTube's default mini guide rail
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+
+  const handleToggleSidebar = () => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setIsMobileSidebarOpen((prev) => !prev);
+    } else {
+      setIsSidebarCollapsed((prev) => !prev);
+    }
+  };
 
   // Profile action guard
   const handleOpenProfile = () => {
@@ -596,53 +606,52 @@ export default function App() {
     <div className="min-h-screen bg-[#0f0f0f] text-neutral-100 font-sans transition-colors duration-200 antialiased pb-16 lg:pb-0">
       
       {/* Top Navbar */}
-      {viewMode !== 'shorts' && (
-        <Navbar
-          viewMode={viewMode}
-          setViewMode={setViewMode}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          currentUser={currentUser}
-          selectedLanguage={selectedLanguage}
-          onOpenCreatePost={handleOpenCreatePost}
-          onOpenNotifications={() => setIsNotificationsOpen(true)}
-          onOpenProfile={handleOpenProfile}
-          onOpenAuth={() => handleRequireAuth()}
-          notifications={notifications}
-          onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
-        />
-      )}
+      <Navbar
+        viewMode={viewMode}
+        setViewMode={setViewMode}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        currentUser={currentUser}
+        selectedLanguage={selectedLanguage}
+        onOpenCreatePost={handleOpenCreatePost}
+        onOpenNotifications={() => setIsNotificationsOpen(true)}
+        onOpenProfile={handleOpenProfile}
+        onOpenAuth={() => handleRequireAuth()}
+        notifications={notifications}
+        onToggleSidebar={handleToggleSidebar}
+        onToggleMobileSidebar={() => setIsMobileSidebarOpen(true)}
+      />
 
       {/* Main Container */}
-      <div className={viewMode === 'shorts' ? 'w-full h-full p-0 m-0' : 'max-w-7xl mx-auto px-2 sm:px-6 flex gap-6'}>
+      <div className={`w-full flex ${viewMode === 'shorts' ? 'h-[calc(100vh-3.5rem)] overflow-hidden' : 'min-h-[calc(100vh-3.5rem)]'}`}>
         
         {/* Desktop Sidebar (Left Navigation) */}
-        {viewMode !== 'shorts' && (
-          <Sidebar
-            activeFilter={activeFilter}
-            onChangeFilter={setActiveFilter}
-            showSavedOnly={showSavedOnly}
-            onToggleSavedOnly={setShowSavedOnly}
-            viewMode={viewMode}
-            setViewMode={setViewMode}
-            selectedLanguage={selectedLanguage}
-            onOpenLanguage={() => setIsLanguageModalOpen(true)}
-            theme={theme}
-            setTheme={setTheme}
-          />
-        )}
+        <Sidebar
+          activeFilter={activeFilter}
+          onChangeFilter={setActiveFilter}
+          showSavedOnly={showSavedOnly}
+          onToggleSavedOnly={setShowSavedOnly}
+          viewMode={viewMode}
+          setViewMode={setViewMode}
+          selectedLanguage={selectedLanguage}
+          onOpenLanguage={() => setIsLanguageModalOpen(true)}
+          theme={theme}
+          setTheme={setTheme}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+        />
 
         {/* Center Main Stage */}
-        <main className={viewMode === 'shorts' ? 'w-full h-full p-0 m-0 flex justify-center' : 'flex-1 min-w-0 py-2 sm:py-3 flex flex-col gap-3'}>
+        <main className={viewMode === 'shorts' ? 'flex-1 min-w-0 h-full flex items-center justify-center overflow-hidden relative' : 'flex-1 min-w-0 py-2 sm:py-3 px-3 sm:px-4 lg:px-6 flex flex-col gap-3'}>
           
           {/* VIEW MODE: FEED */}
           {viewMode === 'feed' && (
-            <div className="flex flex-col gap-3 w-full max-w-2xl mx-auto">
+            <div className="flex flex-col gap-4 w-full max-w-4xl xl:max-w-5xl">
               
-              {/* TOP FILTER PILLS BAR (Matching Screenshot) */}
-              <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar py-1">
+              {/* TOP FILTER PILLS BAR (Starts immediately after collapsed left sidebar) */}
+              <div className="w-full flex items-center justify-between gap-2 overflow-x-auto no-scrollbar py-1">
                 <div className="flex items-center gap-2">
-                  {['Top', 'Newest', 'Creator posts', 'Trending', 'Discussions', 'Polls', 'Images'].map((pill) => (
+                  {['Top', 'Newest', 'Creator posts', 'Discussions', 'Polls', 'Images'].map((pill) => (
                     <button
                       key={pill}
                       onClick={() => setActiveFilterPill(pill)}
@@ -741,6 +750,8 @@ export default function App() {
               onToggleSave={handleToggleSavePost}
               onSelectPost={(p) => setSelectedPost(p)}
               onRequireAuth={handleRequireAuth}
+              onSubscribeToggle={handleToggleSubscribe}
+              subscribedCreators={subscribedCreators}
             />
           )}
 

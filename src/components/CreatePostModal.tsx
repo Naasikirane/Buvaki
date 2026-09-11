@@ -23,7 +23,9 @@ import {
   Clock,
   Layers,
   Camera,
-  Film
+  Film,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { getYouTubeEmbedUrl, isYouTubeUrl, processImageFile, captureVideoFrame, formatFileSize, formatDuration } from '../lib/mediaUtils';
 import { saveLocalMediaBlob } from '../lib/mediaStorage';
@@ -52,6 +54,8 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [imageMode, setImageMode] = useState<'upload' | 'url'>('upload');
   const [imageUrl, setImageUrl] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [isModalGalleryExpanded, setIsModalGalleryExpanded] = useState<boolean>(false);
   const [imageFileName, setImageFileName] = useState<string>('');
   const [imageFileSize, setImageFileSize] = useState<string>('');
   const [isProcessingImage, setIsProcessingImage] = useState<boolean>(false);
@@ -115,22 +119,40 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState<string[]>(['Option 1', 'Option 2']);
 
-  const handleFileSelect = async (file?: File | null) => {
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      setImageError('Please select a valid image file (JPEG, PNG, WEBP, GIF, SVG)');
+  const handleFileSelect = async (filesOrFile?: FileList | File[] | File | null) => {
+    if (!filesOrFile) return;
+    
+    let files: File[] = [];
+    if (filesOrFile instanceof FileList) {
+      files = Array.from(filesOrFile);
+    } else if (Array.isArray(filesOrFile)) {
+      files = filesOrFile;
+    } else if (filesOrFile instanceof File) {
+      files = [filesOrFile];
+    }
+
+    if (files.length === 0) return;
+
+    const validFiles = files.filter(f => f.type.startsWith('image/'));
+    if (validFiles.length === 0) {
+      setImageError('Please select valid image files (JPEG, PNG, WEBP, GIF, SVG)');
       return;
     }
 
     setImageError(null);
     setIsProcessingImage(true);
-    setImageFileName(file.name);
-    setImageFileSize((file.size / 1024).toFixed(1) + ' KB');
+    setImageFileName(validFiles[0].name + (validFiles.length > 1 ? ` (+${validFiles.length - 1} more)` : ''));
+    setImageFileSize((validFiles.reduce((acc, f) => acc + f.size, 0) / 1024).toFixed(1) + ' KB');
 
     try {
-      const processedBase64 = await processImageFile(file);
-      setImagePreview(processedBase64);
-      setImageUrl(processedBase64);
+      const processedList: string[] = [];
+      for (const file of validFiles) {
+        const processedBase64 = await processImageFile(file);
+        processedList.push(processedBase64);
+      }
+      setImagePreviews(prev => [...prev, ...processedList]);
+      setImagePreview(processedList[0]);
+      setImageUrl(processedList[0]);
     } catch (err) {
       console.error('Image upload failed:', err);
       setImageError('Failed to load image from device. Please try another image.');
@@ -312,17 +334,33 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    const file = e.dataTransfer.files?.[0];
-    handleFileSelect(file);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileSelect(e.dataTransfer.files);
+    }
   };
 
   const handleClearImage = () => {
     setImagePreview(null);
+    setImagePreviews([]);
     setImageUrl('');
     setImageFileName('');
     setImageFileSize('');
     setImageError(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleRemoveOneImage = (idxToRemove: number) => {
+    setImagePreviews(prev => {
+      const filtered = prev.filter((_, idx) => idx !== idxToRemove);
+      if (filtered.length === 0) {
+        setImagePreview(null);
+        setImageUrl('');
+      } else {
+        setImagePreview(filtered[0]);
+        setImageUrl(filtered[0]);
+      }
+      return filtered;
+    });
   };
 
   const handleAddPollOption = () => {
@@ -374,7 +412,11 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
       postData.isShort = false;
       postData.isLong = false;
       if (postType === 'image') {
-        postData.imageUrl = (imageUrl || imagePreview || '').trim() || undefined;
+        const allImages = imagePreviews.length > 0
+          ? imagePreviews
+          : (imageUrl || imagePreview ? [(imageUrl || imagePreview).trim()] : []);
+        postData.imageUrl = allImages[0] || undefined;
+        postData.images = allImages.length > 0 ? allImages : undefined;
       } else if (postType === 'video') {
         postData.type = 'video';
         postData.videoUrl = (postVideoUrl || postVideoPreview || '').trim();
@@ -1178,11 +1220,12 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
-                    onChange={(e) => handleFileSelect(e.target.files?.[0])}
+                    multiple
+                    onChange={(e) => handleFileSelect(e.target.files)}
                     className="hidden"
                   />
 
-                  {!imagePreview ? (
+                  {imagePreviews.length === 0 && !imagePreview ? (
                     <div
                       onDragOver={handleDragOver}
                       onDragLeave={handleDragLeave}
@@ -1200,10 +1243,10 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
                       <div className="flex flex-col gap-1">
                         <p className="text-xs sm:text-sm font-bold text-slate-200">
-                          {isDragging ? 'Drop photo here to upload' : 'Click to choose image from your phone or device'}
+                          {isDragging ? 'Drop photos here to upload' : 'Click to choose images from your phone or device'}
                         </p>
                         <p className="text-[11px] text-slate-400">
-                          Supports PNG, JPG, WEBP, GIF, SVG or live camera capture
+                          Select one or multiple photos (PNG, JPG, WEBP, GIF, SVG)
                         </p>
                       </div>
 
@@ -1216,46 +1259,116 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                       </button>
                     </div>
                   ) : (
-                    /* Image preview once selected from phone */
-                    <div className="relative rounded-2xl overflow-hidden border border-violet-800/60 bg-slate-950 group">
-                      <img
-                        src={imagePreview}
-                        alt="Upload preview"
-                        className="w-full max-h-72 object-contain bg-slate-950/80"
-                      />
-
-                      {/* Overlay Bar */}
-                      <div className="p-3 bg-slate-900/90 border-t border-violet-900/40 flex items-center justify-between">
-                        <div className="flex items-center gap-2 min-w-0">
+                    /* Image preview: Small, Square Images of Uniform Size with Independent MORE Icon */
+                    <div className="relative rounded-2xl overflow-hidden border border-violet-800/60 bg-slate-950 p-2.5 space-y-2.5">
+                      {/* Controls header */}
+                      <div className="flex items-center justify-between px-1">
+                        <div className="flex items-center gap-2">
                           <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                          <span className="text-xs font-semibold text-slate-200 truncate">
-                            {imageFileName || 'Uploaded Photo'}
+                          <span className="text-xs font-semibold text-slate-200">
+                            {imagePreviews.length > 0 ? `${imagePreviews.length} Photo${imagePreviews.length > 1 ? 's' : ''} Selected` : imageFileName || 'Uploaded Photo'}
                           </span>
-                          {imageFileSize && (
-                            <span className="text-[10px] text-slate-400 font-mono">
-                              ({imageFileSize})
-                            </span>
-                          )}
                         </div>
 
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
-                            className="px-3 py-1 rounded-lg text-xs font-medium text-violet-300 hover:text-white bg-slate-800 hover:bg-violet-900 transition-colors"
+                            className="px-2.5 py-1 rounded-lg text-xs font-medium text-violet-300 hover:text-white bg-slate-800 hover:bg-violet-900 transition-colors flex items-center gap-1"
                           >
-                            Change Photo
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Add Photo</span>
                           </button>
                           <button
                             type="button"
                             onClick={handleClearImage}
                             className="p-1.5 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-950/50 transition-colors"
-                            title="Remove Photo"
+                            title="Remove All"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
+
+                      {/* Horizontal row of small square photos with independent MORE icon next to the last photo */}
+                      {!isModalGalleryExpanded ? (
+                        <div className="flex items-center gap-3 overflow-x-auto no-scrollbar scroll-smooth py-1 pr-2">
+                          {(imagePreviews.length > 0 ? imagePreviews : [imagePreview || '']).map((imgUrl, idx) => (
+                            <div
+                              key={idx}
+                              className="relative shrink-0 w-36 h-36 sm:w-44 sm:h-44 aspect-square rounded-2xl overflow-hidden bg-slate-900 border border-white/10 group/item"
+                            >
+                              <img
+                                src={imgUrl}
+                                alt={`Selected upload ${idx + 1}`}
+                                className="w-full h-full object-cover select-none"
+                              />
+                              {(imagePreviews.length > 1) && (
+                                <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-sm text-[10px] font-bold text-white">
+                                  {idx + 1}/{imagePreviews.length}
+                                </div>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveOneImage(idx)}
+                                className="absolute top-2 left-2 p-1 rounded-md bg-black/70 hover:bg-rose-900 text-rose-300 hover:text-white opacity-0 group-hover/item:opacity-100 transition-opacity"
+                                title="Remove this photo"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+
+                          {/* Independent Expanding MORE icon next to the last photo */}
+                          <button
+                            type="button"
+                            onClick={() => setIsModalGalleryExpanded(true)}
+                            className="shrink-0 flex flex-col items-center justify-center gap-1 px-3 py-2.5 rounded-xl bg-black/90 hover:bg-black border border-white/20 text-white shadow-xl transition-all hover:scale-105 active:scale-95 cursor-pointer select-none self-center"
+                            title="Expand photos"
+                          >
+                            <span className="text-[11px] font-extrabold uppercase tracking-wider text-white">
+                              MORE
+                            </span>
+                            <Maximize2 className="w-4 h-4 text-white" />
+                          </button>
+                        </div>
+                      ) : (
+                        /* Expanded View */
+                        <div className="flex flex-col gap-3">
+                          <div className="flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => setIsModalGalleryExpanded(false)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/90 hover:bg-black border border-white/20 text-white text-xs font-bold uppercase tracking-wider shadow-lg hover:scale-105 transition-all cursor-pointer"
+                            >
+                              <span>LESS</span>
+                              <Minimize2 className="w-3.5 h-3.5 text-white" />
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-80 overflow-y-auto pr-1">
+                            {(imagePreviews.length > 0 ? imagePreviews : [imagePreview || '']).map((imgUrl, idx) => (
+                              <div
+                                key={idx}
+                                className="relative w-full aspect-video sm:aspect-[16/10] rounded-xl overflow-hidden bg-slate-900 border border-white/10 group/item"
+                              >
+                                <img
+                                  src={imgUrl}
+                                  alt={`Selected upload ${idx + 1}`}
+                                  className="w-full h-full object-cover select-none"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveOneImage(idx)}
+                                  className="absolute top-2 right-2 p-1 rounded-md bg-black/70 hover:bg-rose-900 text-rose-300 hover:text-white"
+                                  title="Remove photo"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 

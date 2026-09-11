@@ -62,8 +62,8 @@ export const MobileNav: React.FC<MobileNavProps> = ({
 
   return (
     <>
-      {/* Bottom Navigation Bar (Matching Screenshot 1) */}
-      <nav className={`${viewMode === 'shorts' ? 'flex' : 'lg:hidden flex'} fixed bottom-0 left-0 right-0 z-40 bg-[#0f0f0f]/95 border-t border-white/10 backdrop-blur-lg px-2 py-1.5 items-center justify-around shadow-2xl max-w-md mx-auto`}>
+      {/* Bottom Navigation Bar (Mobile only) */}
+      <nav className="lg:hidden flex fixed bottom-0 left-0 right-0 z-40 bg-[#0f0f0f]/95 border-t border-white/10 backdrop-blur-lg px-2 py-1.5 items-center justify-around shadow-2xl max-w-md mx-auto">
         
         {/* Home / Feed Tab */}
         <button

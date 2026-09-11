@@ -9,7 +9,12 @@ import {
   Sparkles, 
   Bookmark, 
   Trash2, 
-  Pin
+  Pin,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { formatRealTimestamp } from '../lib/timeUtils';
 import { DeletePostConfirmModal } from './DeletePostConfirmModal';
@@ -46,6 +51,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const sliderRef = useRef<HTMLDivElement>(null);
 
   // Mouse Drag to Scroll State for Desktop/Touch
@@ -93,6 +99,19 @@ export const PostCard: React.FC<PostCardProps> = ({
     : post.imageUrl 
     ? [post.imageUrl] 
     : [];
+
+  const [isGalleryExpanded, setIsGalleryExpanded] = useState(false);
+  const galleryScrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollGallery = (direction: 'left' | 'right') => {
+    if (galleryScrollRef.current) {
+      const scrollAmount = galleryScrollRef.current.clientWidth * 0.8;
+      galleryScrollRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   const handleTranslate = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -205,7 +224,7 @@ export const PostCard: React.FC<PostCardProps> = ({
         if (onOpenComments) onOpenComments(post);
         else onSelectPost(post);
       }}
-      className="group w-full max-w-xl mx-auto bg-[#0f0f0f] pb-5 transition-all duration-200 cursor-pointer overflow-hidden text-left"
+      className="group w-full max-w-2xl lg:max-w-3xl xl:max-w-4xl bg-[#0f0f0f] pb-5 transition-all duration-200 cursor-pointer text-left"
     >
       {/* Pinned Badge if any */}
       {post.isPinned && (
@@ -379,53 +398,117 @@ export const PostCard: React.FC<PostCardProps> = ({
             </div>
           )}
 
-          {/* 3. Media Content: Natural Horizontal Sliding Carousel for Multiple Images, or Single Image */}
-          {/* Single Image (Bigger in size and dimension as default 1:1 aspect-square format) */}
-          {postImages.length === 1 && (
-            <div className="mt-2.5" onClick={(e) => e.stopPropagation()}>
-              <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-neutral-900 border border-white/5 shadow-md flex items-center justify-center">
-                <img
-                  src={postImages[0]}
-                  alt="Community post media"
-                  className="w-full h-full object-cover rounded-2xl select-none"
-                  referrerPolicy="no-referrer"
-                  loading="lazy"
-                />
-              </div>
-            </div>
-          )}
+          {/* 3. Media Content: Small, Square Images of Uniform Size with Independent Expanding MORE Icon */}
+          {postImages.length > 0 && (
+            <div className="mt-2.5 relative group/gallery" onClick={(e) => e.stopPropagation()}>
+              {!isGalleryExpanded ? (
+                /* Standard Compact Mode: Small square photos of identical size in a horizontal row */
+                <div className="relative">
+                  {/* Left Scroll Arrow (shown if overflowing) */}
+                  {postImages.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() => scrollGallery('left')}
+                      className="absolute left-1 top-1/2 -translate-y-1/2 z-10 p-1.5 rounded-full bg-black/75 hover:bg-black border border-white/20 text-white opacity-0 group-hover/gallery:opacity-100 transition-opacity shadow-lg cursor-pointer hidden sm:flex items-center justify-center"
+                      aria-label="Scroll left"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                  )}
 
-          {/* Multiple Images: Natural Horizontal Sliding Carousel (Previous image stays visible on the left, active image aligns, next image peeks on right) */}
-          {postImages.length > 1 && (
-            <div 
-              className="mt-2.5 -ml-[68px] sm:-ml-[70px] -mr-4 overflow-hidden" 
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div 
-                ref={sliderRef}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUpOrLeave}
-                onMouseLeave={handleMouseUpOrLeave}
-                className="flex gap-2.5 overflow-x-auto snap-x snap-mandatory no-scrollbar pl-[68px] sm:pl-[70px] pr-4 pb-1 cursor-grab active:cursor-grabbing select-none"
-                style={{ scrollPaddingLeft: '68px' }}
-              >
-                {postImages.map((imgUrl, idx) => (
+                  {/* Horizontal row of small square photos with independent MORE icon next to the last photo */}
                   <div 
-                    key={idx} 
-                    className="relative flex-shrink-0 w-[78%] sm:w-[320px] aspect-square rounded-2xl overflow-hidden bg-neutral-900 snap-start border border-white/5 shadow-md"
+                    ref={galleryScrollRef}
+                    className="flex items-center gap-3 overflow-x-auto no-scrollbar scroll-smooth py-1 pr-4"
                   >
-                    <img
-                      src={imgUrl}
-                      alt={`Post media ${idx + 1}`}
-                      className="w-full h-full object-cover rounded-2xl select-none pointer-events-none"
-                      referrerPolicy="no-referrer"
-                      loading="lazy"
-                      draggable={false}
-                    />
+                    {postImages.map((imgUrl, idx) => (
+                      <div
+                        key={idx}
+                        onClick={() => setLightboxIndex(idx)}
+                        className="relative shrink-0 w-[180px] h-[180px] sm:w-[220px] sm:h-[220px] md:w-[240px] md:h-[240px] aspect-square rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 shadow-md cursor-zoom-in group/img"
+                      >
+                        <img
+                          src={imgUrl}
+                          alt={`Post media ${idx + 1}`}
+                          className="w-full h-full object-cover select-none transition-transform duration-300 group-hover/img:scale-[1.03]"
+                          referrerPolicy="no-referrer"
+                          loading="lazy"
+                        />
+                        {/* Image Counter badge in top-right (when multiple photos) */}
+                        {postImages.length > 1 && (
+                          <div className="absolute top-2.5 right-2.5 px-2.5 py-0.5 rounded-full bg-black/65 backdrop-blur-md text-[11px] font-semibold text-white/95 border border-white/10 select-none shadow-sm">
+                            {idx + 1}/{postImages.length}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Independent Expanding MORE Icon: placed next to the last photo */}
+                    <button
+                      type="button"
+                      onClick={() => setIsGalleryExpanded(true)}
+                      className="shrink-0 flex flex-col items-center justify-center gap-1 px-3.5 py-2.5 rounded-xl bg-black/90 hover:bg-black border border-white/20 text-white shadow-xl transition-all hover:scale-105 active:scale-95 cursor-pointer select-none self-center"
+                      title="Expand photos"
+                    >
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-white">
+                        MORE
+                      </span>
+                      <Maximize2 className="w-4 h-4 text-white" />
+                    </button>
                   </div>
-                ))}
-              </div>
+
+                  {/* Right Scroll Arrow (shown if overflowing) */}
+                  {postImages.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() => scrollGallery('right')}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 z-10 p-1.5 rounded-full bg-black/75 hover:bg-black border border-white/20 text-white opacity-0 group-hover/gallery:opacity-100 transition-opacity shadow-lg cursor-pointer hidden sm:flex items-center justify-center"
+                      aria-label="Scroll right"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              ) : (
+                /* Expanded Mode: Large view with independent LESS button to collapse back */
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-xs font-semibold text-neutral-400">
+                      {postImages.length} {postImages.length === 1 ? 'Photo' : 'Photos'} (Expanded View)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsGalleryExpanded(false)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/90 hover:bg-black border border-white/20 text-white text-xs font-bold uppercase tracking-wider shadow-lg hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                      title="Collapse to small square photos"
+                    >
+                      <span>LESS</span>
+                      <Minimize2 className="w-3.5 h-3.5 text-white" />
+                    </button>
+                  </div>
+
+                  {postImages.map((imgUrl, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => setLightboxIndex(idx)}
+                      className="relative w-full max-w-2xl aspect-video sm:aspect-[16/10] max-h-[500px] rounded-2xl overflow-hidden bg-neutral-900 border border-white/5 shadow-md cursor-zoom-in group/img"
+                    >
+                      <img
+                        src={imgUrl}
+                        alt={`Post media ${idx + 1}`}
+                        className="w-full h-full object-cover select-none transition-transform duration-300 group-hover/img:scale-[1.02]"
+                        referrerPolicy="no-referrer"
+                        loading="lazy"
+                      />
+                      {postImages.length > 1 && (
+                        <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-[11px] font-medium text-white/90 border border-white/10">
+                          {idx + 1} / {postImages.length}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -568,6 +651,71 @@ export const PostCard: React.FC<PostCardProps> = ({
             setIsConfirmDeleteOpen(false);
           }}
         />
+      )}
+
+      {/* Lightbox Fullscreen Viewer */}
+      {lightboxIndex !== null && postImages[lightboxIndex] && (
+        <div 
+          className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex items-center justify-center p-4 select-none animate-in fade-in duration-200"
+          onClick={(e) => {
+            e.stopPropagation();
+            setLightboxIndex(null);
+          }}
+        >
+          {/* Close button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setLightboxIndex(null);
+            }}
+            className="absolute top-4 right-4 z-20 p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+            aria-label="Close image viewer"
+          >
+            <X className="w-6 h-6" />
+          </button>
+
+          {/* Navigation - Prev */}
+          {postImages.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : postImages.length - 1));
+              }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+              aria-label="Previous image"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          )}
+
+          {/* Main Image */}
+          <div className="relative max-w-5xl max-h-[85vh] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={postImages[lightboxIndex]}
+              alt={`Full preview ${lightboxIndex + 1}`}
+              className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl"
+            />
+            {postImages.length > 1 && (
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full bg-black/75 backdrop-blur-md text-xs font-semibold text-white">
+                {lightboxIndex + 1} / {postImages.length}
+              </div>
+            )}
+          </div>
+
+          {/* Navigation - Next */}
+          {postImages.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIndex((prev) => (prev !== null && prev < postImages.length - 1 ? prev + 1 : 0));
+              }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+              aria-label="Next image"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          )}
+        </div>
       )}
 
     </article>
