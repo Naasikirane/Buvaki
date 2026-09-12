@@ -10,20 +10,20 @@
 }
 
 @layer utilities {
-  /* Custom scrollbar styling */
+  /* Custom scrollbar styling for light theme */
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
   .custom-scrollbar::-webkit-scrollbar-track {
-    background: rgba(15, 23, 42, 0.6);
+    background: rgba(241, 245, 249, 0.8);
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(139, 92, 246, 0.3);
+    background: rgba(148, 163, 184, 0.4);
     border-radius: 9999px;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(139, 92, 246, 0.6);
+    background: rgba(100, 116, 139, 0.6);
   }
 
   .no-scrollbar::-webkit-scrollbar {
@@ -36,7 +36,10 @@
 }
 
 html, body {
-  background-color: #020617;
-  color: #f8fafc;
+  background-color: #ffffff;
+  color: #0f0f0f;
+  font-family: "Roboto", "YouTube Sans", Arial, sans-serif;
   overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }

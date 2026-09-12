@@ -235,13 +235,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   return (
     <div 
       dir={isRTL(selectedLanguage.code) ? 'rtl' : 'ltr'}
-      className="fixed inset-0 z-50 w-full h-full min-h-screen bg-slate-950 flex flex-col overflow-hidden animate-in fade-in duration-200 m-0 p-0 rounded-none border-none"
+      className="fixed inset-0 z-50 w-full h-full min-h-screen bg-white flex flex-col overflow-hidden animate-in fade-in duration-200 m-0 p-0 rounded-none border-none"
     >
       {/* Full-width Header Ribbon with Brand & Close Button */}
-      <header className="relative w-full px-4 sm:px-8 py-3.5 flex items-center justify-between border-b border-violet-900/40 bg-slate-950/95 backdrop-blur-md shrink-0">
+      <header className="relative w-full px-4 sm:px-8 py-3.5 flex items-center justify-between border-b border-slate-200 bg-white/95 backdrop-blur-md shrink-0">
         <div className="flex items-center gap-2.5">
           <Logo size="sm" />
-          <span className="text-xs px-2.5 py-0.5 rounded-full bg-violet-900/60 border border-violet-700/50 text-violet-300 font-semibold">
+          <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-semibold">
             Free Access
           </span>
         </div>
@@ -249,7 +249,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-full text-slate-400 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 transition-colors"
             aria-label="Close"
           >
             <X className="w-5 h-5" />
@@ -258,27 +258,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       </header>
 
       {/* Full-screen Scrollable Content Area */}
-      <main className="flex-1 w-full overflow-y-auto custom-scrollbar bg-slate-950">
+      <main className="flex-1 w-full overflow-y-auto custom-scrollbar bg-white">
         <div className="w-full max-w-lg mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-4">
           {/* Prompt Reason Banner if triggered by an interaction */}
           {promptReason && (
-            <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-pink-950/40 border border-pink-500/40 text-pink-200 text-xs">
-              <Sparkles className="w-4 h-4 text-pink-400 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs">
+              <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
               <div>
-                <span className="font-bold block text-pink-300">Sign in required</span>
+                <span className="font-bold block text-amber-900">Sign in required</span>
                 <span>{promptReason}</span>
               </div>
             </div>
           )}
 
           {/* Tab Switcher (Sign In vs Sign Up) */}
-          <div className="flex p-1 rounded-2xl bg-slate-900/90 border border-violet-900/50">
+          <div className="flex p-1 rounded-2xl bg-slate-100 border border-slate-200">
             <button
               onClick={() => handleTabSwitch('signin')}
               className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
                 activeTab === 'signin'
-                  ? 'bg-violet-600 text-white shadow-md shadow-violet-600/30'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               Sign In
@@ -287,8 +287,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               onClick={() => handleTabSwitch('signup')}
               className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
                 activeTab === 'signup'
-                  ? 'bg-pink-600 text-white shadow-md shadow-pink-600/30'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               Create Account
@@ -297,16 +297,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
           {/* Error Message */}
           {error && (
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-red-950/60 border border-red-500/50 text-red-200 text-xs animate-in fade-in">
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs animate-in fade-in">
+              <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
           {/* Success Message */}
           {successMsg && (
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-950/60 border border-emerald-500/50 text-emerald-200 text-xs animate-in fade-in">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>{successMsg}</span>
             </div>
           )}
@@ -315,9 +315,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <button
             onClick={handleDemoLogin}
             type="button"
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-pink-500/20 hover:from-amber-500/30 hover:to-pink-500/30 border border-amber-500/40 text-amber-200 text-xs font-bold transition-all hover:scale-[1.01] active:scale-[0.99] shadow-sm"
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-2xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-xs font-bold transition-all hover:scale-[1.01] active:scale-[0.99] shadow-sm"
           >
-            <Zap className="w-4 h-4 text-amber-400" />
+            <Zap className="w-4 h-4 text-amber-600" />
             <span>⚡ 1-Click Instant Demo Login (MayaLin)</span>
           </button>
 
@@ -326,7 +326,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             onClick={handleGoogleAuth}
             disabled={isLoading}
             type="button"
-            className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-2xl bg-slate-900/90 hover:bg-slate-850 border border-violet-800/40 text-slate-100 text-xs font-bold transition-all hover:border-violet-500/60 disabled:opacity-50 shadow-sm"
+            className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold transition-all hover:border-slate-300 disabled:opacity-50 shadow-sm"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path
@@ -350,40 +350,40 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </button>
 
           <div className="flex items-center gap-3 my-1">
-            <div className="flex-1 h-px bg-slate-800" />
-            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">or with email</span>
-            <div className="flex-1 h-px bg-slate-800" />
+            <div className="flex-1 h-px bg-slate-200" />
+            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">or with email</span>
+            <div className="flex-1 h-px bg-slate-200" />
           </div>
 
           {/* SIGN IN FORM */}
           {activeTab === 'signin' && (
             <form onSubmit={handleSignIn} className="flex flex-col gap-3">
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-slate-300">Email Address</label>
+                <label className="text-[11px] font-semibold text-slate-700">Email Address</label>
                 <div className="relative flex items-center">
-                  <Mail className="w-4 h-4 text-slate-500 absolute left-3 pointer-events-none" />
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
                   <input
                     type="email"
                     required
                     value={signInEmail}
                     onChange={(e) => setSignInEmail(e.target.value)}
                     placeholder="you@example.com"
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-900/90 border border-violet-900/40 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-violet-500 transition-colors"
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-900 transition-colors"
                   />
                 </div>
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-slate-300">Password</label>
+                <label className="text-[11px] font-semibold text-slate-700">Password</label>
                 <div className="relative flex items-center">
-                  <Lock className="w-4 h-4 text-slate-500 absolute left-3 pointer-events-none" />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
                   <input
                     type="password"
                     required
                     value={signInPassword}
                     onChange={(e) => setSignInPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-900/90 border border-violet-900/40 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-violet-500 transition-colors"
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-900 transition-colors"
                   />
                 </div>
               </div>
@@ -391,7 +391,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <button
                 type="submit"
                 disabled={isLoading}
-                className="mt-1 w-full py-2.5 px-4 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs shadow-lg shadow-violet-600/30 active:scale-98 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                className="mt-1 w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-md active:scale-98 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {isLoading ? (
                   <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
@@ -409,53 +409,53 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           {activeTab === 'signup' && (
             <form onSubmit={handleSignUp} className="flex flex-col gap-3">
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-slate-300">Username</label>
+                <label className="text-[11px] font-semibold text-slate-700">Username</label>
                 <div className="relative flex items-center">
-                  <UserIcon className="w-4 h-4 text-slate-500 absolute left-3 pointer-events-none" />
+                  <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
                   <input
                     type="text"
                     required
                     value={signUpUsername}
                     onChange={(e) => setSignUpUsername(e.target.value)}
                     placeholder="e.g. MayaLin"
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-900/90 border border-violet-900/40 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-violet-500 transition-colors"
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-900 transition-colors"
                   />
                 </div>
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-slate-300">Email Address</label>
+                <label className="text-[11px] font-semibold text-slate-700">Email Address</label>
                 <div className="relative flex items-center">
-                  <Mail className="w-4 h-4 text-slate-500 absolute left-3 pointer-events-none" />
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
                   <input
                     type="email"
                     required
                     value={signUpEmail}
                     onChange={(e) => setSignUpEmail(e.target.value)}
                     placeholder="you@example.com"
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-900/90 border border-violet-900/40 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-violet-500 transition-colors"
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-900 transition-colors"
                   />
                 </div>
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-slate-300">Password (6+ chars)</label>
+                <label className="text-[11px] font-semibold text-slate-700">Password (6+ chars)</label>
                 <div className="relative flex items-center">
-                  <Lock className="w-4 h-4 text-slate-500 absolute left-3 pointer-events-none" />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
                   <input
                     type="password"
                     required
                     value={signUpPassword}
                     onChange={(e) => setSignUpPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-900/90 border border-violet-900/40 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-violet-500 transition-colors"
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-900 transition-colors"
                   />
                 </div>
               </div>
 
               {/* Gender Avatar Selector */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-semibold text-slate-300">Avatar Style</label>
+                <label className="text-[11px] font-semibold text-slate-700">Avatar Style</label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
                     { key: 'female', label: 'Female', img: GENERIC_AVATARS.female.url },
@@ -468,8 +468,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       onClick={() => setSignUpGender(g.key as any)}
                       className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border text-center transition-all ${
                         signUpGender === g.key
-                          ? 'border-pink-500 bg-pink-950/40 text-white ring-1 ring-pink-500'
-                          : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white'
+                          ? 'border-slate-900 bg-slate-100 text-slate-900 ring-1 ring-slate-900'
+                          : 'border-slate-200 bg-slate-50 text-slate-600 hover:text-slate-900'
                       }`}
                     >
                       <img src={g.img} alt={g.label} className="w-8 h-8 rounded-lg object-cover" />
@@ -482,7 +482,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <button
                 type="submit"
                 disabled={isLoading}
-                className="mt-1 w-full py-2.5 px-4 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs shadow-lg shadow-pink-600/30 active:scale-98 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                className="mt-1 w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-md active:scale-98 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {isLoading ? (
                   <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
@@ -497,11 +497,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           )}
 
           {/* Guest browsing notice */}
-          <div className="text-center pt-2 border-t border-slate-900">
+          <div className="text-center pt-2 border-t border-slate-200">
             <button
               onClick={onClose}
               type="button"
-              className="text-xs text-slate-400 hover:text-slate-200 underline decoration-slate-600 underline-offset-4"
+              className="text-xs text-slate-500 hover:text-slate-800 underline decoration-slate-300 underline-offset-4"
             >
               Continue browsing for free as guest
             </button>

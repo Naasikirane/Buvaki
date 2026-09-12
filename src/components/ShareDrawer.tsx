@@ -157,26 +157,26 @@ export const ShareDrawer: React.FC<ShareDrawerProps> = ({
       />
 
       {/* Slide-Up Bottom Sheet */}
-      <div className="relative w-full max-w-md bg-[#212121] border-t sm:border border-white/10 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col z-10 overflow-hidden animate-in slide-in-from-bottom duration-300">
+      <div className="relative w-full max-w-md bg-white border-t sm:border border-slate-200 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col z-10 overflow-hidden animate-in slide-in-from-bottom duration-300">
         
         {/* Drag Handle */}
         <div className="w-full flex items-center justify-center pt-3 pb-1 cursor-grab">
-          <div className="w-10 h-1 rounded-full bg-white/20" />
+          <div className="w-10 h-1 rounded-full bg-slate-300" />
         </div>
 
         {/* Header */}
-        <div className="px-5 py-3 flex items-center justify-between border-b border-white/10">
-          <h3 className="text-lg font-bold text-white tracking-tight">Share</h3>
+        <div className="px-5 py-3 flex items-center justify-between border-b border-slate-200">
+          <h3 className="text-lg font-bold text-slate-900 tracking-tight">Share</h3>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-white/10 text-neutral-300 hover:text-white transition-colors"
+            className="p-1.5 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Horizontal App Icons Row (Matching Screenshot 3) */}
-        <div className="px-4 py-4 overflow-x-auto custom-scrollbar flex items-center gap-4 border-b border-white/10">
+        <div className="px-4 py-4 overflow-x-auto custom-scrollbar flex items-center gap-4 border-b border-slate-200">
           {socialApps.map((app, idx) => (
             <a
               key={idx}
@@ -189,7 +189,7 @@ export const ShareDrawer: React.FC<ShareDrawerProps> = ({
               <div className={`w-13 h-13 rounded-full flex items-center justify-center shadow-md transition-transform group-hover:scale-105 group-active:scale-95 ${app.iconBg}`}>
                 {app.icon}
               </div>
-              <span className="text-[11px] text-neutral-300 group-hover:text-white truncate max-w-[68px]">
+              <span className="text-[11px] text-slate-700 group-hover:text-slate-900 truncate max-w-[68px]">
                 {app.name}
               </span>
             </a>
@@ -202,16 +202,16 @@ export const ShareDrawer: React.FC<ShareDrawerProps> = ({
           {/* Copy link */}
           <button
             onClick={handleCopyLink}
-            className="w-full px-5 py-3 flex items-center gap-4 hover:bg-white/5 transition-colors text-left group"
+            className="w-full px-5 py-3 flex items-center gap-4 hover:bg-slate-50 transition-colors text-left group"
           >
-            <div className="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center text-white group-hover:bg-neutral-700 transition-colors">
-              {copied ? <Check className="w-5 h-5 text-emerald-400" /> : <Copy className="w-5 h-5" />}
+            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 group-hover:bg-slate-200 transition-colors">
+              {copied ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-semibold text-white">
+              <span className="text-sm font-semibold text-slate-900">
                 {copied ? 'Link copied!' : 'Copy link'}
               </span>
-              <span className="text-xs text-neutral-400 truncate max-w-xs font-mono">
+              <span className="text-xs text-slate-500 truncate max-w-xs font-mono">
                 {postUrl}
               </span>
             </div>
@@ -220,30 +220,30 @@ export const ShareDrawer: React.FC<ShareDrawerProps> = ({
           {/* Quick Share */}
           <button
             onClick={handleQuickShare}
-            className="w-full px-5 py-3 flex items-center gap-4 hover:bg-white/5 transition-colors text-left group"
+            className="w-full px-5 py-3 flex items-center gap-4 hover:bg-slate-50 transition-colors text-left group"
           >
-            <div className="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center text-white group-hover:bg-neutral-700 transition-colors">
+            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 group-hover:bg-slate-200 transition-colors">
               <Share2 className="w-5 h-5" />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-semibold text-white">Quick Share</span>
-              <span className="text-xs text-neutral-400">Share to nearby devices or installed apps</span>
+              <span className="text-sm font-semibold text-slate-900">Quick Share</span>
+              <span className="text-xs text-slate-500">Share to nearby devices or installed apps</span>
             </div>
           </button>
 
           {/* Repost on Buvaki */}
           <button
             onClick={handleRepost}
-            className="w-full px-5 py-3 flex items-center gap-4 hover:bg-white/5 transition-colors text-left group"
+            className="w-full px-5 py-3 flex items-center gap-4 hover:bg-slate-50 transition-colors text-left group"
           >
-            <div className="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center text-white group-hover:bg-neutral-700 transition-colors">
+            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 group-hover:bg-slate-200 transition-colors">
               <Edit3 className="w-5 h-5" />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-semibold text-white">
+              <span className="text-sm font-semibold text-slate-900">
                 {repostedToast ? 'Reposted to your feed!' : 'Repost on Buvaki'}
               </span>
-              <span className="text-xs text-neutral-400">Share with your followers on Buvaki</span>
+              <span className="text-xs text-slate-500">Share with your followers on Buvaki</span>
             </div>
           </button>
 
@@ -251,7 +251,7 @@ export const ShareDrawer: React.FC<ShareDrawerProps> = ({
 
         {/* Toast confirmation */}
         {copied && (
-          <div className="m-3 p-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold text-center animate-in fade-in">
+          <div className="m-3 p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold text-center animate-in fade-in">
             ✓ Post link copied to clipboard!
           </div>
         )}

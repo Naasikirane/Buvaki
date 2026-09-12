@@ -446,16 +446,16 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const longYtEmbedUrl = getYouTubeEmbedUrl(longVideoUrl);
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col w-full h-full min-h-screen overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-white flex flex-col w-full h-full min-h-screen overflow-hidden">
       {/* Full-width Top Creator Bar */}
-      <header className="flex items-center justify-between px-4 sm:px-8 py-3.5 border-b border-violet-900/40 bg-slate-950/95 backdrop-blur-md shrink-0">
+      <header className="flex items-center justify-between px-4 sm:px-8 py-3.5 border-b border-slate-200 bg-white/95 backdrop-blur-md shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-violet-600/20 border border-violet-500/40 flex items-center justify-center text-pink-400">
+          <div className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-800">
             <Sparkles className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-sm sm:text-base font-bold text-slate-100 leading-tight">Create on Buvaki</h2>
-            <p className="text-[11px] text-slate-400 hidden sm:block">Publish threads, vertical shorts, or 16:9 widescreen videos</p>
+            <h2 className="text-sm sm:text-base font-bold text-slate-900 leading-tight">Create on Buvaki</h2>
+            <p className="text-[11px] text-slate-500 hidden sm:block">Publish threads, vertical shorts, or 16:9 widescreen videos</p>
           </div>
         </div>
 
@@ -463,7 +463,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 transition-colors"
+            className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 transition-colors"
           >
             Discard
           </button>
@@ -471,14 +471,14 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             type="button"
             onClick={handleSubmit}
             disabled={!title.trim() || isProcessingImage || isProcessingLongVideo}
-            className="px-4 sm:px-5 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-bold text-xs shadow-md shadow-violet-600/20 active:scale-95 transition-all flex items-center gap-1.5"
+            className="px-4 sm:px-5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-bold text-xs shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
           >
             <span>{mainTab === 'shorts' ? 'Publish Short' : mainTab === 'longs' ? 'Publish Video' : 'Publish Post'}</span>
           </button>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="p-1.5 rounded-full text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 ml-1"
+            className="p-1.5 rounded-full text-slate-400 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 ml-1"
           >
             <X className="w-4 h-4" />
           </button>
@@ -486,20 +486,20 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
       </header>
 
       {/* Full-width Scrollable Creator Canvas */}
-      <main className="flex-1 w-full overflow-y-auto custom-scrollbar bg-slate-950">
+      <main className="flex-1 w-full overflow-y-auto custom-scrollbar bg-white">
         <div className="w-full max-w-4xl mx-auto px-4 sm:px-8 py-6 sm:py-8">
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
           
           {/* 1. PRIMARY TABS: Posts, Shorts, Longs */}
           <div className="flex flex-col gap-1.5">
-            <div className="grid grid-cols-3 p-1 rounded-2xl bg-slate-900 border border-violet-900/40 shadow-inner">
+            <div className="grid grid-cols-3 p-1 rounded-2xl bg-slate-100 border border-slate-200 shadow-inner">
               <button
                 type="button"
                 onClick={() => setMainTab('posts')}
                 className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                   mainTab === 'posts'
-                    ? 'bg-violet-600 text-white shadow-md shadow-violet-600/30'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                 }`}
               >
                 <FileText className="w-4 h-4" />
@@ -511,8 +511,8 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 onClick={() => setMainTab('shorts')}
                 className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                   mainTab === 'shorts'
-                    ? 'bg-pink-600 text-white shadow-md shadow-pink-600/30'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                 }`}
               >
                 <Clapperboard className="w-4 h-4" />
@@ -524,8 +524,8 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 onClick={() => setMainTab('longs')}
                 className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                   mainTab === 'longs'
-                    ? 'bg-violet-600 text-white shadow-md shadow-violet-600/30'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                 }`}
               >
                 <Tv className="w-4 h-4" />
@@ -536,12 +536,12 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
           {/* 3. Sub-tabs (Text | Photo | Video | Link | Poll) - shown when in Posts mode */}
           {mainTab === 'posts' && (
-            <div className="flex flex-wrap sm:flex-nowrap rounded-xl bg-slate-900 p-1 border border-violet-900/40 gap-1">
+            <div className="flex flex-wrap sm:flex-nowrap rounded-xl bg-slate-100 p-1 border border-slate-200 gap-1">
               <button
                 type="button"
                 onClick={() => setPostType('text')}
                 className={`flex-1 min-w-[65px] flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${
-                  postType === 'text' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                  postType === 'text' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <FileText className="w-3.5 h-3.5" /> Text
@@ -550,7 +550,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 type="button"
                 onClick={() => setPostType('image')}
                 className={`flex-1 min-w-[65px] flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${
-                  postType === 'image' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                  postType === 'image' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <ImageIcon className="w-3.5 h-3.5" /> Photo
@@ -559,16 +559,16 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 type="button"
                 onClick={() => setPostType('video')}
                 className={`flex-1 min-w-[65px] flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${
-                  postType === 'video' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                  postType === 'video' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <Film className="w-3.5 h-3.5 text-pink-400" /> Video
+                <Film className="w-3.5 h-3.5 text-pink-600" /> Video
               </button>
               <button
                 type="button"
                 onClick={() => setPostType('link')}
                 className={`flex-1 min-w-[65px] flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${
-                  postType === 'link' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                  postType === 'link' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <Link2 className="w-3.5 h-3.5" /> Link
@@ -577,7 +577,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 type="button"
                 onClick={() => setPostType('poll')}
                 className={`flex-1 min-w-[65px] flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-all ${
-                  postType === 'poll' ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                  postType === 'poll' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <BarChart2 className="w-3.5 h-3.5" /> Poll

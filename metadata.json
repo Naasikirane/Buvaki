@@ -1,6 +1,6 @@
 {
   "name": "Buvaki",
-  "description": "A modern video and community post platform with vertical shorts, widescreen longs, multi-image galleries, and interactive discussions.",
+  "description": "Buvaki is a modern social media and community platform featuring sub-buvakis, interactive threads, live chat channels, and real-time discussions.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

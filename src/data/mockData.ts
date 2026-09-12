@@ -1,13 +1,13 @@
 import { Post, SubBuvaki, ChatChannel, ChatMessage, User, NotificationItem, Comment } from '../types';
 
 export const CURRENT_USER: User = {
-  id: 'u_guest_creator',
-  username: 'Buvaki Creator',
-  handle: '@creator',
-  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-  bio: 'Creative creator on Buvaki.',
-  karma: 100,
-  badges: ['Founding Member'],
+  id: 'u_buvaki_story',
+  username: 'Buvaki story',
+  handle: '@buvaki',
+  avatar: '/src/assets/images/buvaki_avatar_1789246881670.jpg',
+  bio: 'Welcome to Buvaki Story! Here, we bring you just fragments of most things. The main are anime, fantasy tales, manga adaptations, and original universe lore.',
+  karma: 1250,
+  badges: ['Creator', 'Verified'],
   joinedDate: 'August 2026',
   status: 'online',
   statusText: 'Creating content',
@@ -177,7 +177,8 @@ export const SEED_POSTS: Post[] = [
     images: [
       'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=800&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&auto=format&fit=crop&q=80'
+      'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=800&auto=format&fit=crop&q=80'
     ],
     score: 3900,
     userVote: null,
@@ -202,7 +203,9 @@ export const SEED_POSTS: Post[] = [
     images: [
       'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=800&auto=format&fit=crop&q=80'
+      'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1563089145-599997674d42?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=80'
     ],
     score: 31000,
     userVote: null,

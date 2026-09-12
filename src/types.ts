@@ -1,4 +1,4 @@
-export type ViewMode = 'feed' | 'shorts' | 'longs' | 'chat' | 'split';
+export type ViewMode = 'feed' | 'shorts' | 'longs' | 'chat' | 'split' | 'you';
 export type FilterSort = 'hot' | 'new' | 'top' | 'discussed';
 export type Theme = 'dark' | 'light' | 'stealth';
 

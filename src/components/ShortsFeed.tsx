@@ -396,11 +396,11 @@ export const ShortsFeed: React.FC<ShortsFeedProps> = ({
             <img
               src={currentShort.creator.avatar}
               alt={currentShort.creator.name}
-              className="w-10 h-10 rounded-full object-cover shrink-0 ring-1 ring-white/10 shadow"
+              className="w-10 h-10 rounded-full object-cover shrink-0 ring-1 ring-slate-200 shadow-sm"
               referrerPolicy="no-referrer"
             />
             
-            <span className="text-sm font-bold text-white truncate max-w-[130px] lg:max-w-[160px]">
+            <span className="text-sm font-bold text-slate-900 truncate max-w-[130px] lg:max-w-[160px]">
               {currentShort.creator.handle}
             </span>
 
@@ -411,10 +411,10 @@ export const ShortsFeed: React.FC<ShortsFeedProps> = ({
                   onSubscribeToggle(currentShort.creator.handle);
                 }
               }}
-              className={`ml-auto px-4 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 shadow-md flex items-center gap-1 shrink-0 ${
+              className={`ml-auto px-4 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 shadow-sm flex items-center gap-1 shrink-0 ${
                 isSubscribed
-                  ? 'bg-neutral-800 hover:bg-neutral-700 text-white border border-white/20'
-                  : 'bg-white hover:bg-neutral-200 text-black'
+                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                  : 'bg-slate-900 hover:bg-slate-800 text-white'
               }`}
             >
               {isSubscribed ? (
@@ -429,13 +429,13 @@ export const ShortsFeed: React.FC<ShortsFeedProps> = ({
           </div>
 
           {/* Video Title / Headline */}
-          <h1 className="text-base lg:text-lg font-bold text-white leading-snug line-clamp-3">
+          <h1 className="text-base lg:text-lg font-bold text-slate-900 leading-snug line-clamp-3">
             {currentShort.title}
           </h1>
 
           {/* Audio Track / Tag Pill */}
-          <div className="inline-flex items-center gap-2 text-xs font-medium text-neutral-200 bg-neutral-800/90 hover:bg-neutral-700/90 border border-white/10 px-3 py-1.5 rounded-full w-fit max-w-full cursor-pointer transition-colors shadow-sm">
-            <Music2 className="w-3.5 h-3.5 text-white shrink-0" />
+          <div className="inline-flex items-center gap-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-full w-fit max-w-full cursor-pointer transition-colors shadow-sm">
+            <Music2 className="w-3.5 h-3.5 text-slate-700 shrink-0" />
             <span className="truncate max-w-[240px]">
               {currentShort.musicTitle}
             </span>
@@ -443,7 +443,7 @@ export const ShortsFeed: React.FC<ShortsFeedProps> = ({
         </div>
 
         {/* 2. The 9:16 Vertical Video Frame */}
-        <div className="relative h-full aspect-[9/16] max-h-[720px] max-w-[405px] w-auto bg-black rounded-2xl overflow-hidden shadow-[0_10px_35px_rgba(0,0,0,0.8)] border border-white/5 flex items-center justify-center shrink-0">
+        <div className="relative h-full aspect-[9/16] max-h-[720px] max-w-[405px] w-auto bg-black rounded-2xl overflow-hidden shadow-xl border border-slate-200 flex items-center justify-center shrink-0">
           
           <AnimatePresence initial={false} custom={slideDirection} mode="popLayout">
             <motion.div
@@ -593,17 +593,17 @@ export const ShortsFeed: React.FC<ShortsFeedProps> = ({
           <div className="flex flex-col items-center gap-1">
             <button
               onClick={() => toggleLike(currentShort.id)}
-              className={`w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-md ${
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-sm border ${
                 isLiked
-                  ? 'bg-white text-black'
-                  : 'bg-[#272727] hover:bg-[#3f3f3f] text-white'
+                  ? 'bg-slate-900 border-slate-900 text-white'
+                  : 'bg-slate-100 border-slate-200 hover:bg-slate-200 text-slate-800'
               }`}
               title="I like this"
               aria-label="Like short"
             >
-              <ThumbsUp className={`w-5 h-5 ${isLiked ? 'fill-black' : ''}`} />
+              <ThumbsUp className={`w-5 h-5 ${isLiked ? 'fill-white' : ''}`} />
             </button>
-            <span className="text-xs font-medium text-white text-center">
+            <span className="text-xs font-semibold text-slate-700 text-center">
               {formatCount(currentShort.likesCount + (isLiked ? 1 : 0))}
             </span>
           </div>
@@ -612,17 +612,17 @@ export const ShortsFeed: React.FC<ShortsFeedProps> = ({
           <div className="flex flex-col items-center gap-1">
             <button
               onClick={() => toggleDislike(currentShort.id)}
-              className={`w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-md ${
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-sm border ${
                 isDisliked
-                  ? 'bg-white text-black'
-                  : 'bg-[#272727] hover:bg-[#3f3f3f] text-white'
+                  ? 'bg-slate-900 border-slate-900 text-white'
+                  : 'bg-slate-100 border-slate-200 hover:bg-slate-200 text-slate-800'
               }`}
               title="I dislike this"
               aria-label="Dislike short"
             >
-              <ThumbsDown className={`w-5 h-5 ${isDisliked ? 'fill-black' : ''}`} />
+              <ThumbsDown className={`w-5 h-5 ${isDisliked ? 'fill-white' : ''}`} />
             </button>
-            <span className="text-xs font-medium text-white text-center">
+            <span className="text-xs font-semibold text-slate-700 text-center">
               Dislike
             </span>
           </div>
@@ -631,13 +631,13 @@ export const ShortsFeed: React.FC<ShortsFeedProps> = ({
           <div className="flex flex-col items-center gap-1">
             <button
               onClick={() => setIsCommentsOpen(!isCommentsOpen)}
-              className="w-12 h-12 rounded-full bg-[#272727] hover:bg-[#3f3f3f] text-white flex items-center justify-center transition-all active:scale-90 shadow-md"
+              className="w-12 h-12 rounded-full bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-800 flex items-center justify-center transition-all active:scale-90 shadow-sm"
               title="Comments"
               aria-label="View comments"
             >
               <MessageSquare className="w-5 h-5" />
             </button>
-            <span className="text-xs font-medium text-white text-center">
+            <span className="text-xs font-semibold text-slate-700 text-center">
               {formatCount(currentShort.commentsCount + commentsList.length)}
             </span>
           </div>
@@ -655,13 +655,13 @@ export const ShortsFeed: React.FC<ShortsFeedProps> = ({
                   navigator.clipboard?.writeText(window.location.href);
                 }
               }}
-              className="w-12 h-12 rounded-full bg-[#272727] hover:bg-[#3f3f3f] text-white flex items-center justify-center transition-all active:scale-90 shadow-md"
+              className="w-12 h-12 rounded-full bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-800 flex items-center justify-center transition-all active:scale-90 shadow-sm"
               title="Share"
               aria-label="Share short"
             >
               <Share2 className="w-5 h-5" />
             </button>
-            <span className="text-xs font-medium text-white text-center">
+            <span className="text-xs font-semibold text-slate-700 text-center">
               Share
             </span>
           </div>
@@ -675,19 +675,19 @@ export const ShortsFeed: React.FC<ShortsFeedProps> = ({
                   return;
                 }
               }}
-              className="w-12 h-12 rounded-full bg-[#272727] hover:bg-[#3f3f3f] text-white flex items-center justify-center transition-all active:scale-90 shadow-md"
+              className="w-12 h-12 rounded-full bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-800 flex items-center justify-center transition-all active:scale-90 shadow-sm"
               title="Remix"
               aria-label="Remix"
             >
               <Repeat2 className="w-5 h-5" />
             </button>
-            <span className="text-xs font-medium text-white text-center">
+            <span className="text-xs font-semibold text-slate-700 text-center">
               Remix
             </span>
           </div>
 
           {/* 6. Sound Track / Creator Art (Spinning Vinyl) */}
-          <div className="w-10 h-10 rounded-lg overflow-hidden border border-white/20 shadow-md mt-1 relative flex items-center justify-center bg-neutral-900">
+          <div className="w-10 h-10 rounded-lg overflow-hidden border border-slate-200 shadow-sm mt-1 relative flex items-center justify-center bg-slate-100">
             <img
               src={currentShort.creator.avatar}
               alt=""
@@ -706,7 +706,7 @@ export const ShortsFeed: React.FC<ShortsFeedProps> = ({
         {currentIndex > 0 && (
           <button
             onClick={handlePrev}
-            className="w-12 h-12 rounded-full bg-[#f2f2f2] hover:bg-white text-black flex items-center justify-center shadow-[0_4px_16px_rgba(0,0,0,0.4)] transition-all active:scale-90"
+            className="w-12 h-12 rounded-full bg-white hover:bg-slate-100 text-slate-900 border border-slate-200 flex items-center justify-center shadow-md transition-all active:scale-90"
             title="Previous video (Up arrow)"
             aria-label="Previous video"
           >
@@ -717,7 +717,7 @@ export const ShortsFeed: React.FC<ShortsFeedProps> = ({
         {currentIndex < allShorts.length - 1 && (
           <button
             onClick={handleNext}
-            className="w-12 h-12 rounded-full bg-[#f2f2f2] hover:bg-white text-black flex items-center justify-center shadow-[0_4px_16px_rgba(0,0,0,0.4)] transition-all active:scale-90"
+            className="w-12 h-12 rounded-full bg-white hover:bg-slate-100 text-slate-900 border border-slate-200 flex items-center justify-center shadow-md transition-all active:scale-90"
             title="Next video (Down arrow)"
             aria-label="Next video"
           >
@@ -734,19 +734,19 @@ export const ShortsFeed: React.FC<ShortsFeedProps> = ({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 260 }}
-            className="fixed inset-y-16 right-4 sm:right-6 lg:right-12 z-50 w-full max-w-sm sm:max-w-md bg-[#181818] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            className="fixed inset-y-16 right-4 sm:right-6 lg:right-12 z-50 w-full max-w-sm sm:max-w-md bg-white border border-slate-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
           >
             {/* Comments Header */}
-            <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/10">
+            <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 bg-white">
               <div className="flex items-center gap-2">
-                <span className="text-base font-bold text-white">Comments</span>
-                <span className="text-xs font-semibold text-neutral-400">
+                <span className="text-base font-bold text-slate-900">Comments</span>
+                <span className="text-xs font-semibold text-slate-500">
                   {commentsList.length}
                 </span>
               </div>
               <button
                 onClick={() => setIsCommentsOpen(false)}
-                className="p-1.5 rounded-full hover:bg-white/10 text-neutral-400 hover:text-white transition-colors"
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-800 transition-colors"
                 aria-label="Close comments"
               >
                 <X className="w-5 h-5" />
@@ -754,12 +754,12 @@ export const ShortsFeed: React.FC<ShortsFeedProps> = ({
             </div>
 
             {/* Comments Scrollable List */}
-            <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4 custom-scrollbar bg-white">
               {commentsList.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center text-neutral-400">
+                <div className="flex flex-col items-center justify-center py-12 text-center text-slate-400">
                   <MessageSquare className="w-8 h-8 mb-2 opacity-40" />
-                  <p className="text-sm font-medium">No comments yet</p>
-                  <p className="text-xs opacity-60">Be the first to share what you think!</p>
+                  <p className="text-sm font-medium text-slate-600">No comments yet</p>
+                  <p className="text-xs text-slate-400">Be the first to share what you think!</p>
                 </div>
               ) : (
                 commentsList.map((c) => (
@@ -767,30 +767,30 @@ export const ShortsFeed: React.FC<ShortsFeedProps> = ({
                     <img
                       src={c.avatar}
                       alt={c.user}
-                      className="w-8 h-8 rounded-full object-cover mt-0.5 shrink-0 ring-1 ring-white/10"
+                      className="w-8 h-8 rounded-full object-cover mt-0.5 shrink-0 ring-1 ring-slate-200"
                       referrerPolicy="no-referrer"
                     />
                     <div className="flex flex-col min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-neutral-200 truncate">
+                        <span className="text-xs font-bold text-slate-900 truncate">
                           {c.user}
                         </span>
-                        <span className="text-[11px] text-neutral-400">
+                        <span className="text-[11px] text-slate-400">
                           {c.time}
                         </span>
                       </div>
-                      <p className="text-xs text-neutral-200 mt-1 leading-relaxed">
+                      <p className="text-xs text-slate-800 mt-1 leading-relaxed">
                         {c.text}
                       </p>
-                      <div className="flex items-center gap-3 mt-2 text-neutral-400">
-                        <button className="flex items-center gap-1 hover:text-white text-[11px] transition-colors">
+                      <div className="flex items-center gap-3 mt-2 text-slate-500">
+                        <button className="flex items-center gap-1 hover:text-slate-900 text-[11px] transition-colors">
                           <ThumbsUp className="w-3.5 h-3.5" />
                           <span>{c.likes || 0}</span>
                         </button>
-                        <button className="hover:text-white text-[11px] transition-colors">
+                        <button className="hover:text-slate-900 text-[11px] transition-colors">
                           <ThumbsDown className="w-3.5 h-3.5" />
                         </button>
-                        <button className="hover:text-white text-[11px] font-semibold transition-colors">
+                        <button className="hover:text-slate-900 text-[11px] font-semibold transition-colors">
                           Reply
                         </button>
                       </div>
@@ -801,11 +801,11 @@ export const ShortsFeed: React.FC<ShortsFeedProps> = ({
             </div>
 
             {/* Comment Input Box */}
-            <form onSubmit={handleAddComment} className="p-3 border-t border-white/10 bg-[#121212] flex items-center gap-2">
+            <form onSubmit={handleAddComment} className="p-3 border-t border-slate-200 bg-white flex items-center gap-2">
               <img
                 src={currentUser ? currentUser.avatar : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'}
                 alt=""
-                className="w-7 h-7 rounded-full object-cover ring-1 ring-white/10 shrink-0"
+                className="w-7 h-7 rounded-full object-cover ring-1 ring-slate-200 shrink-0"
                 referrerPolicy="no-referrer"
               />
               <input
@@ -813,12 +813,12 @@ export const ShortsFeed: React.FC<ShortsFeedProps> = ({
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 placeholder="Add a comment..."
-                className="flex-1 bg-[#222] text-white text-xs px-3 py-2 rounded-full border border-white/10 focus:outline-none focus:border-white/30 transition-all placeholder:text-neutral-500"
+                className="flex-1 bg-slate-50 text-slate-900 text-xs px-3 py-2 rounded-full border border-slate-200 focus:outline-none focus:border-slate-400 transition-all placeholder:text-slate-400"
               />
               <button
                 type="submit"
                 disabled={!commentText.trim()}
-                className="p-2 rounded-full bg-white hover:bg-neutral-200 disabled:opacity-30 disabled:hover:bg-white text-black transition-all"
+                className="p-2 rounded-full bg-slate-900 hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-slate-900 text-white transition-all"
                 aria-label="Send comment"
               >
                 <Send className="w-3.5 h-3.5 stroke-[2.5]" />

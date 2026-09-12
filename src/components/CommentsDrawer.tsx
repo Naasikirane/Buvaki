@@ -106,18 +106,18 @@ export const CommentsDrawer: React.FC<CommentsDrawerProps> = ({
       />
 
       {/* Slide-Up Bottom Sheet / Modal Dialog */}
-      <div className="relative w-full max-w-lg max-h-[85vh] sm:max-h-[80vh] h-[85vh] bg-[#0f0f0f] border-t sm:border border-white/10 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col z-10 overflow-hidden animate-in slide-in-from-bottom duration-300">
+      <div className="relative w-full max-w-lg max-h-[85vh] sm:max-h-[80vh] h-[85vh] bg-white border-t sm:border border-slate-200 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col z-10 overflow-hidden animate-in slide-in-from-bottom duration-300">
         
         {/* Drag Handle */}
         <div className="w-full flex items-center justify-center pt-3 pb-1 cursor-grab">
-          <div className="w-10 h-1 rounded-full bg-white/20" />
+          <div className="w-10 h-1 rounded-full bg-slate-300" />
         </div>
 
         {/* Header Bar */}
-        <div className="px-4 py-3 flex items-center justify-between border-b border-white/10">
+        <div className="px-4 py-3 flex items-center justify-between border-b border-slate-200">
           <div className="flex items-center gap-3">
-            <h3 className="text-lg font-bold text-white tracking-tight">Post comments</h3>
-            <span className="text-sm font-semibold text-neutral-400 font-mono">
+            <h3 className="text-lg font-bold text-slate-900 tracking-tight">Post comments</h3>
+            <span className="text-sm font-semibold text-slate-500 font-mono">
               {totalCount}
             </span>
           </div>
@@ -127,7 +127,7 @@ export const CommentsDrawer: React.FC<CommentsDrawerProps> = ({
             <div className="relative">
               <button
                 onClick={() => setShowSortMenu(!showSortMenu)}
-                className="p-2 rounded-full hover:bg-white/10 text-neutral-300 hover:text-white transition-colors"
+                className="p-2 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors"
                 title="Sort comments"
                 aria-label="Sort comments"
               >
@@ -135,14 +135,14 @@ export const CommentsDrawer: React.FC<CommentsDrawerProps> = ({
               </button>
 
               {showSortMenu && (
-                <div className="absolute right-0 mt-2 w-44 rounded-xl bg-neutral-900 border border-white/10 shadow-2xl py-1.5 z-20">
+                <div className="absolute right-0 mt-2 w-44 rounded-xl bg-white border border-slate-200 shadow-xl py-1.5 z-20">
                   <button
                     onClick={() => {
                       setSortBy('top');
                       setShowSortMenu(false);
                     }}
                     className={`w-full text-left px-4 py-2 text-xs font-semibold flex items-center justify-between ${
-                      sortBy === 'top' ? 'text-white bg-white/10 font-bold' : 'text-neutral-300 hover:bg-white/5'
+                      sortBy === 'top' ? 'text-slate-900 bg-slate-100 font-bold' : 'text-slate-700 hover:bg-slate-50'
                     }`}
                   >
                     <span>Top comments</span>
@@ -153,7 +153,7 @@ export const CommentsDrawer: React.FC<CommentsDrawerProps> = ({
                       setShowSortMenu(false);
                     }}
                     className={`w-full text-left px-4 py-2 text-xs font-semibold flex items-center justify-between ${
-                      sortBy === 'newest' ? 'text-white bg-white/10 font-bold' : 'text-neutral-300 hover:bg-white/5'
+                      sortBy === 'newest' ? 'text-slate-900 bg-slate-100 font-bold' : 'text-slate-700 hover:bg-slate-50'
                     }`}
                   >
                     <span>Newest first</span>
@@ -165,7 +165,7 @@ export const CommentsDrawer: React.FC<CommentsDrawerProps> = ({
             {/* Close Button */}
             <button
               onClick={onClose}
-              className="p-2 rounded-full hover:bg-white/10 text-neutral-300 hover:text-white transition-colors"
+              className="p-2 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors"
               aria-label="Close comments"
             >
               <X className="w-5 h-5" />
@@ -176,10 +176,10 @@ export const CommentsDrawer: React.FC<CommentsDrawerProps> = ({
         {/* Scrollable Comments Feed */}
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4 custom-scrollbar">
           {sortedComments.length === 0 ? (
-            <div className="py-16 text-center flex flex-col items-center justify-center text-neutral-400 gap-2">
-              <MessageSquare className="w-10 h-10 text-neutral-600 stroke-[1.5]" />
-              <p className="text-sm font-semibold text-neutral-300">No comments yet</p>
-              <p className="text-xs text-neutral-500 max-w-xs">
+            <div className="py-16 text-center flex flex-col items-center justify-center text-slate-400 gap-2">
+              <MessageSquare className="w-10 h-10 text-slate-300 stroke-[1.5]" />
+              <p className="text-sm font-semibold text-slate-700">No comments yet</p>
+              <p className="text-xs text-slate-500 max-w-xs">
                 Be the first to share your thoughts on this post.
               </p>
             </div>
@@ -197,43 +197,43 @@ export const CommentsDrawer: React.FC<CommentsDrawerProps> = ({
                 <div className="flex-1 min-w-0 flex flex-col">
                   {/* Author Line */}
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="font-semibold text-neutral-300 hover:text-white transition-colors truncate">
+                    <span className="font-semibold text-slate-700 hover:text-slate-900 transition-colors truncate">
                       {comment.author.handle.startsWith('@') ? comment.author.handle : `@${comment.author.handle.replace(/^u\//, '')}`}
                     </span>
-                    <span className="text-neutral-500">•</span>
-                    <span className="text-neutral-500 text-[11px]">
+                    <span className="text-slate-400">•</span>
+                    <span className="text-slate-400 text-[11px]">
                       {formatRealTimestamp(comment.createdAt || comment.timestamp)}
                     </span>
                   </div>
 
                   {/* Comment Text */}
-                  <p className="text-sm text-neutral-100 mt-1 whitespace-pre-wrap leading-relaxed break-words">
+                  <p className="text-sm text-slate-800 mt-1 whitespace-pre-wrap leading-relaxed break-words">
                     {comment.content}
                   </p>
 
                   {/* Actions Row (Thumbs Up, Thumbs Down, Reply) */}
-                  <div className="flex items-center gap-4 mt-2 text-neutral-400 text-xs">
+                  <div className="flex items-center gap-4 mt-2 text-slate-500 text-xs">
                     {/* Upvote */}
                     <button
                       onClick={() => onVoteComment(comment.id, 'up')}
-                      className={`flex items-center gap-1.5 p-1 rounded-md transition-colors hover:text-white ${
-                        comment.userVote === 'up' ? 'text-white font-bold' : ''
+                      className={`flex items-center gap-1.5 p-1 rounded-md transition-colors hover:text-slate-900 ${
+                        comment.userVote === 'up' ? 'text-sky-600 font-bold' : ''
                       }`}
                       aria-label="Like comment"
                     >
-                      <ThumbsUp className={`w-4 h-4 ${comment.userVote === 'up' ? 'fill-white text-white' : ''}`} />
+                      <ThumbsUp className={`w-4 h-4 ${comment.userVote === 'up' ? 'fill-sky-600 text-sky-600' : ''}`} />
                       {comment.score > 0 && <span>{comment.score}</span>}
                     </button>
 
                     {/* Downvote */}
                     <button
                       onClick={() => onVoteComment(comment.id, 'down')}
-                      className={`p-1 rounded-md transition-colors hover:text-white ${
-                        comment.userVote === 'down' ? 'text-white font-bold' : ''
+                      className={`p-1 rounded-md transition-colors hover:text-slate-900 ${
+                        comment.userVote === 'down' ? 'text-sky-600 font-bold' : ''
                       }`}
                       aria-label="Dislike comment"
                     >
-                      <ThumbsDown className={`w-4 h-4 ${comment.userVote === 'down' ? 'fill-white text-white' : ''}`} />
+                      <ThumbsDown className={`w-4 h-4 ${comment.userVote === 'down' ? 'fill-sky-600 text-sky-600' : ''}`} />
                     </button>
 
                     {/* Reply Button */}
@@ -242,7 +242,7 @@ export const CommentsDrawer: React.FC<CommentsDrawerProps> = ({
                         setReplyingToId(replyingToId === comment.id ? null : comment.id);
                         setReplyText('');
                       }}
-                      className="p-1 rounded-md transition-colors hover:text-white font-medium"
+                      className="p-1 rounded-md transition-colors hover:text-slate-900 font-medium"
                       aria-label="Reply to comment"
                     >
                       <MessageSquare className="w-3.5 h-3.5" />
@@ -257,7 +257,7 @@ export const CommentsDrawer: React.FC<CommentsDrawerProps> = ({
                         value={replyText}
                         onChange={(e) => setReplyText(e.target.value)}
                         placeholder={`Reply to ${comment.author.handle}...`}
-                        className="flex-1 bg-neutral-900 border border-white/15 rounded-full px-3 py-1.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-white/40"
+                        className="flex-1 bg-slate-100 border border-slate-200 rounded-full px-3 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-500"
                         autoFocus
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && !e.shiftKey) {
@@ -269,13 +269,13 @@ export const CommentsDrawer: React.FC<CommentsDrawerProps> = ({
                       <button
                         onClick={() => handlePostReply(comment.id)}
                         disabled={!replyText.trim()}
-                        className="px-3 py-1.5 bg-white text-black font-bold text-xs rounded-full disabled:opacity-40 disabled:cursor-not-allowed hover:bg-neutral-200 transition-colors"
+                        className="px-3 py-1.5 bg-slate-900 text-white font-bold text-xs rounded-full disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-800 transition-colors"
                       >
                         Reply
                       </button>
                       <button
                         onClick={() => setReplyingToId(null)}
-                        className="p-1.5 text-neutral-400 hover:text-white text-xs"
+                        className="p-1.5 text-slate-400 hover:text-slate-700 text-xs"
                       >
                         Cancel
                       </button>
@@ -287,7 +287,7 @@ export const CommentsDrawer: React.FC<CommentsDrawerProps> = ({
                     <div className="mt-2.5">
                       <button
                         onClick={() => toggleReplies(comment.id)}
-                        className="flex items-center gap-1.5 text-xs font-bold text-sky-400 hover:text-sky-300 transition-colors py-0.5"
+                        className="flex items-center gap-1.5 text-xs font-bold text-sky-600 hover:text-sky-700 transition-colors py-0.5"
                       >
                         <span>
                           {comment.replies.length} {comment.replies.length === 1 ? 'reply' : 'replies'}
@@ -300,7 +300,7 @@ export const CommentsDrawer: React.FC<CommentsDrawerProps> = ({
                       </button>
 
                       {expandedReplies[comment.id] && (
-                        <div className="mt-2 pl-3 border-l-2 border-neutral-700 space-y-3">
+                        <div className="mt-2 pl-3 border-l-2 border-slate-200 space-y-3">
                           {comment.replies.map((reply) => (
                             <div key={reply.id} className="flex gap-2.5 text-left">
                               <img
@@ -311,34 +311,34 @@ export const CommentsDrawer: React.FC<CommentsDrawerProps> = ({
                               />
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 text-xs">
-                                  <span className="font-semibold text-neutral-300">
+                                  <span className="font-semibold text-slate-700">
                                     {reply.author.handle.startsWith('@') ? reply.author.handle : `@${reply.author.handle.replace(/^u\//, '')}`}
                                   </span>
-                                  <span className="text-neutral-500">•</span>
-                                  <span className="text-neutral-500 text-[10px]">
+                                  <span className="text-slate-400">•</span>
+                                  <span className="text-slate-400 text-[10px]">
                                     {formatRealTimestamp(reply.createdAt || reply.timestamp)}
                                   </span>
                                 </div>
-                                <p className="text-xs text-neutral-100 mt-1 whitespace-pre-wrap leading-relaxed">
+                                <p className="text-xs text-slate-800 mt-1 whitespace-pre-wrap leading-relaxed">
                                   {reply.content}
                                 </p>
-                                <div className="flex items-center gap-3 mt-1 text-neutral-400 text-xs">
+                                <div className="flex items-center gap-3 mt-1 text-slate-500 text-xs">
                                   <button
                                     onClick={() => onVoteComment(reply.id, 'up')}
-                                    className={`flex items-center gap-1 p-0.5 hover:text-white ${
-                                      reply.userVote === 'up' ? 'text-white font-bold' : ''
+                                    className={`flex items-center gap-1 p-0.5 hover:text-slate-900 ${
+                                      reply.userVote === 'up' ? 'text-sky-600 font-bold' : ''
                                     }`}
                                   >
-                                    <ThumbsUp className={`w-3.5 h-3.5 ${reply.userVote === 'up' ? 'fill-white' : ''}`} />
+                                    <ThumbsUp className={`w-3.5 h-3.5 ${reply.userVote === 'up' ? 'fill-sky-600 text-sky-600' : ''}`} />
                                     {reply.score > 0 && <span className="text-[11px]">{reply.score}</span>}
                                   </button>
                                   <button
                                     onClick={() => onVoteComment(reply.id, 'down')}
-                                    className={`p-0.5 hover:text-white ${
-                                      reply.userVote === 'down' ? 'text-white font-bold' : ''
+                                    className={`p-0.5 hover:text-slate-900 ${
+                                      reply.userVote === 'down' ? 'text-sky-600 font-bold' : ''
                                     }`}
                                   >
-                                    <ThumbsDown className={`w-3.5 h-3.5 ${reply.userVote === 'down' ? 'fill-white' : ''}`} />
+                                    <ThumbsDown className={`w-3.5 h-3.5 ${reply.userVote === 'down' ? 'fill-sky-600 text-sky-600' : ''}`} />
                                   </button>
                                 </div>
                               </div>
@@ -357,7 +357,7 @@ export const CommentsDrawer: React.FC<CommentsDrawerProps> = ({
         {/* Pinned Bottom Input Bar (Matching Screenshot 2) */}
         <form 
           onSubmit={handlePostMainComment}
-          className="p-3 border-t border-white/10 bg-[#0f0f0f] flex items-center gap-3"
+          className="p-3 border-t border-slate-200 bg-white flex items-center gap-3"
         >
           <img
             src={currentUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
@@ -366,20 +366,20 @@ export const CommentsDrawer: React.FC<CommentsDrawerProps> = ({
             referrerPolicy="no-referrer"
           />
 
-          <div className="flex-1 flex items-center bg-neutral-900 border border-white/10 rounded-full px-3.5 py-1.5 focus-within:border-white/30 transition-colors">
+          <div className="flex-1 flex items-center bg-slate-100 border border-slate-200 rounded-full px-3.5 py-1.5 focus-within:border-sky-500 transition-colors">
             <input
               type="text"
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               placeholder="Comment..."
-              className="w-full bg-transparent text-xs sm:text-sm text-white placeholder-neutral-500 focus:outline-none"
+              className="w-full bg-transparent text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none"
             />
           </div>
 
           <button
             type="submit"
             disabled={!commentText.trim()}
-            className="p-2 rounded-full bg-white text-black disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-200 transition-colors flex-shrink-0"
+            className="p-2 rounded-full bg-slate-900 text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-800 transition-colors flex-shrink-0"
             aria-label="Send comment"
           >
             <Send className="w-4 h-4" />

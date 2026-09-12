@@ -61,7 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       <aside 
-        className="w-[72px] flex-shrink-0 hidden lg:flex flex-col items-center gap-1.5 py-3 px-1 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto no-scrollbar select-none z-20"
+        className="w-[72px] flex-shrink-0 hidden lg:flex flex-col items-center gap-1.5 py-3 px-1 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto no-scrollbar select-none z-20 bg-white border-r border-[#0000001a]"
         aria-label="Collapsed sidebar navigation"
       >
         {/* Home */}
@@ -70,15 +70,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onToggleSavedOnly(false);
             setViewMode('feed');
           }}
-          className={`w-full py-3.5 px-1 flex flex-col items-center justify-center rounded-xl transition-all ${
+          className={`w-full py-4 px-1 flex flex-col items-center justify-center rounded-xl transition-all ${
             viewMode === 'feed' && !showSavedOnly && activeFilter !== 'hot' && activeFilter !== 'discussed'
-              ? 'bg-neutral-800 text-white font-semibold'
-              : 'text-neutral-300 hover:text-white hover:bg-neutral-900'
+              ? 'bg-[#f2f2f2] text-[#0f0f0f] font-medium'
+              : 'text-[#0f0f0f] hover:bg-[#f2f2f2]'
           }`}
           title="Home"
         >
-          <Home className={`w-5 h-5 mb-1.5 ${viewMode === 'feed' && !showSavedOnly ? 'text-white stroke-[2.5]' : 'text-neutral-300'}`} />
-          <span className="text-[10px] leading-tight font-medium tracking-tight text-center truncate max-w-full">
+          <Home className={`w-5 h-5 mb-1.5 ${viewMode === 'feed' && !showSavedOnly ? 'text-[#0f0f0f] stroke-[2.25] fill-[#0f0f0f]' : 'text-[#0f0f0f] stroke-[1.75]'}`} />
+          <span className="text-[10px] leading-tight font-normal text-center truncate max-w-full">
             Home
           </span>
         </button>
@@ -89,15 +89,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onToggleSavedOnly(false);
             setViewMode('shorts');
           }}
-          className={`w-full py-3.5 px-1 flex flex-col items-center justify-center rounded-xl transition-all ${
+          className={`w-full py-4 px-1 flex flex-col items-center justify-center rounded-xl transition-all ${
             viewMode === 'shorts'
-              ? 'bg-neutral-800 text-white font-semibold'
-              : 'text-neutral-300 hover:text-white hover:bg-neutral-900'
+              ? 'bg-[#f2f2f2] text-[#0f0f0f] font-medium'
+              : 'text-[#0f0f0f] hover:bg-[#f2f2f2]'
           }`}
           title="Shorts"
         >
-          <Clapperboard className={`w-5 h-5 mb-1.5 ${viewMode === 'shorts' ? 'text-pink-400 stroke-[2.5]' : 'text-neutral-300'}`} />
-          <span className="text-[10px] leading-tight font-medium tracking-tight text-center truncate max-w-full">
+          <Clapperboard className={`w-5 h-5 mb-1.5 ${viewMode === 'shorts' ? 'text-[#ff0000] stroke-[2.25] fill-[#ff0000]/20' : 'text-[#0f0f0f] stroke-[1.75]'}`} />
+          <span className="text-[10px] leading-tight font-normal text-center truncate max-w-full">
             Shorts
           </span>
         </button>
@@ -108,87 +108,55 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onToggleSavedOnly(false);
             setViewMode('longs');
           }}
-          className={`w-full py-3.5 px-1 flex flex-col items-center justify-center rounded-xl transition-all ${
+          className={`w-full py-4 px-1 flex flex-col items-center justify-center rounded-xl transition-all ${
             viewMode === 'longs'
-              ? 'bg-neutral-800 text-white font-semibold'
-              : 'text-neutral-300 hover:text-white hover:bg-neutral-900'
+              ? 'bg-[#f2f2f2] text-[#0f0f0f] font-medium'
+              : 'text-[#0f0f0f] hover:bg-[#f2f2f2]'
           }`}
           title="Longs"
         >
-          <Tv className={`w-5 h-5 mb-1.5 ${viewMode === 'longs' ? 'text-violet-400 stroke-[2.5]' : 'text-neutral-300'}`} />
-          <span className="text-[10px] leading-tight font-medium tracking-tight text-center truncate max-w-full">
-            Longs
+          <Tv className={`w-5 h-5 mb-1.5 ${viewMode === 'longs' ? 'text-[#0f0f0f] stroke-[2.25]' : 'text-[#0f0f0f] stroke-[1.75]'}`} />
+          <span className="text-[10px] leading-tight font-normal text-center truncate max-w-full">
+            Subscriptions
           </span>
         </button>
 
         {/* You */}
         <button
           onClick={() => {
-            onToggleSavedOnly(true);
-            setViewMode('feed');
+            onToggleSavedOnly(false);
+            setViewMode('you');
           }}
-          className={`w-full py-3.5 px-1 flex flex-col items-center justify-center rounded-xl transition-all group ${
-            showSavedOnly
-              ? 'bg-neutral-800 text-white font-semibold'
-              : 'text-neutral-300 hover:text-white hover:bg-neutral-900'
+          className={`w-full py-4 px-1 flex flex-col items-center justify-center rounded-xl transition-all group ${
+            viewMode === 'you'
+              ? 'bg-[#f2f2f2] text-[#0f0f0f] font-medium'
+              : 'text-[#0f0f0f] hover:bg-[#f2f2f2]'
           }`}
           title="You"
         >
-          {/* Circle with photo/graphic of the thumbs-up logo */}
-          <div className={`w-6 h-6 rounded-full flex items-center justify-center mb-1.5 overflow-hidden transition-all duration-200 group-hover:scale-105 shadow-sm bg-white ${
-            showSavedOnly
-              ? 'ring-2 ring-sky-400'
-              : 'ring-1 ring-white/40'
-          }`}>
-            <svg
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-              className="w-3.5 h-3.5 transform -translate-y-[0.5px]"
-            >
-              <defs>
-                <linearGradient id="you_thumbs_circle" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#38bdf8" />
-                  <stop offset="100%" stopColor="#0284c7" />
-                </linearGradient>
-              </defs>
-              {/* Left cuff vertical pill */}
-              <rect 
-                x="2" 
-                y="9.5" 
-                width="4.5" 
-                height="12" 
-                rx="1.8" 
-                fill="url(#you_thumbs_circle)" 
-              />
-              {/* Main thumb & hand body */}
-              <path 
-                d="M7.5 10.2L11 2.8C11.8 1.4 13.8 1.8 14 3.5L14 9.2H19.5C21.2 9.2 22.5 10.8 22.1 12.5L20.6 18.5C20.2 20 18.8 21.2 17.2 21.2H7.5V10.2Z" 
-                fill="url(#you_thumbs_circle)" 
-              />
-            </svg>
-          </div>
-          <span className="text-[10px] leading-tight font-medium tracking-tight text-center truncate max-w-full">
+          <User className={`w-5 h-5 mb-1.5 ${viewMode === 'you' ? 'text-[#0f0f0f] stroke-[2.25] fill-[#0f0f0f]' : 'text-[#0f0f0f] stroke-[1.75]'}`} />
+          <span className="text-[10px] leading-tight font-normal text-center truncate max-w-full">
             You
           </span>
         </button>
 
         {/* Bottom utility icons */}
-        <div className="mt-auto flex flex-col items-center gap-2 pt-2 border-t border-white/10 w-full">
+        <div className="mt-auto flex flex-col items-center gap-2 pt-2 border-t border-[#0000001a] w-full">
           <button
             onClick={onOpenLanguage}
-            className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white/10 text-neutral-300 hover:text-white transition-all"
+            className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-[#f2f2f2] text-[#606060] hover:text-[#0f0f0f] transition-all"
             title={`Language: ${selectedLanguage.name} (${selectedLanguage.code.toUpperCase()})`}
           >
             <FlagIcon code={selectedLanguage.code} size="sm" />
           </button>
           <button
             onClick={toggleTheme}
-            className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white/10 text-neutral-300 hover:text-white transition-all"
+            className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-[#f2f2f2] text-[#606060] hover:text-[#0f0f0f] transition-all"
             title={`Theme: ${theme}`}
           >
-            {theme === 'dark' && <Moon className="w-4 h-4 text-violet-300" />}
-            {theme === 'stealth' && <Eye className="w-4 h-4 text-emerald-400" />}
-            {theme === 'light' && <Sun className="w-4 h-4 text-amber-400" />}
+            {theme === 'dark' && <Moon className="w-4 h-4 text-[#0f0f0f]" />}
+            {theme === 'stealth' && <Eye className="w-4 h-4 text-[#0f0f0f]" />}
+            {theme === 'light' && <Sun className="w-4 h-4 text-[#0f0f0f]" />}
           </button>
         </div>
       </aside>
@@ -197,20 +165,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {!isCollapsed && (
         <div 
           onClick={onToggleCollapse}
-          className="fixed inset-0 top-14 bg-black/60 z-40 lg:block transition-opacity duration-200"
+          className="fixed inset-0 top-14 bg-black/40 z-40 lg:block transition-opacity duration-200"
           aria-hidden="true"
         />
       )}
 
       {/* Main Expanded YouTube Sidebar */}
       <aside 
-        className={`fixed top-14 left-0 bottom-0 w-60 bg-[#0f0f0f] border-r border-white/10 z-50 flex flex-col py-3 px-3 overflow-y-auto custom-scrollbar text-left select-none transition-transform duration-200 ease-out shadow-2xl ${
+        className={`fixed top-14 left-0 bottom-0 w-60 bg-white border-r border-[#0000001a] z-50 flex flex-col py-3 px-3 overflow-y-auto custom-scrollbar text-left select-none transition-transform duration-200 ease-out shadow-2xl ${
           isCollapsed ? '-translate-x-full pointer-events-none' : 'translate-x-0'
         }`}
         aria-label="Expanded sidebar navigation"
       >
         {/* Main Navigation (YouTube Style) */}
-        <div className="flex flex-col gap-1 border-b border-white/10 pb-3">
+        <div className="flex flex-col gap-0.5 border-b border-[#0000001a] pb-3">
           
           {/* Home */}
           <button
@@ -219,13 +187,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
               setViewMode('feed');
               if (onToggleCollapse) onToggleCollapse();
             }}
-            className={`flex items-center gap-4 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+            className={`flex items-center gap-6 px-3 py-2.5 rounded-xl text-sm transition-colors ${
               viewMode === 'feed' && !showSavedOnly
-                ? 'bg-neutral-800 text-white font-semibold'
-                : 'text-neutral-200 hover:text-white hover:bg-white/10'
+                ? 'bg-[#f2f2f2] text-[#0f0f0f] font-medium'
+                : 'text-[#0f0f0f] hover:bg-[#f2f2f2] font-normal'
             }`}
           >
-            <Home className={`w-5 h-5 ${viewMode === 'feed' && !showSavedOnly ? 'text-white stroke-[2.5]' : 'text-neutral-300'}`} />
+            <Home className={`w-5 h-5 ${viewMode === 'feed' && !showSavedOnly ? 'text-[#0f0f0f] stroke-[2.25] fill-[#0f0f0f]' : 'text-[#0f0f0f] stroke-[1.75]'}`} />
             <span>Home</span>
           </button>
 
@@ -236,13 +204,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
               setViewMode('shorts');
               if (onToggleCollapse) onToggleCollapse();
             }}
-            className={`flex items-center gap-4 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+            className={`flex items-center gap-6 px-3 py-2.5 rounded-xl text-sm transition-colors ${
               viewMode === 'shorts'
-                ? 'bg-neutral-800 text-white font-semibold'
-                : 'text-neutral-200 hover:text-white hover:bg-white/10'
+                ? 'bg-[#f2f2f2] text-[#0f0f0f] font-medium'
+                : 'text-[#0f0f0f] hover:bg-[#f2f2f2] font-normal'
             }`}
           >
-            <Clapperboard className={`w-5 h-5 ${viewMode === 'shorts' ? 'text-pink-400 stroke-[2.5]' : 'text-neutral-300'}`} />
+            <Clapperboard className={`w-5 h-5 ${viewMode === 'shorts' ? 'text-[#ff0000] stroke-[2.25] fill-[#ff0000]/20' : 'text-[#0f0f0f] stroke-[1.75]'}`} />
             <span>Shorts</span>
           </button>
 
@@ -253,23 +221,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
               setViewMode('longs');
               if (onToggleCollapse) onToggleCollapse();
             }}
-            className={`flex items-center gap-4 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+            className={`flex items-center gap-6 px-3 py-2.5 rounded-xl text-sm transition-colors ${
               viewMode === 'longs'
-                ? 'bg-neutral-800 text-white font-semibold'
-                : 'text-neutral-200 hover:text-white hover:bg-neutral-900'
+                ? 'bg-[#f2f2f2] text-[#0f0f0f] font-medium'
+                : 'text-[#0f0f0f] hover:bg-[#f2f2f2] font-normal'
             }`}
           >
-            <Tv className={`w-5 h-5 ${viewMode === 'longs' ? 'text-violet-400 stroke-[2.5]' : 'text-neutral-300'}`} />
-            <span>Longs</span>
+            <Tv className={`w-5 h-5 ${viewMode === 'longs' ? 'text-[#0f0f0f] stroke-[2.25]' : 'text-[#0f0f0f] stroke-[1.75]'}`} />
+            <span>Subscriptions</span>
           </button>
 
         </div>
 
         {/* Subscriptions Section (Matching YouTube Screenshot) */}
-        <div className="flex flex-col gap-1 border-b border-white/10 py-3">
-          <div className="flex items-center justify-between px-3.5 py-1 text-sm font-bold text-white group cursor-pointer">
+        <div className="flex flex-col gap-0.5 border-b border-[#0000001a] py-3">
+          <div className="flex items-center justify-between px-3 py-1 text-base font-bold text-[#0f0f0f] group cursor-pointer">
             <span>Subscriptions</span>
-            <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-white transition-colors" />
+            <ChevronRight className="w-4 h-4 text-[#606060] group-hover:text-[#0f0f0f] transition-colors" />
           </div>
           
           {[
@@ -288,58 +256,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 setViewMode('feed');
                 if (onToggleCollapse) onToggleCollapse();
               }}
-              className="flex items-center justify-between px-3.5 py-2 rounded-xl text-sm text-neutral-200 hover:text-white hover:bg-white/10 transition-colors w-full text-left"
+              className="flex items-center justify-between px-3 py-2 rounded-xl text-sm text-[#0f0f0f] hover:bg-[#f2f2f2] transition-colors w-full text-left"
             >
-              <div className="flex items-center gap-3.5 min-w-0">
+              <div className="flex items-center gap-6 min-w-0">
                 <img
                   src={sub.avatar}
                   alt={sub.name}
-                  className="w-6 h-6 rounded-full object-cover shrink-0 ring-1 ring-white/10"
+                  className="w-6 h-6 rounded-full object-cover shrink-0 ring-1 ring-black/10"
                   referrerPolicy="no-referrer"
                 />
-                <span className="truncate text-sm font-medium">{sub.name}</span>
+                <span className="truncate text-sm font-normal text-[#0f0f0f]">{sub.name}</span>
               </div>
               {sub.hasDot && (
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                <span className="w-1 h-1 rounded-full bg-[#065fd4] shrink-0" />
               )}
             </button>
           ))}
 
           {/* Show more button */}
-          <button className="flex items-center gap-3.5 px-3.5 py-2 rounded-xl text-sm text-neutral-300 hover:text-white hover:bg-white/10 transition-colors w-full text-left">
-            <ChevronDown className="w-4 h-4 text-neutral-400" />
+          <button className="flex items-center gap-6 px-3 py-2 rounded-xl text-sm text-[#0f0f0f] hover:bg-[#f2f2f2] transition-colors w-full text-left">
+            <ChevronDown className="w-4 h-4 text-[#606060]" />
             <span>Show more</span>
           </button>
         </div>
 
         {/* You Section */}
-        <div className="flex flex-col gap-1 border-b border-white/10 py-3">
+        <div className="flex flex-col gap-0.5 border-b border-[#0000001a] py-3">
           <button
             onClick={() => {
-              onToggleSavedOnly(true);
-              setViewMode('feed');
+              onToggleSavedOnly(false);
+              setViewMode('you');
               if (onToggleCollapse) onToggleCollapse();
             }}
-            className={`flex items-center gap-4 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-              showSavedOnly
-                ? 'bg-neutral-800 text-white font-semibold'
-                : 'text-neutral-200 hover:text-white hover:bg-white/10'
+            className={`flex items-center gap-6 px-3 py-2.5 rounded-xl text-sm transition-colors ${
+              viewMode === 'you'
+                ? 'bg-[#f2f2f2] text-[#0f0f0f] font-medium'
+                : 'text-[#0f0f0f] hover:bg-[#f2f2f2] font-normal'
             }`}
           >
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 overflow-hidden bg-white shadow-sm ${
-              showSavedOnly ? 'ring-2 ring-sky-400' : 'ring-1 ring-white/40'
-            }`}>
-              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5">
-                <defs>
-                  <linearGradient id="you_thumbs_expanded" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#38bdf8" />
-                    <stop offset="100%" stopColor="#0284c7" />
-                  </linearGradient>
-                </defs>
-                <rect x="2" y="9.5" width="4.5" height="12" rx="1.8" fill="url(#you_thumbs_expanded)" />
-                <path d="M7.5 10.2L11 2.8C11.8 1.4 13.8 1.8 14 3.5L14 9.2H19.5C21.2 9.2 22.5 10.8 22.1 12.5L20.6 18.5C20.2 20 18.8 21.2 17.2 21.2H7.5V10.2Z" fill="url(#you_thumbs_expanded)" />
-              </svg>
-            </div>
+            <User className={`w-5 h-5 ${viewMode === 'you' ? 'text-[#0f0f0f] stroke-[2.25] fill-[#0f0f0f]' : 'text-[#0f0f0f] stroke-[1.75]'}`} />
             <span>You</span>
           </button>
         </div>
@@ -349,24 +304,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={onOpenLanguage}
-              className="flex-1 flex items-center justify-between gap-1.5 px-3 py-2 rounded-xl bg-neutral-900 border border-white/10 hover:border-white/20 text-neutral-200 text-xs font-semibold transition-all hover:bg-neutral-800"
+              className="flex-1 flex items-center justify-between gap-1.5 px-3 py-2 rounded-xl bg-[#f2f2f2] hover:bg-[#e5e5e5] text-[#0f0f0f] text-xs font-medium transition-colors"
               title={`Language: ${selectedLanguage.name}`}
             >
               <div className="flex items-center gap-1.5 min-w-0">
                 <FlagIcon code={selectedLanguage.code} size="sm" />
                 <span className="text-xs font-bold uppercase">{selectedLanguage.code}</span>
               </div>
-              <Globe className="w-3.5 h-3.5 text-neutral-400" />
+              <Globe className="w-3.5 h-3.5 text-[#606060]" />
             </button>
 
             <button
               onClick={toggleTheme}
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-neutral-900 border border-white/10 hover:border-white/20 text-neutral-200 text-xs font-semibold transition-all hover:bg-neutral-800"
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#f2f2f2] hover:bg-[#e5e5e5] text-[#0f0f0f] text-xs font-medium transition-colors"
               title={`Theme: ${theme}`}
             >
-              {theme === 'dark' && <Moon className="w-3.5 h-3.5 text-violet-300" />}
-              {theme === 'stealth' && <Eye className="w-3.5 h-3.5 text-emerald-400" />}
-              {theme === 'light' && <Sun className="w-3.5 h-3.5 text-amber-400" />}
+              {theme === 'dark' && <Moon className="w-3.5 h-3.5 text-[#0f0f0f]" />}
+              {theme === 'stealth' && <Eye className="w-3.5 h-3.5 text-[#0f0f0f]" />}
+              {theme === 'light' && <Sun className="w-3.5 h-3.5 text-[#0f0f0f]" />}
               <span className="capitalize text-xs">{theme}</span>
             </button>
           </div>

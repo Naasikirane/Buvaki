@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Post, User, SupportedLanguage, Comment } from '../types';
+import { Post, User, SupportedLanguage, Comment, Theme } from '../types';
 import { 
   ThumbsUp, 
   ThumbsDown, 
@@ -12,9 +12,7 @@ import {
   Pin,
   X,
   ChevronLeft,
-  ChevronRight,
-  Maximize2,
-  Minimize2
+  ChevronRight
 } from 'lucide-react';
 import { formatRealTimestamp } from '../lib/timeUtils';
 import { DeletePostConfirmModal } from './DeletePostConfirmModal';
@@ -24,6 +22,8 @@ interface PostCardProps {
   currentUser: User | null;
   selectedLanguage?: SupportedLanguage;
   topComment?: Comment | null;
+  comments?: Comment[];
+  onAddComment?: (postId: string, content: string) => void;
   onVote: (postId: string, direction: 'up' | 'down') => void;
   onSelectPost: (post: Post) => void;
   onToggleSave: (postId: string) => void;
@@ -33,6 +33,9 @@ interface PostCardProps {
   onOpenShare?: (post: Post) => void;
   onSubscribeToggle?: (authorId: string) => void;
   isSubscribed?: boolean;
+  theme?: Theme;
+  isActiveCenter?: boolean;
+  onFocusPost?: (post: Post) => void;
 }
 
 export const PostCard: React.FC<PostCardProps> = ({
@@ -40,6 +43,8 @@ export const PostCard: React.FC<PostCardProps> = ({
   currentUser,
   selectedLanguage,
   topComment,
+  comments,
+  onAddComment,
   onVote,
   onSelectPost,
   onToggleSave,
@@ -47,12 +52,27 @@ export const PostCard: React.FC<PostCardProps> = ({
   onDeletePost,
   onOpenComments,
   onOpenShare,
+  theme = 'dark',
+  isActiveCenter = false,
+  onFocusPost,
 }) => {
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [inlineComment, setInlineComment] = useState('');
   const sliderRef = useRef<HTMLDivElement>(null);
+
+  const commentsList = comments || (topComment ? [topComment] : []);
+
+  const handleInlineCommentSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inlineComment.trim()) return;
+    if (onAddComment) {
+      onAddComment(post.id, inlineComment.trim());
+      setInlineComment('');
+    }
+  };
 
   // Mouse Drag to Scroll State for Desktop/Touch
   const isDraggingRef = useRef(false);
@@ -99,19 +119,6 @@ export const PostCard: React.FC<PostCardProps> = ({
     : post.imageUrl 
     ? [post.imageUrl] 
     : [];
-
-  const [isGalleryExpanded, setIsGalleryExpanded] = useState(false);
-  const galleryScrollRef = useRef<HTMLDivElement>(null);
-
-  const scrollGallery = (direction: 'left' | 'right') => {
-    if (galleryScrollRef.current) {
-      const scrollAmount = galleryScrollRef.current.clientWidth * 0.8;
-      galleryScrollRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth'
-      });
-    }
-  };
 
   const handleTranslate = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -160,7 +167,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   };
 
   // Fallback top comment preview text if not provided in props
-  const resolvedTopComment = topComment || (post.id === 'post_ojisan_brothers' ? {
+  const resolvedTopComment = topComment || commentsList[0] || (post.id === 'post_ojisan_brothers' ? {
     id: 'c_council',
     postId: post.id,
     author: {
@@ -216,121 +223,141 @@ export const PostCard: React.FC<PostCardProps> = ({
     replies: []
   } : null);
 
+  const isDark = theme === 'dark' || theme === 'stealth';
   const displayContent = post.content || post.title;
 
   return (
     <article 
       onClick={() => {
-        if (onOpenComments) onOpenComments(post);
+        if (onFocusPost) onFocusPost(post);
+        else if (onOpenComments) onOpenComments(post);
         else onSelectPost(post);
       }}
-      className="group w-full max-w-2xl lg:max-w-3xl xl:max-w-4xl bg-[#0f0f0f] pb-5 transition-all duration-200 cursor-pointer text-left"
+      className={`group w-full max-w-full rounded-xl p-4 transition-all duration-150 cursor-pointer text-left border ${
+        isDark 
+          ? 'bg-[#0f0f0f] border-white/10 hover:border-white/20 text-white' 
+          : 'bg-white border-[#0000001a] hover:border-[#00000033] text-[#0f0f0f]'
+      } ${
+        isActiveCenter 
+          ? (isDark ? 'border-[#3ea6ff] shadow-xs' : 'border-[#065fd4] shadow-xs') 
+          : ''
+      }`}
     >
       {/* Pinned Badge if any */}
       {post.isPinned && (
-        <div className="px-4 pt-2 flex items-center gap-1.5 text-xs font-bold text-sky-400">
-          <Pin className="w-3.5 h-3.5 fill-sky-400" />
-          <span>Pinned community post</span>
+        <div className="mb-2.5 flex items-center gap-1.5 text-xs font-medium text-[#606060]">
+          <Pin className="w-3.5 h-3.5 fill-[#606060]" />
+          <span>Pinned post</span>
         </div>
       )}
 
-      {/* Main Row: Left Avatar + Right Indented Content Column (Identical to Green Line Indentation) */}
-      <div className="px-4 pt-3.5 flex items-start gap-3 sm:gap-3.5">
+      {/* Main Container */}
+      <div className="flex items-start gap-3 w-full">
         
-        {/* Left Column: Creator Avatar */}
+        {/* Creator Avatar */}
         <div className="shrink-0 pt-0.5">
           <img
             src={post.author.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
             alt={post.author.username}
-            className="w-10 h-10 rounded-full object-cover ring-1 ring-white/10"
+            className={`w-10 h-10 rounded-full object-cover ring-1 ${isDark ? 'ring-white/10' : 'ring-black/10'}`}
             referrerPolicy="no-referrer"
           />
         </div>
 
-        {/* Right Column: ALL items indented and vertically aligned together */}
-        <div className="flex-1 min-w-0">
-          
-          {/* 1. Header Row: Author Username Pill & Timestamp + 3-dots Menu */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex flex-col min-w-0">
-              <div className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors w-fit">
-                <span className="text-xs font-semibold text-white truncate">
+          {/* Content Column */}
+          <div className="flex-1 min-w-0">
+            
+            {/* 1. Header Row: Author Channel Name & Timestamp + 3-dots Menu */}
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-baseline gap-2 min-w-0">
+                <span className={`text-sm font-medium truncate ${isDark ? 'text-white' : 'text-[#0f0f0f]'}`}>
                   {post.author.username || post.author.handle.replace(/^@/, '')}
                 </span>
+                <span className="text-xs text-[#606060] font-normal shrink-0">
+                  {formatRealTimestamp(post.createdAt || post.timestamp)}
+                </span>
               </div>
-              <span className="text-[11px] sm:text-xs text-neutral-400 mt-1">
-                {formatRealTimestamp(post.createdAt || post.timestamp)}
-              </span>
-            </div>
 
-            {/* 3 dots menu button */}
-            <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
-              <button
-                onClick={() => setShowOptionsMenu(!showOptionsMenu)}
-                className="p-1 rounded-full hover:bg-white/10 text-neutral-400 hover:text-white transition-colors"
-                aria-label="More options"
-              >
-                <MoreVertical className="w-5 h-5" />
-              </button>
+              {/* 3 dots menu button */}
+              <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
+                <button
+                  onClick={() => setShowOptionsMenu(!showOptionsMenu)}
+                  className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
+                    isDark ? 'hover:bg-white/10 text-neutral-300' : 'hover:bg-black/5 text-[#0f0f0f]'
+                  }`}
+                  aria-label="More options"
+                >
+                  <MoreVertical className="w-4 h-4 stroke-[1.75]" />
+                </button>
 
-              {showOptionsMenu && (
-                <div className="absolute right-0 mt-1 w-48 rounded-xl bg-neutral-900 border border-white/10 shadow-2xl py-1.5 z-30 animate-in fade-in zoom-in-95">
-                  <button
-                    onClick={(e) => {
-                      handleTranslate(e);
-                      setShowOptionsMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-2.5 text-xs text-neutral-200 hover:bg-white/10 flex items-center gap-2.5 font-medium"
-                  >
-                    <Sparkles className="w-4 h-4 text-violet-400" />
-                    <span>{isTranslated ? 'Show Original' : 'Translate post'}</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      onToggleSave(post.id);
-                      setShowOptionsMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-2.5 text-xs text-neutral-200 hover:bg-white/10 flex items-center gap-2.5 font-medium"
-                  >
-                    <Bookmark className={`w-4 h-4 ${post.isSaved ? 'fill-emerald-400 text-emerald-400' : ''}`} />
-                    <span>{post.isSaved ? 'Remove from saved' : 'Save post'}</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      if (onOpenShare) onOpenShare(post);
-                      setShowOptionsMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-2.5 text-xs text-neutral-200 hover:bg-white/10 flex items-center gap-2.5 font-medium"
-                  >
-                    <Share2 className="w-4 h-4 text-neutral-300" />
-                    <span>Share post</span>
-                  </button>
-
-                  {isAuthor && onDeletePost && (
+                {showOptionsMenu && (
+                  <div className={`absolute right-0 mt-1 w-48 rounded-xl border shadow-xl py-1.5 z-30 animate-in fade-in zoom-in-95 ${
+                    isDark ? 'bg-[#212121] border-white/10 text-white' : 'bg-white border-[#0000001a] text-[#0f0f0f]'
+                  }`}>
                     <button
-                      onClick={() => {
-                        setIsConfirmDeleteOpen(true);
+                      onClick={(e) => {
+                        handleTranslate(e);
                         setShowOptionsMenu(false);
                       }}
-                      className="w-full text-left px-4 py-2.5 text-xs text-rose-400 hover:bg-rose-950/40 flex items-center gap-2.5 font-medium border-t border-white/10"
+                      className={`w-full text-left px-4 py-2.5 text-xs flex items-center gap-2.5 font-normal ${
+                        isDark ? 'hover:bg-white/10' : 'hover:bg-[#f2f2f2]'
+                      }`}
                     >
-                      <Trash2 className="w-4 h-4" />
-                      <span>Delete post</span>
+                      <Sparkles className="w-4 h-4 text-[#065fd4]" />
+                      <span>{isTranslated ? 'Show Original' : 'Translate post'}</span>
                     </button>
-                  )}
-                </div>
-              )}
+
+                    <button
+                      onClick={() => {
+                        onToggleSave(post.id);
+                        setShowOptionsMenu(false);
+                      }}
+                      className={`w-full text-left px-4 py-2.5 text-xs flex items-center gap-2.5 font-normal ${
+                        isDark ? 'hover:bg-white/10' : 'hover:bg-[#f2f2f2]'
+                      }`}
+                    >
+                      <Bookmark className={`w-4 h-4 ${post.isSaved ? 'fill-[#065fd4] text-[#065fd4]' : ''}`} />
+                      <span>{post.isSaved ? 'Remove from saved' : 'Save post'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        if (onOpenShare) onOpenShare(post);
+                        setShowOptionsMenu(false);
+                      }}
+                      className={`w-full text-left px-4 py-2.5 text-xs flex items-center gap-2.5 font-normal ${
+                        isDark ? 'hover:bg-white/10' : 'hover:bg-[#f2f2f2]'
+                      }`}
+                    >
+                      <Share2 className="w-4 h-4 text-[#606060]" />
+                      <span>Share post</span>
+                    </button>
+
+                    {isAuthor && onDeletePost && (
+                      <button
+                        onClick={() => {
+                          setIsConfirmDeleteOpen(true);
+                          setShowOptionsMenu(false);
+                        }}
+                        className={`w-full text-left px-4 py-2.5 text-xs text-[#cc0000] flex items-center gap-2.5 font-normal border-t ${
+                          isDark ? 'border-white/10 hover:bg-white/10' : 'border-[#0000001a] hover:bg-[#fff0f0]'
+                        }`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        <span>Delete post</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
           {/* 2. Text / Caption: Statement + ...more occupying exactly two lines */}
           {displayContent && (
-            <div className="mt-2">
+            <div className="mt-1.5">
               {isTranslated && (
-                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-violet-950/80 border border-violet-700/60 text-violet-300 text-[10px] font-semibold mb-1">
-                  <Sparkles className="w-3 h-3 text-violet-400 animate-pulse" />
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#065fd4]/10 border border-[#065fd4]/20 text-[#065fd4] text-[10px] font-medium mb-1">
+                  <Sparkles className="w-3 h-3 text-[#065fd4] animate-pulse" />
                   <span>AI Translated</span>
                 </div>
               )}
@@ -339,7 +366,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                 
                 if (isExpanded) {
                   return (
-                    <p className="text-sm text-neutral-100 whitespace-pre-wrap leading-relaxed">
+                    <p className={`text-sm whitespace-pre-wrap leading-[20px] font-normal ${isDark ? 'text-neutral-200' : 'text-[#0f0f0f]'}`}>
                       <span>{fullText}</span>{' '}
                       <button
                         type="button"
@@ -347,7 +374,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                           e.stopPropagation();
                           setIsExpanded(false);
                         }}
-                        className="text-neutral-400 hover:text-white font-medium text-xs ml-1 inline-block transition-colors"
+                        className="text-[#606060] hover:text-[#0f0f0f] font-medium text-xs ml-1 inline-block transition-colors"
                       >
                         Show less
                       </button>
@@ -363,7 +390,7 @@ export const PostCard: React.FC<PostCardProps> = ({
 
                 if (!shouldTruncate) {
                   return (
-                    <p className="text-sm text-neutral-100 whitespace-pre-wrap leading-relaxed">
+                    <p className={`text-sm whitespace-pre-wrap leading-[20px] font-normal ${isDark ? 'text-neutral-200' : 'text-[#0f0f0f]'}`}>
                       {fullText}
                     </p>
                   );
@@ -380,7 +407,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                 }
 
                 return (
-                  <p className="text-sm text-neutral-100 leading-relaxed">
+                  <p className={`text-sm leading-[20px] font-normal ${isDark ? 'text-neutral-200' : 'text-[#0f0f0f]'}`}>
                     <span>{snippet}</span>
                     <button
                       type="button"
@@ -388,7 +415,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                         e.stopPropagation();
                         setIsExpanded(true);
                       }}
-                      className="text-neutral-400 hover:text-white font-medium text-xs ml-0.5 inline-flex items-center transition-colors"
+                      className="text-[#606060] hover:text-[#0f0f0f] font-medium text-xs ml-0.5 inline-flex items-center transition-colors"
                     >
                       ...more
                     </button>
@@ -398,125 +425,41 @@ export const PostCard: React.FC<PostCardProps> = ({
             </div>
           )}
 
-          {/* 3. Media Content: Small, Square Images of Uniform Size with Independent Expanding MORE Icon */}
+          {/* 3. Media Content: Uniform Size Images Fitting Left-to-Right and Wrapping Downwards (No cutting, no horizontal scroll, no MORE button) */}
           {postImages.length > 0 && (
-            <div className="mt-2.5 relative group/gallery" onClick={(e) => e.stopPropagation()}>
-              {!isGalleryExpanded ? (
-                /* Standard Compact Mode: Small square photos of identical size in a horizontal row */
-                <div className="relative">
-                  {/* Left Scroll Arrow (shown if overflowing) */}
-                  {postImages.length > 2 && (
-                    <button
-                      type="button"
-                      onClick={() => scrollGallery('left')}
-                      className="absolute left-1 top-1/2 -translate-y-1/2 z-10 p-1.5 rounded-full bg-black/75 hover:bg-black border border-white/20 text-white opacity-0 group-hover/gallery:opacity-100 transition-opacity shadow-lg cursor-pointer hidden sm:flex items-center justify-center"
-                      aria-label="Scroll left"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                  )}
-
-                  {/* Horizontal row of small square photos with independent MORE icon next to the last photo */}
-                  <div 
-                    ref={galleryScrollRef}
-                    className="flex items-center gap-3 overflow-x-auto no-scrollbar scroll-smooth py-1 pr-4"
-                  >
-                    {postImages.map((imgUrl, idx) => (
-                      <div
-                        key={idx}
-                        onClick={() => setLightboxIndex(idx)}
-                        className="relative shrink-0 w-[180px] h-[180px] sm:w-[220px] sm:h-[220px] md:w-[240px] md:h-[240px] aspect-square rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 shadow-md cursor-zoom-in group/img"
-                      >
-                        <img
-                          src={imgUrl}
-                          alt={`Post media ${idx + 1}`}
-                          className="w-full h-full object-cover select-none transition-transform duration-300 group-hover/img:scale-[1.03]"
-                          referrerPolicy="no-referrer"
-                          loading="lazy"
-                        />
-                        {/* Image Counter badge in top-right (when multiple photos) */}
-                        {postImages.length > 1 && (
-                          <div className="absolute top-2.5 right-2.5 px-2.5 py-0.5 rounded-full bg-black/65 backdrop-blur-md text-[11px] font-semibold text-white/95 border border-white/10 select-none shadow-sm">
-                            {idx + 1}/{postImages.length}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-
-                    {/* Independent Expanding MORE Icon: placed next to the last photo */}
-                    <button
-                      type="button"
-                      onClick={() => setIsGalleryExpanded(true)}
-                      className="shrink-0 flex flex-col items-center justify-center gap-1 px-3.5 py-2.5 rounded-xl bg-black/90 hover:bg-black border border-white/20 text-white shadow-xl transition-all hover:scale-105 active:scale-95 cursor-pointer select-none self-center"
-                      title="Expand photos"
-                    >
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-white">
-                        MORE
-                      </span>
-                      <Maximize2 className="w-4 h-4 text-white" />
-                    </button>
-                  </div>
-
-                  {/* Right Scroll Arrow (shown if overflowing) */}
-                  {postImages.length > 2 && (
-                    <button
-                      type="button"
-                      onClick={() => scrollGallery('right')}
-                      className="absolute right-1 top-1/2 -translate-y-1/2 z-10 p-1.5 rounded-full bg-black/75 hover:bg-black border border-white/20 text-white opacity-0 group-hover/gallery:opacity-100 transition-opacity shadow-lg cursor-pointer hidden sm:flex items-center justify-center"
-                      aria-label="Scroll right"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              ) : (
-                /* Expanded Mode: Large view with independent LESS button to collapse back */
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between px-1">
-                    <span className="text-xs font-semibold text-neutral-400">
-                      {postImages.length} {postImages.length === 1 ? 'Photo' : 'Photos'} (Expanded View)
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setIsGalleryExpanded(false)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/90 hover:bg-black border border-white/20 text-white text-xs font-bold uppercase tracking-wider shadow-lg hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                      title="Collapse to small square photos"
-                    >
-                      <span>LESS</span>
-                      <Minimize2 className="w-3.5 h-3.5 text-white" />
-                    </button>
-                  </div>
-
-                  {postImages.map((imgUrl, idx) => (
-                    <div
-                      key={idx}
-                      onClick={() => setLightboxIndex(idx)}
-                      className="relative w-full max-w-2xl aspect-video sm:aspect-[16/10] max-h-[500px] rounded-2xl overflow-hidden bg-neutral-900 border border-white/5 shadow-md cursor-zoom-in group/img"
-                    >
-                      <img
-                        src={imgUrl}
-                        alt={`Post media ${idx + 1}`}
-                        className="w-full h-full object-cover select-none transition-transform duration-300 group-hover/img:scale-[1.02]"
-                        referrerPolicy="no-referrer"
-                        loading="lazy"
-                      />
-                      {postImages.length > 1 && (
-                        <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-[11px] font-medium text-white/90 border border-white/10">
-                          {idx + 1} / {postImages.length}
-                        </div>
-                      )}
+            <div className="mt-2.5 flex flex-wrap gap-2 sm:gap-2.5" onClick={(e) => e.stopPropagation()}>
+              {postImages.map((imgUrl, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => setLightboxIndex(idx)}
+                  className={`relative shrink-0 w-[165px] h-[235px] sm:w-[195px] sm:h-[275px] rounded-xl overflow-hidden cursor-zoom-in group/img transition-transform duration-200 hover:scale-[1.01] shadow-xs ${
+                    isDark ? 'bg-[#181818] border border-white/10' : 'bg-[#f2f2f2] border border-[#0000001a]'
+                  }`}
+                >
+                  <img
+                    src={imgUrl}
+                    alt={`Post media ${idx + 1}`}
+                    className="w-full h-full object-cover select-none"
+                    referrerPolicy="no-referrer"
+                    loading="lazy"
+                  />
+                  {postImages.length > 1 && (
+                    <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[10px] font-medium text-white select-none shadow-xs">
+                      {idx + 1}/{postImages.length}
                     </div>
-                  ))}
+                  )}
                 </div>
-              )}
+              ))}
             </div>
           )}
 
           {/* Poll Type Post Support */}
           {post.type === 'poll' && post.poll && (
             <div className="mt-2.5" onClick={(e) => e.stopPropagation()}>
-              <div className="p-3.5 rounded-2xl bg-neutral-900 border border-white/10 space-y-2">
-                <h4 className="text-xs sm:text-sm font-bold text-white">{post.poll.question}</h4>
+              <div className={`p-3.5 rounded-xl border space-y-2 ${
+                isDark ? 'bg-[#181818] border-white/10' : 'bg-[#f9f9f9] border-[#0000001a]'
+              }`}>
+                <h4 className={`text-xs sm:text-sm font-medium ${isDark ? 'text-white' : 'text-[#0f0f0f]'}`}>{post.poll.question}</h4>
                 <div className="space-y-1.5">
                   {post.poll.options.map((opt) => {
                     const total = post.poll?.totalVotes || 1;
@@ -527,21 +470,23 @@ export const PostCard: React.FC<PostCardProps> = ({
                       <button
                         key={opt.id}
                         onClick={() => onVotePoll(post.id, opt.id)}
-                        className={`w-full relative overflow-hidden p-2.5 rounded-xl border text-left text-xs font-semibold transition-all ${
+                        className={`w-full relative overflow-hidden p-2.5 rounded-lg border text-left text-xs font-medium transition-all ${
                           isSelected
-                            ? 'border-sky-500 bg-sky-950/40 text-white'
-                            : 'border-white/10 bg-neutral-800/80 text-neutral-200 hover:bg-neutral-800'
+                            ? isDark ? 'border-[#3ea6ff] bg-[#3ea6ff]/10 text-[#3ea6ff]' : 'border-[#065fd4] bg-[#065fd4]/10 text-[#065fd4]'
+                            : isDark ? 'border-white/5 bg-white/5 text-neutral-300 hover:bg-white/10' : 'border-[#0000001a] bg-white text-[#0f0f0f] hover:bg-[#f2f2f2]'
                         }`}
                       >
                         <div 
                           className={`absolute top-0 bottom-0 left-0 transition-all duration-500 ${
-                            isSelected ? 'bg-sky-600/30' : 'bg-white/10'
+                            isSelected 
+                              ? isDark ? 'bg-[#3ea6ff]/20' : 'bg-[#065fd4]/20' 
+                              : isDark ? 'bg-white/5' : 'bg-black/5'
                           }`}
                           style={{ width: `${percentage}%` }}
                         />
                         <div className="relative z-10 flex items-center justify-between">
                           <span className="truncate">{opt.text}</span>
-                          <span className="font-mono text-[11px] text-neutral-400 font-bold ml-2">
+                          <span className={`font-mono text-[11px] font-bold ml-2 ${isDark ? 'text-neutral-400' : 'text-[#606060]'}`}>
                             {percentage}%
                           </span>
                         </div>
@@ -553,21 +498,23 @@ export const PostCard: React.FC<PostCardProps> = ({
             </div>
           )}
 
-          {/* 4. Action Row (Aligned with the green indentation line: 👍 [count]  👎  💬 [count]  ↪️) */}
+          {/* 4. Action Row (Aligned: 👍 [count]  👎  💬 [count]  ↪️) */}
           <div 
-            className="mt-3 flex items-center gap-6 sm:gap-7 text-neutral-300"
+            className={`mt-3 flex items-center gap-6 sm:gap-7 ${isDark ? 'text-neutral-400' : 'text-[#606060]'}`}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Like / Upvote */}
             <button
               onClick={() => onVote(post.id, 'up')}
-              className={`flex items-center gap-2 py-1 hover:text-white transition-colors ${
-                post.userVote === 'up' ? 'text-white font-bold' : 'text-neutral-300'
+              className={`flex items-center gap-1.5 py-1 text-xs sm:text-sm font-normal transition-colors ${
+                post.userVote === 'up' 
+                  ? 'text-[#065fd4] font-medium' 
+                  : isDark ? 'hover:text-white' : 'hover:text-[#0f0f0f]'
               }`}
               aria-label="Like"
             >
-              <ThumbsUp className={`w-5 h-5 ${post.userVote === 'up' ? 'fill-white text-white' : ''}`} />
-              <span className="text-xs sm:text-sm font-semibold">
+              <ThumbsUp className={`w-4 h-4 stroke-[1.75] ${post.userVote === 'up' ? 'fill-[#065fd4] text-[#065fd4]' : ''}`} />
+              <span>
                 {formatScore(post.score)}
               </span>
             </button>
@@ -575,62 +522,74 @@ export const PostCard: React.FC<PostCardProps> = ({
             {/* Dislike / Downvote */}
             <button
               onClick={() => onVote(post.id, 'down')}
-              className={`flex items-center py-1 hover:text-white transition-colors ${
-                post.userVote === 'down' ? 'text-white font-bold' : 'text-neutral-300'
+              className={`flex items-center py-1 transition-colors ${
+                post.userVote === 'down' 
+                  ? 'text-[#065fd4] font-medium' 
+                  : isDark ? 'hover:text-white' : 'hover:text-[#0f0f0f]'
               }`}
               aria-label="Dislike"
             >
-              <ThumbsDown className={`w-5 h-5 ${post.userVote === 'down' ? 'fill-white text-white' : ''}`} />
+              <ThumbsDown className={`w-4 h-4 stroke-[1.75] ${post.userVote === 'down' ? 'fill-[#065fd4] text-[#065fd4]' : ''}`} />
             </button>
 
             {/* Comments Count */}
             <button
               onClick={() => {
-                if (onOpenComments) onOpenComments(post);
+                if (onFocusPost) onFocusPost(post);
+                else if (onOpenComments) onOpenComments(post);
                 else onSelectPost(post);
               }}
-              className="flex items-center gap-2 py-1 text-neutral-300 hover:text-white transition-colors"
+              className={`flex items-center gap-1.5 py-1 text-xs sm:text-sm font-normal transition-colors ${
+                isDark ? 'hover:text-white' : 'hover:text-[#0f0f0f]'
+              }`}
               aria-label="Comments"
             >
-              <MessageSquare className="w-5 h-5" />
-              <span className="text-xs sm:text-sm font-semibold">
-                {post.commentCount || 0}
+              <MessageSquare className="w-4 h-4 stroke-[1.75]" />
+              <span>
+                {post.commentCount || commentsList.length}
               </span>
             </button>
 
-            {/* Share Arrow (Matching Screenshot) */}
+            {/* Share Arrow */}
             <button
               onClick={() => {
                 if (onOpenShare) onOpenShare(post);
               }}
-              className="flex items-center py-1 text-neutral-300 hover:text-white transition-colors"
+              className={`flex items-center py-1 transition-colors ${
+                isDark ? 'hover:text-white' : 'hover:text-[#0f0f0f]'
+              }`}
               aria-label="Share"
             >
-              <Share2 className="w-5 h-5" />
+              <Share2 className="w-4 h-4 stroke-[1.75]" />
             </button>
           </div>
 
-          {/* 5. Highlighted Comments Box (Aligned with the green indentation line) */}
+          {/* Comments Preview Box (Matches UI screenshot) */}
           <div 
             className="mt-3"
             onClick={(e) => {
               e.stopPropagation();
-              if (onOpenComments) onOpenComments(post);
+              if (onFocusPost) onFocusPost(post);
+              else if (onOpenComments) onOpenComments(post);
               else onSelectPost(post);
             }}
           >
-            <div className="p-3 rounded-2xl bg-[#212121] hover:bg-[#282828] transition-colors cursor-pointer border border-white/5">
-              <div className="text-xs font-semibold text-neutral-300 mb-1.5">
+            <div className={`p-3 rounded-xl transition-colors cursor-pointer border ${
+              isDark 
+                ? 'bg-[#181818] hover:bg-[#202020] border-white/5 text-neutral-300' 
+                : 'bg-[#f9f9f9] hover:bg-[#f2f2f2] border-[#0000000d] text-[#0f0f0f]'
+            }`}>
+              <div className={`text-xs font-medium mb-1.5 ${isDark ? 'text-neutral-300' : 'text-[#0f0f0f]'}`}>
                 Comments
               </div>
               <div className="flex items-center gap-2.5">
                 <img
                   src={resolvedTopComment?.author?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'}
                   alt="Commenter"
-                  className="w-5 h-5 rounded-full object-cover shrink-0"
+                  className="w-5 h-5 rounded-full object-cover shrink-0 ring-1 ring-black/10"
                   referrerPolicy="no-referrer"
                 />
-                <p className="text-xs text-neutral-200 truncate font-normal">
+                <p className={`text-xs truncate font-normal ${isDark ? 'text-neutral-300' : 'text-slate-600'}`}>
                   {resolvedTopComment?.content || 'Add a comment...'}
                 </p>
               </div>

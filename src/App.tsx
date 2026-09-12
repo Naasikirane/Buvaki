@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { MobileNav } from './components/MobileNav';
 import { PostCard } from './components/PostCard';
+import { RightCommentsSidebar } from './components/RightCommentsSidebar';
 import { PostDetailModal } from './components/PostDetailModal';
 import { CreatePostModal } from './components/CreatePostModal';
 import { CommentsDrawer } from './components/CommentsDrawer';
 import { ShareDrawer } from './components/ShareDrawer';
 import { ShortsFeed } from './components/ShortsFeed';
 import { LongsFeed } from './components/LongsFeed';
+import { YouPage } from './components/YouPage';
 import { UserProfileModal } from './components/UserProfileModal';
 import { NotificationsModal } from './components/NotificationsModal';
 import { LanguageSelectorModal } from './components/LanguageSelectorModal';
@@ -67,10 +69,10 @@ export default function App() {
       try {
         return JSON.parse(saved);
       } catch (err) {
-        return null;
+        return CURRENT_USER;
       }
     }
-    return null;
+    return CURRENT_USER;
   });
 
   const [posts, setPosts] = useState<Post[]>(() => {
@@ -123,11 +125,16 @@ export default function App() {
   });
 
   const [viewMode, setViewMode] = useState<ViewMode>('feed');
-  const [theme, setTheme] = useState<Theme>('dark');
+  const [theme, setTheme] = useState<Theme>('light');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilterPill, setActiveFilterPill] = useState<string>('Top');
   const [activeFilter, setActiveFilter] = useState<FilterSort>('hot');
   const [showSavedOnly, setShowSavedOnly] = useState(false);
+
+  // Active centered post for the right-side comment bar
+  const [activeCenterPostId, setActiveCenterPostId] = useState<string | null>(null);
+  const postElementsRef = useRef<Map<string, HTMLElement>>(new Map());
+  const isAutoScrollingRef = useRef(false);
 
   // Subscribed creators tracking
   const [subscribedCreators, setSubscribedCreators] = useState<Set<string>>(() => {
@@ -189,11 +196,8 @@ export default function App() {
 
   // Profile action guard
   const handleOpenProfile = () => {
-    if (currentUser) {
-      setIsProfileOpen(true);
-    } else {
-      handleRequireAuth('Sign in or create an account to view and manage your profile');
-    }
+    setShowSavedOnly(false);
+    setViewMode('you');
   };
 
   // Open create post guard
@@ -432,7 +436,7 @@ export default function App() {
       handleRequireAuth('Sign in or create an account to vote on comments.');
       return;
     }
-    const postId = targetPostId || selectedPost?.id || drawerCommentsPost?.id;
+    const postId = targetPostId || selectedPost?.id || drawerCommentsPost?.id || activeCenterPostId;
     if (!postId) return;
 
     dbVote(currentUser.id, commentId, 'comment', direction);
@@ -600,10 +604,89 @@ export default function App() {
   const userPublishedPosts = currentUser ? posts.filter((p) => p.author.id === currentUser.id) : [];
   const userSavedPosts = posts.filter((p) => p.isSaved);
 
+  const activeCenterPost = useMemo(() => {
+    if (!sortedPosts.length) return null;
+    if (activeCenterPostId) {
+      const found = sortedPosts.find((p) => p.id === activeCenterPostId);
+      if (found) return found;
+    }
+    return sortedPosts[0];
+  }, [sortedPosts, activeCenterPostId]);
+
+  const activeCenterComments = activeCenterPost ? commentsMap[activeCenterPost.id] || [] : [];
+
+  const handleFocusPost = (postId: string) => {
+    setActiveCenterPostId(postId);
+    const el = postElementsRef.current.get(postId);
+    if (el) {
+      isAutoScrollingRef.current = true;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => {
+        isAutoScrollingRef.current = false;
+      }, 500);
+    }
+  };
+
+  // Detect which post is closest to the screen vertical center while scrolling and auto-center
+  useEffect(() => {
+    if (viewMode !== 'feed' || sortedPosts.length === 0) return;
+
+    if (!activeCenterPostId && sortedPosts[0]) {
+      setActiveCenterPostId(sortedPosts[0].id);
+    }
+
+    let scrollTimeout: any = null;
+
+    const onScroll = () => {
+      if (isAutoScrollingRef.current) return;
+
+      const viewportCenter = window.innerHeight / 2;
+      let closestId: string | null = null;
+      let minDistance = Infinity;
+
+      postElementsRef.current.forEach((el, id) => {
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        const elCenter = rect.top + rect.height / 2;
+        const dist = Math.abs(viewportCenter - elCenter);
+        if (dist < minDistance) {
+          minDistance = dist;
+          closestId = id;
+        }
+      });
+
+      if (closestId && closestId !== activeCenterPostId) {
+        setActiveCenterPostId(closestId);
+      }
+
+      // Auto-center debounced snap: when scrolling down pauses and post is within auto-center proximity
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        if (isAutoScrollingRef.current) return;
+        if (closestId && minDistance > 12 && minDistance < 180) {
+          const el = postElementsRef.current.get(closestId);
+          if (el) {
+            isAutoScrollingRef.current = true;
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => {
+              isAutoScrollingRef.current = false;
+            }, 450);
+          }
+        }
+      }, 160);
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      clearTimeout(scrollTimeout);
+    };
+  }, [viewMode, sortedPosts, activeCenterPostId]);
+
   const t = getTranslation(selectedLanguage.code);
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f] text-neutral-100 font-sans transition-colors duration-200 antialiased pb-16 lg:pb-0">
+    <div className="min-h-screen bg-white text-[#0f0f0f] font-sans transition-colors duration-200 antialiased pb-16 lg:pb-0">
       
       {/* Top Navbar */}
       <Navbar
@@ -623,7 +706,7 @@ export default function App() {
       />
 
       {/* Main Container */}
-      <div className={`w-full flex ${viewMode === 'shorts' ? 'h-[calc(100vh-3.5rem)] overflow-hidden' : 'min-h-[calc(100vh-3.5rem)]'}`}>
+      <div className={`w-full flex pt-14 ${viewMode === 'shorts' ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
         
         {/* Desktop Sidebar (Left Navigation) */}
         <Sidebar
@@ -642,99 +725,144 @@ export default function App() {
         />
 
         {/* Center Main Stage */}
-        <main className={viewMode === 'shorts' ? 'flex-1 min-w-0 h-full flex items-center justify-center overflow-hidden relative' : 'flex-1 min-w-0 py-2 sm:py-3 px-3 sm:px-4 lg:px-6 flex flex-col gap-3'}>
+        <main className={
+          viewMode === 'shorts'
+            ? 'flex-1 min-w-0 h-full flex items-center justify-center overflow-hidden relative'
+            : (viewMode === 'longs' || viewMode === 'you')
+              ? 'flex-1 min-w-0 flex flex-col'
+              : 'flex-1 min-w-0 py-2 sm:py-3 px-3 sm:px-4 lg:px-6 flex flex-col gap-3'
+        }>
           
           {/* VIEW MODE: FEED */}
           {viewMode === 'feed' && (
-            <div className="flex flex-col gap-4 w-full max-w-4xl xl:max-w-5xl">
+            <div className="flex items-start gap-5 w-full justify-center">
               
-              {/* TOP FILTER PILLS BAR (Starts immediately after collapsed left sidebar) */}
-              <div className="w-full flex items-center justify-between gap-2 overflow-x-auto no-scrollbar py-1">
-                <div className="flex items-center gap-2">
-                  {['Top', 'Newest', 'Creator posts', 'Discussions', 'Polls', 'Images'].map((pill) => (
-                    <button
-                      key={pill}
-                      onClick={() => setActiveFilterPill(pill)}
-                      className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-                        activeFilterPill === pill
-                          ? 'bg-white text-black font-bold shadow-sm'
-                          : 'bg-white/10 text-neutral-300 hover:bg-white/20 hover:text-white'
-                      }`}
-                    >
-                      {pill}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Send Feedback text link on the right (Screenshot 1) */}
-                <button
-                  onClick={() => {
-                    setFeedbackToast('Thank you for your feedback! Community feed has been upgraded.');
-                    setTimeout(() => setFeedbackToast(null), 3000);
-                  }}
-                  className="text-xs text-sky-400 hover:text-sky-300 font-semibold whitespace-nowrap px-2 shrink-0"
-                >
-                  Send feedback
-                </button>
-              </div>
-
-              {/* Toast confirmation */}
-              {feedbackToast && (
-                <div className="p-2.5 rounded-xl bg-neutral-900 border border-white/20 text-xs text-emerald-400 flex items-center gap-2 animate-in fade-in">
-                  <Check className="w-4 h-4" />
-                  <span>{feedbackToast}</span>
-                </div>
-              )}
-
-              {/* Community Posts Feed (Identical to Screenshots) */}
-              <div className="flex flex-col gap-4">
-                {sortedPosts.length === 0 ? (
-                  <div className="p-12 text-center rounded-2xl bg-neutral-900/50 border border-white/10 flex flex-col items-center gap-3">
-                    <Compass className="w-8 h-8 text-neutral-400" />
-                    <span className="text-sm font-semibold text-neutral-300">No community posts found</span>
-                    <button
-                      onClick={handleOpenCreatePost}
-                      className="mt-2 px-4 py-2 rounded-full bg-white text-black font-bold text-xs hover:bg-neutral-200"
-                    >
-                      Create the first post
-                    </button>
+              {/* Center Feed Column */}
+              <div className="flex-1 min-w-0 flex flex-col gap-4 max-w-3xl xl:max-w-4xl">
+                
+                {/* TOP FILTER PILLS BAR (YouTube Chips Style) */}
+                <div className="w-full flex items-center justify-between gap-2 overflow-x-auto no-scrollbar py-1">
+                  <div className="flex items-center gap-2">
+                    {['Top', 'Newest', 'Creator posts', 'Discussions', 'Polls', 'Images'].map((pill) => (
+                      <button
+                        key={pill}
+                        onClick={() => setActiveFilterPill(pill)}
+                        className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${
+                          activeFilterPill === pill
+                            ? 'bg-[#0f0f0f] text-white shadow-2xs'
+                            : 'bg-[#0000000d] hover:bg-[#00000014] text-[#0f0f0f]'
+                        }`}
+                      >
+                        {pill}
+                      </button>
+                    ))}
                   </div>
-                ) : (
-                  sortedPosts.map((post) => {
-                    const isSub = subscribedCreators.has(post.author.id) || subscribedCreators.has(post.author.handle);
-                    const topComment = commentsMap[post.id]?.[0] || null;
-                    return (
-                      <PostCard
-                        key={post.id}
-                        post={post}
-                        currentUser={currentUser}
-                        selectedLanguage={selectedLanguage}
-                        topComment={topComment}
-                        onVote={handleVotePost}
-                        onSelectPost={(p) => setSelectedPost(p)}
-                        onToggleSave={handleToggleSavePost}
-                        onVotePoll={handleVotePoll}
-                        onDeletePost={handleDeletePost}
-                        onOpenComments={(p) => setDrawerCommentsPost(p)}
-                        onOpenShare={(p) => setDrawerSharePost(p)}
-                        onSubscribeToggle={(authorId) => handleToggleSubscribe(authorId)}
-                        isSubscribed={isSub}
-                      />
-                    );
-                  })
+
+                  {/* Send Feedback text link on the right */}
+                  <button
+                    onClick={() => {
+                      setFeedbackToast('Thank you for your feedback! Community feed has been upgraded.');
+                      setTimeout(() => setFeedbackToast(null), 3000);
+                    }}
+                    className="text-xs font-medium text-[#065fd4] hover:underline whitespace-nowrap px-2 shrink-0 cursor-pointer"
+                  >
+                    Send feedback
+                  </button>
+                </div>
+
+                {/* Toast confirmation */}
+                {feedbackToast && (
+                  <div className="p-2.5 rounded-xl bg-[#f2f2f2] border border-[#0000001a] text-xs text-[#0f0f0f] font-medium flex items-center gap-2 animate-in fade-in">
+                    <Check className="w-4 h-4 text-[#065fd4]" />
+                    <span>{feedbackToast}</span>
+                  </div>
                 )}
+
+                {/* Community Posts Feed with Auto-Centering on Scroll */}
+                <div className="flex flex-col gap-4">
+                  {sortedPosts.length === 0 ? (
+                    <div className="p-12 text-center rounded-2xl bg-slate-50 border border-slate-200 flex flex-col items-center gap-3">
+                      <Compass className="w-8 h-8 text-slate-400" />
+                      <span className="text-sm font-semibold text-slate-600">No community posts found</span>
+                      <button
+                        onClick={handleOpenCreatePost}
+                        className="mt-2 px-4 py-2 rounded-full bg-slate-900 text-white font-bold text-xs hover:bg-slate-800"
+                      >
+                        Create the first post
+                      </button>
+                    </div>
+                  ) : (
+                    sortedPosts.map((post) => {
+                      const isSub = subscribedCreators.has(post.author.id) || subscribedCreators.has(post.author.handle);
+                      const postComments = commentsMap[post.id] || [];
+                      const topComment = postComments[0] || null;
+                      const isCenter = (activeCenterPostId || sortedPosts[0]?.id) === post.id;
+
+                      return (
+                        <div
+                          key={post.id}
+                          id={`post-${post.id}`}
+                          ref={(el) => {
+                            if (el) postElementsRef.current.set(post.id, el);
+                            else postElementsRef.current.delete(post.id);
+                          }}
+                          className="scroll-mt-24 transition-transform duration-200"
+                        >
+                          <PostCard
+                            post={post}
+                            currentUser={currentUser}
+                            selectedLanguage={selectedLanguage}
+                            topComment={topComment}
+                            comments={postComments}
+                            onAddComment={handleAddComment}
+                            onVote={handleVotePost}
+                            onSelectPost={(p) => setSelectedPost(p)}
+                            onToggleSave={handleToggleSavePost}
+                            onVotePoll={handleVotePoll}
+                            onDeletePost={handleDeletePost}
+                            onOpenComments={(p) => {
+                              handleFocusPost(p.id);
+                              if (window.innerWidth < 1024) {
+                                setDrawerCommentsPost(p);
+                              }
+                            }}
+                            onOpenShare={(p) => setDrawerSharePost(p)}
+                            onSubscribeToggle={(authorId) => handleToggleSubscribe(authorId)}
+                            isSubscribed={isSub}
+                            theme={theme}
+                            isActiveCenter={isCenter}
+                            onFocusPost={(p) => handleFocusPost(p.id)}
+                          />
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Floating "Create a post" button */}
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
+                  <button
+                    onClick={handleOpenCreatePost}
+                    className="flex items-center gap-2.5 px-6 py-3 rounded-full bg-slate-900 text-white font-bold text-sm shadow-xl hover:bg-slate-800 active:scale-95 transition-all cursor-pointer border border-slate-700"
+                  >
+                    <SquarePen className="w-4 h-4 text-white stroke-[2.5]" />
+                    <span>Create a post</span>
+                  </button>
+                </div>
+
               </div>
 
-              {/* Floating "Create a post" button (Matching Screenshots) */}
-              <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
-                <button
-                  onClick={handleOpenCreatePost}
-                  className="flex items-center gap-2.5 px-6 py-3 rounded-full bg-white text-black font-bold text-sm shadow-[0_8px_30px_rgb(0,0,0,0.6)] hover:bg-neutral-200 active:scale-95 transition-all cursor-pointer border border-white/20"
-                >
-                  <SquarePen className="w-4 h-4 text-black stroke-[2.5]" />
-                  <span>Create a post</span>
-                </button>
-              </div>
+              {/* Dedicated Right Comments Sidebar on Home Feed (Sticky, auto-updates to whichever post is in center) */}
+              <RightCommentsSidebar
+                activePost={activeCenterPost}
+                comments={activeCenterComments}
+                currentUser={currentUser}
+                selectedLanguage={selectedLanguage}
+                onVoteComment={(cId, dir) => handleVoteComment(cId, dir, activeCenterPost?.id)}
+                onAddComment={handleAddComment}
+                onRequireAuth={handleRequireAuth}
+                theme={theme}
+              />
 
             </div>
           )}
@@ -766,6 +894,17 @@ export default function App() {
               onToggleSave={handleToggleSavePost}
               onSelectPost={(p) => setSelectedPost(p)}
               onRequireAuth={handleRequireAuth}
+              onSelectShort={() => setViewMode('shorts')}
+            />
+          )}
+
+          {/* VIEW MODE: YOU (Matches You_expectations.png and You_expectations2.png) */}
+          {viewMode === 'you' && (
+            <YouPage
+              currentUser={currentUser}
+              onSelectPost={(p) => setSelectedPost(p)}
+              onRequireAuth={handleRequireAuth}
+              onNavigateToFeed={() => setViewMode('feed')}
             />
           )}
 

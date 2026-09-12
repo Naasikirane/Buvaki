@@ -63,7 +63,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
   return (
     <>
       {/* Bottom Navigation Bar (Mobile only) */}
-      <nav className="lg:hidden flex fixed bottom-0 left-0 right-0 z-40 bg-[#0f0f0f]/95 border-t border-white/10 backdrop-blur-lg px-2 py-1.5 items-center justify-around shadow-2xl max-w-md mx-auto">
+      <nav className="lg:hidden flex fixed bottom-0 left-0 right-0 z-40 bg-white/95 border-t border-slate-200 backdrop-blur-lg px-2 py-1.5 items-center justify-around shadow-2xl max-w-md mx-auto">
         
         {/* Home / Feed Tab */}
         <button
@@ -72,7 +72,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
             setViewMode('feed');
           }}
           className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
-            viewMode === 'feed' && !showSavedOnly ? 'text-white font-bold' : 'text-neutral-400 hover:text-white'
+            viewMode === 'feed' && !showSavedOnly ? 'text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-900'
           }`}
         >
           <Home className="w-5 h-5" />
@@ -86,7 +86,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
             setViewMode('shorts');
           }}
           className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
-            viewMode === 'shorts' ? 'text-pink-400 font-bold' : 'text-neutral-400 hover:text-white'
+            viewMode === 'shorts' ? 'text-pink-600 font-bold' : 'text-slate-500 hover:text-slate-900'
           }`}
         >
           <Clapperboard className="w-5 h-5" />
@@ -96,7 +96,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
         {/* Center Floating (+) Post Button */}
         <button
           onClick={onOpenCreatePost}
-          className="flex items-center justify-center w-11 h-11 -mt-4 rounded-full bg-white hover:bg-neutral-200 text-black shadow-lg active:scale-95 transition-all border-2 border-black"
+          className="flex items-center justify-center w-11 h-11 -mt-4 rounded-full bg-slate-900 hover:bg-slate-800 text-white shadow-lg active:scale-95 transition-all border-2 border-white"
           aria-label={t.createPost}
         >
           <Plus className="w-6 h-6 stroke-[3]" />
@@ -109,7 +109,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
             setViewMode('longs');
           }}
           className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
-            viewMode === 'longs' ? 'text-violet-400 font-bold' : 'text-neutral-400 hover:text-white'
+            viewMode === 'longs' ? 'text-violet-600 font-bold' : 'text-slate-500 hover:text-slate-900'
           }`}
         >
           <Tv className="w-5 h-5" />
@@ -119,21 +119,25 @@ export const MobileNav: React.FC<MobileNavProps> = ({
         {/* You / Profile Tab */}
         <button
           onClick={onOpenProfile}
-          className="flex flex-col items-center gap-1 p-2 rounded-xl text-neutral-400 hover:text-white transition-all"
+          className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
+            viewMode === 'you' ? 'text-[#0f0f0f] font-semibold' : 'text-slate-500 hover:text-slate-900'
+          }`}
         >
           {currentUser ? (
             <>
               <img
                 src={currentUser.avatar}
                 alt={currentUser.username}
-                className="w-5 h-5 rounded-full object-cover ring-1 ring-white/20"
+                className={`w-5 h-5 rounded-full object-cover ring-1 ${
+                  viewMode === 'you' ? 'ring-2 ring-black' : 'ring-slate-300'
+                }`}
                 referrerPolicy="no-referrer"
               />
               <span className="text-[10px] truncate max-w-[60px]">You</span>
             </>
           ) : (
             <>
-              <LogIn className="w-5 h-5 text-neutral-400" />
+              <LogIn className="w-5 h-5 text-slate-500" />
               <span className="text-[10px]">Sign In</span>
             </>
           )}
@@ -147,18 +151,18 @@ export const MobileNav: React.FC<MobileNavProps> = ({
           {/* Backdrop */}
           <div
             onClick={onCloseMobileSidebar}
-            className="fixed inset-0 bg-black/80 backdrop-blur-xs transition-opacity"
+            className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
           />
 
           {/* Drawer Content */}
-          <div className="relative w-4/5 max-w-xs bg-[#0f0f0f] border-r border-white/10 p-5 flex flex-col gap-5 overflow-y-auto z-10 text-left">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <span className="font-bold text-white text-sm">
+          <div className="relative w-4/5 max-w-xs bg-white border-r border-slate-200 p-5 flex flex-col gap-5 overflow-y-auto z-10 text-left">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <span className="font-bold text-slate-900 text-sm">
                 Navigation
               </span>
               <button
                 onClick={onCloseMobileSidebar}
-                className="p-1.5 rounded-full text-neutral-400 hover:text-white bg-neutral-900"
+                className="p-1.5 rounded-full text-slate-500 hover:text-slate-900 bg-slate-100"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -171,29 +175,29 @@ export const MobileNav: React.FC<MobileNavProps> = ({
                   onOpenLanguage();
                   onCloseMobileSidebar();
                 }}
-                className="flex-1 flex items-center justify-between gap-1 px-3 py-2 rounded-xl bg-neutral-900 border border-white/10 text-neutral-200 text-xs font-semibold hover:border-white/30 transition-all"
+                className="flex-1 flex items-center justify-between gap-1 px-3 py-2 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold hover:border-slate-300 transition-all"
               >
                 <div className="flex items-center gap-1.5">
                   <FlagIcon code={selectedLanguage.code} size="sm" />
                   <span>{selectedLanguage.code.toUpperCase()}</span>
                 </div>
-                <Globe className="w-3.5 h-3.5 text-neutral-400" />
+                <Globe className="w-3.5 h-3.5 text-slate-400" />
               </button>
 
               <button
                 onClick={toggleTheme}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-neutral-900 border border-white/10 text-neutral-200 text-xs font-semibold hover:border-white/30 transition-all"
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold hover:border-slate-300 transition-all"
               >
-                {theme === 'dark' && <Moon className="w-3.5 h-3.5 text-violet-300" />}
-                {theme === 'stealth' && <Eye className="w-3.5 h-3.5 text-emerald-400" />}
-                {theme === 'light' && <Sun className="w-3.5 h-3.5 text-amber-400" />}
+                {theme === 'dark' && <Moon className="w-3.5 h-3.5 text-violet-600" />}
+                {theme === 'stealth' && <Eye className="w-3.5 h-3.5 text-emerald-600" />}
+                {theme === 'light' && <Sun className="w-3.5 h-3.5 text-amber-500" />}
                 <span className="capitalize">{theme}</span>
               </button>
             </div>
 
             {/* Navigation items */}
             <div className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 Explore
               </span>
               
@@ -203,9 +207,9 @@ export const MobileNav: React.FC<MobileNavProps> = ({
                   setViewMode('feed');
                   onCloseMobileSidebar();
                 }}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-neutral-200 bg-neutral-900"
+                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200"
               >
-                <Home className="w-4 h-4 text-white" /> Home
+                <Home className="w-4 h-4 text-slate-900" /> Home
               </button>
               
               <button
@@ -213,9 +217,9 @@ export const MobileNav: React.FC<MobileNavProps> = ({
                   setViewMode('shorts');
                   onCloseMobileSidebar();
                 }}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-pink-300 bg-neutral-900"
+                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-pink-700 bg-pink-50 hover:bg-pink-100"
               >
-                <Clapperboard className="w-4 h-4 text-pink-400" /> Shorts
+                <Clapperboard className="w-4 h-4 text-pink-600" /> Shorts
               </button>
 
               <button
@@ -223,9 +227,9 @@ export const MobileNav: React.FC<MobileNavProps> = ({
                   setViewMode('longs');
                   onCloseMobileSidebar();
                 }}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-violet-300 bg-neutral-900"
+                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-violet-700 bg-violet-50 hover:bg-violet-100"
               >
-                <Tv className="w-4 h-4 text-violet-400" /> Longs
+                <Tv className="w-4 h-4 text-violet-600" /> Longs
               </button>
 
               <button
@@ -234,9 +238,9 @@ export const MobileNav: React.FC<MobileNavProps> = ({
                   setViewMode('feed');
                   onCloseMobileSidebar();
                 }}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-neutral-200 bg-neutral-900"
+                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200"
               >
-                <Bookmark className="w-4 h-4 text-emerald-400" /> Saved Posts
+                <Bookmark className="w-4 h-4 text-emerald-600" /> Saved Posts
               </button>
             </div>
 

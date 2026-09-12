@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ViewMode, User, NotificationItem, SupportedLanguage } from '../types';
 import { getTranslation } from '../lib/translations';
 import { 
@@ -12,7 +12,10 @@ import {
   Sun,
   Globe,
   MessageSquare,
-  Menu
+  Menu,
+  Mic,
+  Clock,
+  User as UserIcon
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -30,7 +33,21 @@ interface NavbarProps {
   onToggleSidebar?: () => void;
   onToggleMobileSidebar?: () => void;
   onOpenLanguage?: () => void;
+  theme?: string;
 }
+
+const SEARCH_SUGGESTIONS = [
+  { text: 'chinese recap', image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=100&auto=format&fit=crop&q=80' },
+  { text: 'anime recap', image: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=100&auto=format&fit=crop&q=80' },
+  { text: 'chinese drama', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80' },
+  { text: 'pretty little baby song', image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100&auto=format&fit=crop&q=80' },
+  { text: "let's kiss forever", image: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&auto=format&fit=crop&q=80' },
+  { text: 'blue', image: 'https://images.unsplash.com/photo-1477959858617-67f30bc75b82?w=100&auto=format&fit=crop&q=80' },
+  { text: 'songs', image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100&auto=format&fit=crop&q=80' },
+  { text: 'startups', image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=100&auto=format&fit=crop&q=80' },
+  { text: 'elon musk beef with chess game', image: 'https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=100&auto=format&fit=crop&q=80' },
+  { text: 'elon musk beef with chase', image: 'https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=100&auto=format&fit=crop&q=80' }
+];
 
 export const Navbar: React.FC<NavbarProps> = ({
   viewMode,
@@ -46,24 +63,41 @@ export const Navbar: React.FC<NavbarProps> = ({
   notifications,
   onToggleSidebar,
   onOpenLanguage,
+  theme = 'light'
 }) => {
   const t = getTranslation(selectedLanguage.code);
   const unreadCount = notifications.filter((n) => !n.read).length;
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const searchBoxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target as Node)) {
+        setIsSearchFocused(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
     <>
-      <header className="fixed top-0 inset-x-0 z-50 w-full border-b border-white/10 bg-[#0f0f0f]/95 backdrop-blur-xl">
+      <header className={`fixed top-0 inset-x-0 z-50 w-full border-b transition-colors ${
+        theme === 'dark' ? 'bg-[#0f0f0f] border-white/10' : 'bg-white border-[#0000001a]'
+      }`}>
         <div className="w-full h-14 flex items-center justify-between pr-3 sm:pr-4 lg:pr-6 gap-2 sm:gap-4">
           
-          {/* Left: Hamburger Menu & Thumbs-Up Icon & Brand Title "bluelike" */}
+          {/* Left: Hamburger Menu & YouTube-Style Brand Logo */}
           <div className="flex items-center min-w-0 shrink-0">
             {onToggleSidebar && (
               <div className="w-12 lg:w-[72px] flex items-center justify-center shrink-0">
                 <button
                   onClick={onToggleSidebar}
-                  className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 active:bg-white/20 text-neutral-300 hover:text-white transition-colors focus:outline-none"
+                  className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors focus:outline-none ${
+                    theme === 'dark' ? 'hover:bg-white/10 text-white' : 'hover:bg-black/5 text-[#0f0f0f]'
+                  }`}
                   title="Guide"
                   aria-label="Toggle navigation guide"
                 >
@@ -81,66 +115,143 @@ export const Navbar: React.FC<NavbarProps> = ({
                   setIsSearchExpanded(false);
                 }
               }}
-              className="flex items-center gap-2.5 text-white hover:opacity-90 transition-opacity focus:outline-none py-1 group"
-              aria-label="bluelike home"
+              className="flex items-center gap-1.5 focus:outline-none py-1 group"
+              aria-label="Buvaki home"
             >
-              {/* Custom Thumbs-Up Icon with ocean blue fill */}
-              <div className="relative flex items-center justify-center shrink-0 w-7 h-7">
+              {/* Monitor Icon: Red Filled Rectangle, White Play Button & Stand Line */}
+              <div className="relative flex items-center justify-center shrink-0 w-7 h-6 group-hover:opacity-90 transition-opacity">
                 <svg
                   viewBox="0 0 24 24"
+                  fill="none"
                   xmlns="http://www.w3.org/2000/svg"
-                  className="w-6 h-6 transform transition-transform duration-200 group-hover:scale-105"
+                  className={`w-full h-full ${theme === 'dark' ? 'text-white' : 'text-[#0f0f0f]'}`}
                 >
-                  <defs>
-                    <linearGradient id="ocean_blue_thumbs" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#38bdf8" />
-                      <stop offset="100%" stopColor="#0284c7" />
-                    </linearGradient>
-                  </defs>
-                  {/* Left cuff vertical pill */}
-                  <rect 
-                    x="2" 
-                    y="9.5" 
-                    width="4.5" 
-                    height="12" 
-                    rx="1.8" 
-                    fill="url(#ocean_blue_thumbs)" 
+                  {/* Monitor Screen: Filled with red, rounded corners, dark bezel stroke */}
+                  <rect
+                    x="2.5"
+                    y="2.5"
+                    width="19"
+                    height="13.5"
+                    rx="3"
+                    fill="#ff0000"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
                   />
-                  {/* Main thumb & hand body */}
-                  <path 
-                    d="M7.5 10.2L11 2.8C11.8 1.4 13.8 1.8 14 3.5L14 9.2H19.5C21.2 9.2 22.5 10.8 22.1 12.5L20.6 18.5C20.2 20 18.8 21.2 17.2 21.2H7.5V10.2Z" 
-                    fill="url(#ocean_blue_thumbs)"
+                  {/* White Filled Play Button at Center of Rectangle */}
+                  <path
+                    d="M 10.2 6.5 C 10.2 6.1 10.6 5.85 11 6.1 L 15.2 8.75 C 15.55 8.95 15.55 9.45 15.2 9.65 L 11 12.3 C 10.6 12.55 10.2 12.3 10.2 11.9 Z"
+                    fill="#ffffff"
+                  />
+                  {/* Monitor Stand Base Line underneath */}
+                  <line
+                    x1="2.5"
+                    y1="20"
+                    x2="21.5"
+                    y2="20"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
                   />
                 </svg>
               </div>
 
-              <span className="text-xl font-bold tracking-tight text-white font-sans lowercase">
-                bluelike
+              {/* YouTube Typography Brand Title */}
+              <span className={`text-[19px] font-bold tracking-tighter lowercase ${
+                theme === 'dark' ? 'text-white' : 'text-[#0f0f0f]'
+              }`}>
+                buvaki
+              </span>
+              <span className="text-[10px] text-[#606060] font-normal self-start -mt-0.5 ml-0.5">
+                KE
               </span>
             </button>
           </div>
 
-          {/* Center: Desktop Search Bar (High standard YouTube/Reddit style) */}
-          <div className="hidden md:flex flex-1 max-w-md mx-auto items-center">
-            <div className="relative w-full flex items-center bg-neutral-900 border border-white/10 hover:border-white/20 focus-within:border-sky-500/70 focus-within:ring-1 focus-within:ring-sky-500/30 rounded-full px-3.5 py-1.5 transition-all shadow-inner">
-              <Search className="w-4 h-4 text-neutral-400 shrink-0 mr-2.5" />
-              <input
-                type="text"
-                value={searchQuery || ''}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search buvaki..."
-                className="w-full bg-transparent text-xs sm:text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="text-neutral-400 hover:text-white p-0.5 rounded-full hover:bg-white/10 transition-colors ml-1"
-                  title="Clear search"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
+          {/* Center: Desktop Search Bar (Exact YouTube Search Box & Voice Mic) */}
+          <div className="hidden md:flex flex-1 max-w-2xl mx-auto items-center justify-center px-4">
+            <div ref={searchBoxRef} className="relative flex items-center w-full max-w-[540px] lg:max-w-[580px] h-10">
+              <div className={`flex-1 flex items-center h-full border rounded-l-full px-4 transition-all ${
+                theme === 'dark'
+                  ? 'border-white/20 focus-within:border-[#3ea6ff] bg-[#121212]'
+                  : 'border-[#cccccc] focus-within:border-[#1c62b9] focus-within:shadow-[inset_0_1px_2px_rgba(0,0,0,0.08)] bg-white'
+              }`}>
+                <input
+                  type="text"
+                  value={searchQuery || ''}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setIsSearchFocused(true)}
+                  placeholder="Search"
+                  className={`w-full bg-transparent text-sm focus:outline-none ${
+                    theme === 'dark' ? 'text-white placeholder-[#aaaaaa]' : 'text-[#0f0f0f] placeholder-[#606060]'
+                  }`}
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="p-1 text-[#606060] hover:text-[#0f0f0f] transition-colors"
+                    title="Clear search"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              <button
+                className={`h-full px-6 border border-l-0 rounded-r-full flex items-center justify-center transition-colors ${
+                  theme === 'dark'
+                    ? 'bg-[#222222] hover:bg-[#272727] border-white/20 text-white'
+                    : 'bg-[#f8f8f8] hover:bg-[#f0f0f0] border-[#cccccc] text-[#0f0f0f]'
+                }`}
+                title="Search"
+              >
+                <Search className="w-5 h-5 stroke-[1.75]" />
+              </button>
+
+              {/* YouTube Autocomplete / History Dropdown (Matching Longs_expectations.png) */}
+              {isSearchFocused && (
+                <div className="absolute top-11 left-0 w-full bg-white border border-[#0000001a] rounded-2xl shadow-2xl py-3 z-50 animate-in fade-in zoom-in-95 text-left select-none">
+                  {SEARCH_SUGGESTIONS
+                    .filter(s => !searchQuery || s.text.toLowerCase().includes(searchQuery.toLowerCase()))
+                    .map((item, idx) => (
+                      <div
+                        key={idx}
+                        onMouseDown={() => {
+                          setSearchQuery(item.text);
+                          setIsSearchFocused(false);
+                        }}
+                        className="flex items-center justify-between px-4 py-2 hover:bg-[#f2f2f2] cursor-pointer transition-colors group"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <Clock className="w-4 h-4 text-[#606060] shrink-0" />
+                          <span className="text-sm font-medium text-[#0f0f0f] truncate group-hover:text-black">
+                            {item.text}
+                          </span>
+                        </div>
+                        <img
+                          src={item.image}
+                          alt={item.text}
+                          className="w-8 h-6 rounded object-cover shrink-0 ml-3 ring-1 ring-black/5"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                    ))}
+                </div>
               )}
             </div>
+            
+            {/* YouTube Microphone Button */}
+            <button
+              onClick={() => {
+                if (searchQuery) setSearchQuery('');
+              }}
+              className={`w-10 h-10 ml-3 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                theme === 'dark'
+                  ? 'bg-[#222222] hover:bg-[#272727] text-white'
+                  : 'bg-[#f2f2f2] hover:bg-[#e5e5e5] text-[#0f0f0f]'
+              }`}
+              title="Search with your voice"
+            >
+              <Mic className="w-5 h-5 stroke-[1.75]" />
+            </button>
           </div>
 
           {/* Right: Quick Actions (Create, Notifications, Profile/Auth, and More) */}
@@ -149,22 +260,22 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Mobile-only Collapsible Search */}
             <div className="md:hidden relative flex items-center">
               {isSearchExpanded || searchQuery ? (
-                <div className="flex items-center gap-2 bg-neutral-900 border border-white/20 rounded-full px-3 py-1.5 shadow-lg w-44 sm:w-56 transition-all duration-200">
-                  <Search className="w-4 h-4 text-neutral-400 shrink-0" />
+                <div className="flex items-center gap-2 bg-[#f2f2f2] border border-[#cccccc] rounded-full px-3 py-1.5 shadow-md w-44 sm:w-56 transition-all duration-200">
+                  <Search className="w-4 h-4 text-[#606060] shrink-0" />
                   <input
                     type="text"
                     autoFocus
                     value={searchQuery || ''}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search..."
-                    className="w-full bg-transparent text-xs text-neutral-100 placeholder-neutral-500 focus:outline-none"
+                    className="w-full bg-transparent text-xs text-[#0f0f0f] placeholder-[#606060] focus:outline-none"
                   />
                   <button
                     onClick={() => {
                       setSearchQuery('');
                       setIsSearchExpanded(false);
                     }}
-                    className="text-neutral-400 hover:text-white p-0.5 rounded-full hover:bg-white/10 transition-colors"
+                    className="text-[#606060] hover:text-[#0f0f0f] p-0.5 rounded-full hover:bg-black/5 transition-colors"
                     title="Close search"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -173,59 +284,66 @@ export const Navbar: React.FC<NavbarProps> = ({
               ) : (
                 <button
                   onClick={() => setIsSearchExpanded(true)}
-                  className="p-2 rounded-full hover:bg-white/10 text-white transition-all"
+                  className="p-2 rounded-full hover:bg-black/5 text-[#0f0f0f] transition-all"
                   title="Search"
                   aria-label="Search"
                 >
-                  <Search className="w-5 h-5" />
+                  <Search className="w-5 h-5 stroke-[1.75]" />
                 </button>
               )}
             </div>
 
-            {/* Desktop Quick Action: "+ Create" Post Pill Button */}
+            {/* Desktop Quick Action: "+ Create" YouTube Pill Button */}
             <button
               onClick={onOpenCreatePost}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 text-neutral-200 hover:text-white text-xs font-semibold transition-all"
+              className={`hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                theme === 'dark'
+                  ? 'bg-[#272727] hover:bg-[#3f3f3f] text-white'
+                  : 'bg-[#f2f2f2] hover:bg-[#e5e5e5] text-[#0f0f0f]'
+              }`}
               title="Create a post"
             >
-              <Plus className="w-4 h-4 text-sky-400" />
+              <Plus className="w-4 h-4 stroke-[2]" />
               <span>Create</span>
             </button>
 
-            {/* Desktop & Mobile: Notifications Bell Icon */}
+            {/* Desktop & Mobile: Notifications Bell Icon with YouTube 9+ Badge */}
             <button
               onClick={onOpenNotifications}
-              className="relative p-2 rounded-full text-neutral-300 hover:text-white hover:bg-white/10 transition-all"
+              className={`relative p-2.5 rounded-full transition-colors ${
+                theme === 'dark' ? 'text-white hover:bg-white/10' : 'text-[#0f0f0f] hover:bg-black/5'
+              }`}
               title="Notifications"
               aria-label="Notifications"
             >
-              <Bell className="w-5 h-5" />
+              <Bell className="w-5 h-5 stroke-[1.75]" />
               {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 min-w-2 h-2 rounded-full bg-rose-500 ring-2 ring-[#0f0f0f]" />
+                <span className="absolute top-1 right-1 px-1 min-w-[16px] h-4 rounded-full bg-[#cc0000] text-white text-[9px] font-bold flex items-center justify-center border-2 border-white">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
               )}
             </button>
 
-            {/* Desktop User Profile or Sign In */}
+            {/* Desktop User Profile or YouTube Sign In Pill */}
             {currentUser ? (
               <button
                 onClick={onOpenProfile}
-                className="hidden sm:flex items-center gap-2 p-1 pl-1.5 pr-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-all"
+                className="flex items-center gap-2 p-0.5 rounded-full focus:outline-none"
                 title={currentUser.username}
               >
                 <img
                   src={currentUser.avatar}
                   alt={currentUser.username}
-                  className="w-6 h-6 rounded-full object-cover ring-1 ring-sky-500/50"
+                  className="w-8 h-8 rounded-full object-cover ring-1 ring-black/10"
                   referrerPolicy="no-referrer"
                 />
-                <span className="text-xs font-medium max-w-[100px] truncate">{currentUser.username}</span>
               </button>
             ) : (
               <button
                 onClick={onOpenAuth}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-sky-500 hover:bg-sky-400 text-black font-semibold text-xs transition-all shadow-sm"
+                className="flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-[#065fd4] hover:bg-[#def1ff] text-[#065fd4] font-medium text-sm transition-colors"
               >
-                <LogIn className="w-3.5 h-3.5" />
+                <UserIcon className="w-4 h-4 stroke-[2]" />
                 <span>Sign in</span>
               </button>
             )}
@@ -234,10 +352,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="relative">
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="p-2 rounded-full hover:bg-white/10 text-white transition-all"
+                className={`p-2.5 rounded-full transition-colors ${
+                  theme === 'dark' ? 'text-white hover:bg-white/10' : 'text-[#0f0f0f] hover:bg-black/5'
+                }`}
                 aria-label="More options"
               >
-                <MoreVertical className="w-5 h-5" />
+                <MoreVertical className="w-5 h-5 stroke-[1.75]" />
               </button>
 
               {isMenuOpen && (
@@ -249,14 +369,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                     aria-hidden="true"
                   />
 
-                  <div className="absolute right-0 mt-2 w-52 rounded-2xl bg-neutral-900 border border-white/10 shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95">
+                  <div className="absolute right-0 mt-2 w-52 rounded-2xl bg-white border border-slate-200 shadow-xl py-2 z-50 animate-in fade-in zoom-in-95">
                     {currentUser ? (
                       <button
                         onClick={() => {
                           onOpenProfile();
                           setIsMenuOpen(false);
                         }}
-                        className="w-full px-4 py-2.5 text-left text-xs font-semibold text-white hover:bg-white/10 flex items-center gap-2.5"
+                        className="w-full px-4 py-2.5 text-left text-xs font-semibold text-slate-900 hover:bg-slate-100 flex items-center gap-2.5"
                       >
                         <img
                           src={currentUser.avatar}
@@ -266,7 +386,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         />
                         <div className="flex flex-col min-w-0">
                           <span className="truncate">{currentUser.username}</span>
-                          <span className="text-[10px] text-neutral-400">View profile</span>
+                          <span className="text-[10px] text-slate-500">View profile</span>
                         </div>
                       </button>
                     ) : (
@@ -275,24 +395,24 @@ export const Navbar: React.FC<NavbarProps> = ({
                           onOpenAuth();
                           setIsMenuOpen(false);
                         }}
-                        className="w-full px-4 py-2.5 text-left text-xs font-semibold text-white hover:bg-white/10 flex items-center gap-2.5"
+                        className="w-full px-4 py-2.5 text-left text-xs font-semibold text-slate-900 hover:bg-slate-100 flex items-center gap-2.5"
                       >
-                        <LogIn className="w-4 h-4 text-sky-400" />
+                        <LogIn className="w-4 h-4 text-sky-600" />
                         <span>Sign in / Register</span>
                       </button>
                     )}
 
-                    <div className="my-1 border-t border-white/10" />
+                    <div className="my-1 border-t border-slate-100" />
 
                     <button
                       onClick={() => {
                         onOpenNotifications();
                         setIsMenuOpen(false);
                       }}
-                      className="sm:hidden w-full px-4 py-2 text-left text-xs font-medium text-neutral-200 hover:bg-white/10 flex items-center justify-between"
+                      className="sm:hidden w-full px-4 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-100 flex items-center justify-between"
                     >
                       <div className="flex items-center gap-2.5">
-                        <Bell className="w-4 h-4 text-neutral-400" />
+                        <Bell className="w-4 h-4 text-slate-400" />
                         <span>Notifications</span>
                       </div>
                       {unreadCount > 0 && (
@@ -308,13 +428,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                           onOpenLanguage();
                           setIsMenuOpen(false);
                         }}
-                        className="w-full px-4 py-2 text-left text-xs font-medium text-neutral-200 hover:bg-white/10 flex items-center justify-between"
+                        className="w-full px-4 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-100 flex items-center justify-between"
                       >
                         <div className="flex items-center gap-2.5">
-                          <Globe className="w-4 h-4 text-neutral-400" />
+                          <Globe className="w-4 h-4 text-slate-400" />
                           <span>Language</span>
                         </div>
-                        <span className="text-[10px] text-neutral-400 font-semibold px-1.5 py-0.5 rounded bg-white/5 uppercase">
+                        <span className="text-[10px] text-slate-500 font-semibold px-1.5 py-0.5 rounded bg-slate-100 uppercase">
                           {selectedLanguage.code}
                         </span>
                       </button>
@@ -325,9 +445,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                         onOpenCreatePost();
                         setIsMenuOpen(false);
                       }}
-                      className="sm:hidden w-full px-4 py-2 text-left text-xs font-medium text-neutral-200 hover:bg-white/10 flex items-center gap-2.5"
+                      className="sm:hidden w-full px-4 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-100 flex items-center gap-2.5"
                     >
-                      <Plus className="w-4 h-4 text-neutral-400" />
+                      <Plus className="w-4 h-4 text-slate-400" />
                       <span>Create a post</span>
                     </button>
                   </div>
@@ -339,8 +459,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         </div>
       </header>
-    {/* Permanent spacer matching fixed navbar height */}
-    <div className="h-14 w-full shrink-0" aria-hidden="true" />
-  </>
+    </>
   );
 };
