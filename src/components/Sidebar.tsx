@@ -61,7 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       <aside 
-        className="w-[72px] flex-shrink-0 hidden lg:flex flex-col items-center gap-1.5 py-3 px-1 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto no-scrollbar select-none z-20 bg-white border-r border-[#0000001a]"
+        className="w-[72px] flex-shrink-0 hidden lg:flex flex-col items-center gap-1.5 py-3 px-1 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto no-scrollbar select-none z-20 bg-white border-r border-white dark:border-white/10"
         aria-label="Collapsed sidebar navigation"
       >
         {/* Home */}
@@ -141,7 +141,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
 
         {/* Bottom utility icons */}
-        <div className="mt-auto flex flex-col items-center gap-2 pt-2 border-t border-[#0000001a] w-full">
+        <div className="mt-auto flex flex-col items-center gap-2 pt-2 border-t border-transparent w-full">
           <button
             onClick={onOpenLanguage}
             className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-[#f2f2f2] text-[#606060] hover:text-[#0f0f0f] transition-all"
@@ -172,7 +172,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Main Expanded YouTube Sidebar */}
       <aside 
-        className={`fixed top-14 left-0 bottom-0 w-60 bg-white border-r border-[#0000001a] z-50 flex flex-col py-3 px-3 overflow-y-auto custom-scrollbar text-left select-none transition-transform duration-200 ease-out shadow-2xl ${
+        className={`fixed top-14 left-0 bottom-0 w-60 bg-white border-r border-white dark:border-white/10 z-50 flex flex-col py-3 px-3 overflow-y-auto custom-scrollbar text-left select-none transition-transform duration-200 ease-out shadow-2xl ${
           isCollapsed ? '-translate-x-full pointer-events-none' : 'translate-x-0'
         }`}
         aria-label="Expanded sidebar navigation"

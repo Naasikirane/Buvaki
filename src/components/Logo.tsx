@@ -20,7 +20,7 @@ export const Logo: React.FC<LogoProps> = ({
 
   return (
     <div className={`inline-flex items-center ${sizeMap[size].gap} select-none ${className}`}>
-      {/* Monitor Icon: Red Filled Rectangle, White Play Button & Stand Line */}
+      {/* Thumbs Up Icon: Filled with Deep Sky Blue */}
       <div className={`relative flex items-center justify-center shrink-0 ${sizeMap[size].icon}`}>
         <svg
           viewBox="0 0 24 24"
@@ -28,30 +28,20 @@ export const Logo: React.FC<LogoProps> = ({
           xmlns="http://www.w3.org/2000/svg"
           className="w-full h-full transform transition-all duration-300 hover:scale-105"
         >
-          {/* Monitor Screen: Filled with red, rounded corners, dark bezel stroke */}
-          <rect
-            x="2.5"
-            y="2.5"
-            width="19"
-            height="13.5"
-            rx="3"
-            fill="#ff0000"
-            stroke="currentColor"
-            strokeWidth="1.5"
-          />
-          {/* White Filled Play Button at Center of Rectangle */}
+          {/* Hand & Thumb Body filled with Deep Sky Blue */}
           <path
-            d="M 10.2 6.5 C 10.2 6.1 10.6 5.85 11 6.1 L 15.2 8.75 C 15.55 8.95 15.55 9.45 15.2 9.65 L 11 12.3 C 10.6 12.55 10.2 12.3 10.2 11.9 Z"
-            fill="#ffffff"
+            d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"
+            fill="#00BFFF"
+            stroke="#00BFFF"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           />
-          {/* Monitor Stand Base Line underneath */}
-          <line
-            x1="2.5"
-            y1="20"
-            x2="21.5"
-            y2="20"
-            stroke="currentColor"
-            strokeWidth="2.2"
+          {/* Wrist Cuff divider matching the screenshot */}
+          <path
+            d="M7 10v12"
+            className="stroke-white dark:stroke-[#0f0f0f]"
+            strokeWidth="1.75"
             strokeLinecap="round"
           />
         </svg>

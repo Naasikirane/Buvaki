@@ -506,7 +506,7 @@ export const LongsFeed: React.FC<LongsFeedProps> = ({
     <div className="flex flex-col w-full bg-white text-[#0f0f0f] min-h-screen">
       
       {/* 1. TOP CATEGORY PILLS BAR (Exact YouTube chips placement & styling) */}
-      <div className="sticky top-14 z-20 bg-white/95 backdrop-blur-xs py-2 px-1 border-b border-[#0000000d] flex items-center justify-between">
+      <div className="sticky top-14 z-20 bg-white/95 backdrop-blur-xs py-2 px-1 border-b border-transparent flex items-center justify-between">
         <div className="relative flex items-center w-full overflow-hidden">
           
           {/* Scroll Left Button */}

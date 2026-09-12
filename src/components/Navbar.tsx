@@ -85,7 +85,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <>
       <header className={`fixed top-0 inset-x-0 z-50 w-full border-b transition-colors ${
-        theme === 'dark' ? 'bg-[#0f0f0f] border-white/10' : 'bg-white border-[#0000001a]'
+        theme === 'dark' ? 'bg-[#0f0f0f] border-white/10' : 'bg-white border-white'
       }`}>
         <div className="w-full h-14 flex items-center justify-between pr-3 sm:pr-4 lg:pr-6 gap-2 sm:gap-4">
           
@@ -118,38 +118,28 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="flex items-center gap-1.5 focus:outline-none py-1 group"
               aria-label="Buvaki home"
             >
-              {/* Monitor Icon: Red Filled Rectangle, White Play Button & Stand Line */}
-              <div className="relative flex items-center justify-center shrink-0 w-7 h-6 group-hover:opacity-90 transition-opacity">
+              {/* Thumbs Up Icon: Filled with Deep Sky Blue */}
+              <div className="relative flex items-center justify-center shrink-0 w-6 h-6 group-hover:opacity-90 transition-opacity">
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
-                  className={`w-full h-full ${theme === 'dark' ? 'text-white' : 'text-[#0f0f0f]'}`}
+                  className="w-full h-full"
                 >
-                  {/* Monitor Screen: Filled with red, rounded corners, dark bezel stroke */}
-                  <rect
-                    x="2.5"
-                    y="2.5"
-                    width="19"
-                    height="13.5"
-                    rx="3"
-                    fill="#ff0000"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  />
-                  {/* White Filled Play Button at Center of Rectangle */}
+                  {/* Hand & Thumb Body filled with Deep Sky Blue */}
                   <path
-                    d="M 10.2 6.5 C 10.2 6.1 10.6 5.85 11 6.1 L 15.2 8.75 C 15.55 8.95 15.55 9.45 15.2 9.65 L 11 12.3 C 10.6 12.55 10.2 12.3 10.2 11.9 Z"
-                    fill="#ffffff"
+                    d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"
+                    fill="#00BFFF"
+                    stroke="#00BFFF"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                   />
-                  {/* Monitor Stand Base Line underneath */}
-                  <line
-                    x1="2.5"
-                    y1="20"
-                    x2="21.5"
-                    y2="20"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
+                  {/* Wrist Cuff divider matching the screenshot */}
+                  <path
+                    d="M7 10v12"
+                    stroke={theme === 'dark' ? '#0f0f0f' : '#ffffff'}
+                    strokeWidth="1.75"
                     strokeLinecap="round"
                   />
                 </svg>
