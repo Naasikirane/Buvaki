@@ -19,11 +19,11 @@ export const Logo: React.FC<LogoProps> = ({
   };
 
   return (
-    <div className={`inline-flex items-center ${sizeMap[size].gap} select-none ${className}`}>
+    <div className={`inline-flex items-end ${sizeMap[size].gap} select-none ${className}`}>
       {/* Thumbs Up Icon: Filled with Deep Sky Blue */}
-      <div className={`relative flex items-center justify-center shrink-0 ${sizeMap[size].icon}`}>
+      <div className={`relative flex items-end justify-center shrink-0 ${sizeMap[size].icon}`}>
         <svg
-          viewBox="0 0 24 24"
+          viewBox="1 1.25 21.75 21.5"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           className="w-full h-full transform transition-all duration-300 hover:scale-105"

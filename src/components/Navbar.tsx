@@ -115,13 +115,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                   setIsSearchExpanded(false);
                 }
               }}
-              className="flex items-center gap-1.5 focus:outline-none py-1 group"
+              className="flex items-end gap-1.5 focus:outline-none h-14 pb-[22px] group"
               aria-label="Buvaki home"
             >
-              {/* Thumbs Up Icon: Filled with Deep Sky Blue */}
-              <div className="relative flex items-center justify-center shrink-0 w-6 h-6 group-hover:opacity-90 transition-opacity">
+              {/* Thumbs Up Icon: Filled with Deep Sky Blue, aligned to base */}
+              <div className="relative flex items-end justify-center shrink-0 w-[22px] h-[21px] group-hover:opacity-90 transition-opacity">
                 <svg
-                  viewBox="0 0 24 24"
+                  viewBox="1 1.25 21.75 21.5"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
                   className="w-full h-full"
@@ -145,15 +145,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </svg>
               </div>
 
-              {/* YouTube Typography Brand Title */}
-              <span className={`text-[19px] font-bold tracking-tighter lowercase ${
-                theme === 'dark' ? 'text-white' : 'text-[#0f0f0f]'
-              }`}>
-                buvaki
-              </span>
-              <span className="text-[10px] text-[#606060] font-normal self-start -mt-0.5 ml-0.5">
-                KE
-              </span>
+              {/* YouTube Typography Brand Title & KE superscript badge aligned on base */}
+              <div className="relative inline-flex items-end">
+                <span className={`text-[19px] font-bold tracking-tighter lowercase leading-none ${
+                  theme === 'dark' ? 'text-white' : 'text-[#0f0f0f]'
+                }`}>
+                  buvaki
+                </span>
+                <sup className="text-[8.5px] font-normal text-[#606060] dark:text-[#aaaaaa] ml-0.5 self-start -mt-1.5 select-none leading-none tracking-normal">
+                  KE
+                </sup>
+              </div>
             </button>
           </div>
 

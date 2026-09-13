@@ -117,6 +117,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
         >
           <Tv className={`w-5 h-5 mb-1.5 ${viewMode === 'longs' ? 'text-[#0f0f0f] stroke-[2.25]' : 'text-[#0f0f0f] stroke-[1.75]'}`} />
           <span className="text-[10px] leading-tight font-normal text-center truncate max-w-full">
+            Longs
+          </span>
+        </button>
+
+        {/* Subscriptions */}
+        <button
+          onClick={() => {
+            if (onToggleCollapse) {
+              onToggleCollapse();
+            }
+          }}
+          className="w-full py-4 px-1 flex flex-col items-center justify-center rounded-xl transition-all text-[#0f0f0f] hover:bg-[#f2f2f2]"
+          title="Subscriptions"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-5 h-5 mb-1.5 text-[#0f0f0f]"
+          >
+            <path d="M4 6h16" />
+            <path d="M7 3h10" />
+            <rect x="2" y="9" width="20" height="12" rx="2" />
+            <polygon points="10 12 15 15 10 18" fill="currentColor" stroke="none" />
+          </svg>
+          <span className="text-[10px] leading-tight font-normal text-center truncate max-w-full">
             Subscriptions
           </span>
         </button>
@@ -228,6 +257,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
             }`}
           >
             <Tv className={`w-5 h-5 ${viewMode === 'longs' ? 'text-[#0f0f0f] stroke-[2.25]' : 'text-[#0f0f0f] stroke-[1.75]'}`} />
+            <span>Longs</span>
+          </button>
+
+          {/* Subscriptions */}
+          <button
+            onClick={() => {
+              if (onToggleCollapse) onToggleCollapse();
+            }}
+            className="flex items-center gap-6 px-3 py-2.5 rounded-xl text-sm transition-colors text-[#0f0f0f] hover:bg-[#f2f2f2] font-normal"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-5 h-5 text-[#0f0f0f]"
+            >
+              <path d="M4 6h16" />
+              <path d="M7 3h10" />
+              <rect x="2" y="9" width="20" height="12" rx="2" />
+              <polygon points="10 12 15 15 10 18" fill="currentColor" stroke="none" />
+            </svg>
             <span>Subscriptions</span>
           </button>
 

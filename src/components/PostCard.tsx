@@ -12,7 +12,9 @@ import {
   Pin,
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { formatRealTimestamp } from '../lib/timeUtils';
 import { DeletePostConfirmModal } from './DeletePostConfirmModal';
@@ -119,6 +121,8 @@ export const PostCard: React.FC<PostCardProps> = ({
     : post.imageUrl 
     ? [post.imageUrl] 
     : [];
+
+  const [isImagesExpanded, setIsImagesExpanded] = useState(false);
 
   const handleTranslate = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -425,33 +429,87 @@ export const PostCard: React.FC<PostCardProps> = ({
             </div>
           )}
 
-          {/* 3. Media Content: Uniform Size Images Fitting Left-to-Right and Wrapping Downwards (No cutting, no horizontal scroll, no MORE button) */}
-          {postImages.length > 0 && (
-            <div className="mt-2.5 flex flex-wrap gap-2 sm:gap-2.5" onClick={(e) => e.stopPropagation()}>
-              {postImages.map((imgUrl, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => setLightboxIndex(idx)}
-                  className={`relative shrink-0 w-[165px] h-[235px] sm:w-[195px] sm:h-[275px] rounded-xl overflow-hidden cursor-zoom-in group/img transition-transform duration-200 hover:scale-[1.01] shadow-xs ${
-                    isDark ? 'bg-[#181818] border border-white/10' : 'bg-[#f2f2f2] border border-[#0000001a]'
-                  }`}
-                >
-                  <img
-                    src={imgUrl}
-                    alt={`Post media ${idx + 1}`}
-                    className="w-full h-full object-cover select-none"
-                    referrerPolicy="no-referrer"
-                    loading="lazy"
-                  />
-                  {postImages.length > 1 && (
-                    <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[10px] font-medium text-white select-none shadow-xs">
-                      {idx + 1}/{postImages.length}
+          {/* 3. Media Content: Limited to 3 in one row without horizontal scroll, with green (downward chevron)more and (upward chevron)less */}
+          {postImages.length > 0 && (() => {
+            const hasExtraImages = postImages.length > 3;
+            const displayedImages = (!hasExtraImages || isImagesExpanded)
+              ? postImages
+              : postImages.slice(0, 3);
+
+            // Container size so up to 3 images fit in one row without horizontal scrolling
+            const getItemWidthClass = () => {
+              if (postImages.length === 1) {
+                return 'w-[240px] sm:w-[280px] h-[176px] sm:h-[206px]';
+              }
+              if (postImages.length === 2) {
+                return 'w-[calc((100%-8px)/2)] sm:w-[195px] max-w-[210px] h-[160px] sm:h-[206px]';
+              }
+              return 'w-[calc((100%-16px)/3)] sm:w-[195px] max-w-[195px] h-[140px] min-[450px]:h-[160px] sm:h-[206px]';
+            };
+
+            const itemWidthClass = getItemWidthClass();
+
+            return (
+              <div className="mt-2.5" onClick={(e) => e.stopPropagation()}>
+                {/* Images grid/row */}
+                <div className="flex flex-wrap gap-2 sm:gap-2.5 w-full">
+                  {displayedImages.map((imgUrl, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => setLightboxIndex(idx)}
+                      className={`relative shrink-0 ${itemWidthClass} rounded-xl overflow-hidden cursor-zoom-in group/img transition-transform duration-200 hover:scale-[1.01] shadow-xs ${
+                        isDark ? 'bg-[#181818] border border-white/10' : 'bg-[#f2f2f2] border border-[#0000001a]'
+                      }`}
+                    >
+                      <img
+                        src={imgUrl}
+                        alt={`Post media ${idx + 1}`}
+                        className="w-full h-full object-cover select-none"
+                        referrerPolicy="no-referrer"
+                        loading="lazy"
+                      />
+                      {postImages.length > 1 && (
+                        <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[10px] font-medium text-white select-none shadow-xs">
+                          {idx + 1}/{postImages.length}
+                        </div>
+                      )}
                     </div>
-                  )}
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+
+                {/* Green "(downward facing chevron)more" or "(upward facing chevron)less" button */}
+                {hasExtraImages && (
+                  <div className="mt-2 flex items-center">
+                    {!isImagesExpanded ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsImagesExpanded(true);
+                        }}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-[#0f9d58] hover:text-[#0b8043] dark:text-[#2ba640] dark:hover:text-[#38c950] transition-colors cursor-pointer py-1 px-1.5 rounded-md hover:bg-green-500/10 active:scale-95 select-none"
+                      >
+                        <ChevronDown className="w-4 h-4 stroke-[2.5]" />
+                        <span>more</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsImagesExpanded(false);
+                        }}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-[#0f9d58] hover:text-[#0b8043] dark:text-[#2ba640] dark:hover:text-[#38c950] transition-colors cursor-pointer py-1 px-1.5 rounded-md hover:bg-green-500/10 active:scale-95 select-none"
+                      >
+                        <ChevronUp className="w-4 h-4 stroke-[2.5]" />
+                        <span>less</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Poll Type Post Support */}
           {post.type === 'poll' && post.poll && (
