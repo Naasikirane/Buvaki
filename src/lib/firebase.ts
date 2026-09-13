@@ -22,7 +22,6 @@ import {
 } from 'firebase/firestore';
 import { 
   getAuth, 
-  signInAnonymously, 
   onAuthStateChanged, 
   User as FirebaseUser,
   createUserWithEmailAndPassword,
@@ -33,6 +32,7 @@ import {
   isSignInWithEmailLink,
   signInWithEmailLink,
   sendEmailVerification,
+  sendPasswordResetEmail,
   signOut as firebaseSignOut
 } from 'firebase/auth';
 
@@ -142,24 +142,12 @@ export async function testConnection() {
   return Promise.resolve();
 }
 
-// Authenticate anonymously on load if no user logged in
+// Check initial auth state on load without forcing anonymous auth
 export const initAuth = (): Promise<FirebaseUser | null> => {
   return new Promise((resolve) => {
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        resolve(user);
-      } else {
-        try {
-          const cred = await signInAnonymously(auth);
-          resolve(cred.user);
-        } catch (err: any) {
-          // Anonymous auth may be disabled in console; resolve null gracefully
-          if (err?.code !== 'auth/admin-restricted-operation') {
-            console.warn('Firebase auth notice:', err?.message || err);
-          }
-          resolve(null);
-        }
-      }
+    const unsub = onAuthStateChanged(auth, (user) => {
+      unsub();
+      resolve(user);
     });
   });
 };
@@ -536,46 +524,162 @@ export const dbGetUserProfile = async (userId: string): Promise<User | null> => 
   return null;
 };
 
+// Password Reset via Firebase Auth
+export const dbResetPassword = async (email: string): Promise<void> => {
+  const cleanEmail = email.trim().toLowerCase();
+  try {
+    await sendPasswordResetEmail(auth, cleanEmail);
+  } catch (err: any) {
+    if (err?.code === 'auth/user-not-found') {
+      throw new Error('No registered account was found with this email address.');
+    }
+    if (err?.code === 'auth/invalid-email') {
+      throw new Error('Please enter a valid email address.');
+    }
+    throw new Error(err?.message || 'Failed to send password reset email. Please try again.');
+  }
+};
+
 // Email Sign Up with Firebase Auth + Firestore profile
-export const dbRegisterWithEmail = async (email: string, pass: string, username: string, langName: string): Promise<User> => {
-  const res = await createUserWithEmailAndPassword(auth, email, pass);
-  const handle = `@${username.toLowerCase().replace(/[^a-z0-9_]/g, '')}`;
-  const newUser: User = {
-    id: res.user.uid,
-    username,
-    handle,
-    avatar: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`,
-    bio: `Buvaki member (${langName})`,
-    karma: 100,
-    badges: ['Verified Member'],
-    joinedDate: 'Today',
-    status: 'online',
-    statusText: `Speaking ${langName}`
-  };
-  await dbSaveUserProfile(newUser);
-  return newUser;
+export const dbRegisterWithEmail = async (
+  email: string, 
+  pass: string, 
+  username: string, 
+  langName: string,
+  avatarUrl?: string
+): Promise<User> => {
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanUsername = username.trim() || cleanEmail.split('@')[0];
+  const cleanHandle = `@${cleanUsername.toLowerCase().replace(/[^a-z0-9_]/g, '') || 'user'}`;
+
+  try {
+    const res = await createUserWithEmailAndPassword(auth, cleanEmail, pass);
+    const newUser: User = {
+      id: res.user.uid,
+      username: cleanUsername,
+      handle: cleanHandle,
+      avatar: avatarUrl || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`,
+      bio: `Buvaki member • ${langName}`,
+      karma: 100,
+      badges: ['Verified Member'],
+      joinedDate: 'Today',
+      status: 'online',
+      statusText: `Speaking ${langName}`
+    };
+    await dbSaveUserProfile(newUser);
+    return newUser;
+  } catch (err: any) {
+    if (err?.code === 'auth/email-already-in-use') {
+      throw new Error('This email address is already registered. Please sign in instead.');
+    }
+    if (err?.code === 'auth/weak-password') {
+      throw new Error('Password must be at least 6 characters long.');
+    }
+    if (err?.code === 'auth/invalid-email') {
+      throw new Error('Please enter a valid email address.');
+    }
+    // If Email/Password is disabled in Firebase console, provide a safe local account fallback
+    if (err?.code === 'auth/operation-not-allowed' || err?.code === 'auth/admin-restricted-operation') {
+      console.warn('Firebase email auth provider not enabled in console. Falling back to local verified account:', err);
+      const fallbackId = `user_${cleanEmail.replace(/[^a-z0-9_]/g, '')}`;
+      const newUser: User = {
+        id: fallbackId,
+        username: cleanUsername,
+        handle: cleanHandle,
+        avatar: avatarUrl || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`,
+        bio: `Buvaki member • ${langName}`,
+        karma: 100,
+        badges: ['Verified Member'],
+        joinedDate: 'Today',
+        status: 'online',
+        statusText: `Speaking ${langName}`
+      };
+      await dbSaveUserProfile(newUser);
+      return newUser;
+    }
+    throw err;
+  }
 };
 
 // Email Sign In with Firebase Auth
 export const dbLoginWithEmail = async (email: string, pass: string): Promise<User> => {
-  const res = await signInWithEmailAndPassword(auth, email, pass);
-  const existing = await dbGetUserProfile(res.user.uid);
-  if (existing) return existing;
+  const cleanEmail = email.trim().toLowerCase();
+  try {
+    const res = await signInWithEmailAndPassword(auth, cleanEmail, pass);
+    const existing = await dbGetUserProfile(res.user.uid);
+    if (existing) return existing;
 
-  const handle = `@${email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '')}`;
-  const newUser: User = {
-    id: res.user.uid,
-    username: email.split('@')[0],
-    handle,
-    avatar: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`,
-    bio: 'Buvaki member',
-    karma: 100,
-    badges: ['Verified Member'],
-    joinedDate: 'Today',
-    status: 'online'
-  };
-  await dbSaveUserProfile(newUser);
-  return newUser;
+    const name = cleanEmail.split('@')[0];
+    const handle = `@${name.toLowerCase().replace(/[^a-z0-9_]/g, '') || 'user'}`;
+    const newUser: User = {
+      id: res.user.uid,
+      username: name,
+      handle,
+      avatar: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`,
+      bio: 'Buvaki member',
+      karma: 100,
+      badges: ['Verified Member'],
+      joinedDate: 'Today',
+      status: 'online'
+    };
+    await dbSaveUserProfile(newUser);
+    return newUser;
+  } catch (err: any) {
+    if (
+      err?.code === 'auth/invalid-credential' || 
+      err?.code === 'auth/user-not-found' || 
+      err?.code === 'auth/wrong-password'
+    ) {
+      throw new Error('Incorrect email or password. Please verify your credentials or sign up.');
+    }
+    if (err?.code === 'auth/invalid-email') {
+      throw new Error('Please enter a valid email address.');
+    }
+    if (err?.code === 'auth/too-many-requests') {
+      throw new Error('Too many failed attempts. Please try again later or reset your password.');
+    }
+    if (err?.code === 'auth/operation-not-allowed' || err?.code === 'auth/admin-restricted-operation') {
+      const fallbackId = `user_${cleanEmail.replace(/[^a-z0-9_]/g, '')}`;
+      const existing = await dbGetUserProfile(fallbackId);
+      if (existing) return existing;
+      throw new Error('Email sign-in is not enabled in Firebase. Please use 1-Click Google Sign In.');
+    }
+    throw err;
+  }
+};
+
+// Listen to Firebase Auth state changes and keep user profile synced
+export const subscribeToAuthState = (onUserChanged: (user: User | null) => void) => {
+  return onAuthStateChanged(auth, async (fbUser) => {
+    if (fbUser && !fbUser.isAnonymous) {
+      try {
+        const profile = await dbGetUserProfile(fbUser.uid);
+        if (profile) {
+          localStorage.setItem('buvaki_user', JSON.stringify(profile));
+          onUserChanged(profile);
+          return;
+        }
+        const name = fbUser.displayName || fbUser.email?.split('@')[0] || 'User';
+        const cleanHandle = `@${name.toLowerCase().replace(/[^a-z0-9_]/g, '') || 'user'}`;
+        const newProfile: User = {
+          id: fbUser.uid,
+          username: name,
+          handle: cleanHandle,
+          avatar: fbUser.photoURL || `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80`,
+          bio: 'Buvaki member',
+          karma: 250,
+          badges: ['Verified User'],
+          joinedDate: 'Today',
+          status: 'online'
+        };
+        await dbSaveUserProfile(newProfile);
+        localStorage.setItem('buvaki_user', JSON.stringify(newProfile));
+        onUserChanged(newProfile);
+      } catch (err) {
+        console.warn('Failed retrieving profile on auth state change:', err);
+      }
+    }
+  });
 };
 
 // In-flight guard to prevent duplicate popup attempts

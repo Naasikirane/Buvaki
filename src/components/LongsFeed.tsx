@@ -11,6 +11,7 @@ import {
   X,
   ArrowLeft,
   MoreVertical,
+  MoreHorizontal,
   ChevronRight,
   ChevronLeft,
   ExternalLink,
@@ -18,7 +19,14 @@ import {
   SlidersHorizontal,
   Send,
   User as UserIcon,
-  Check
+  Check,
+  Download,
+  Scissors,
+  Bell,
+  Menu,
+  Search,
+  Mic,
+  Plus
 } from 'lucide-react';
 import { isYouTubeUrl, getYouTubeEmbedUrl } from '../lib/mediaUtils';
 import { BuvakiVideoPlayer } from './BuvakiVideoPlayer';
@@ -76,6 +84,94 @@ interface LongsFeedProps {
 
 // Curated data exactly reflecting the YouTube screenshot and expectations
 const SAMPLE_LONGS: LongVideoItem[] = [
+  {
+    id: 'yt_rec_toradora',
+    title: 'The ENTIRE Story Of ToraDora! In 51 Minutes',
+    description: 'Complete story recap of the beloved romantic comedy anime series Toradora! in 51 minutes. Follow Ryuuji Takasu and Taiga Aisaka as they navigate high school life, unexpected love triangles, and finding true feelings.\n\n#anime #recap #toradora #romance #animerecap',
+    creator: {
+      name: 'AniSpot Recapped',
+      handle: '@AniSpotRecapped',
+      avatar: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=150&auto=format&fit=crop&q=80',
+      subscribers: '1.2M',
+      isSubscribed: false,
+      isVerified: true
+    },
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=1000&auto=format&fit=crop&q=80',
+    duration: '51:24',
+    viewsCount: 1420000,
+    viewsDisplay: '1.4M views',
+    likesCount: 140000,
+    uploadedTime: '2 weeks ago',
+    category: 'anime',
+    quality: '1080p HD'
+  },
+  {
+    id: 'yt_rec_brocode_system',
+    title: 'The System Promised Him a New Life After 8000 Years...',
+    description: 'Complete season recap of the epic fantasy reincarnation adventure with full cinematic narration and remastered sound.',
+    creator: {
+      name: 'BroCode Cinema',
+      handle: '@BroCodeCinema',
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+      subscribers: '540K',
+      isSubscribed: false,
+      isVerified: true
+    },
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1000&auto=format&fit=crop&q=80',
+    duration: '1:52:17',
+    viewsCount: 140000,
+    viewsDisplay: '140K views',
+    likesCount: 12000,
+    uploadedTime: '3 weeks ago',
+    category: 'anime',
+    quality: '1080p HD'
+  },
+  {
+    id: 'yt_rec_soldier_territory',
+    title: 'Retired Soldier Takes Over a Forgotten Territory and Modernizes It',
+    description: 'When an elite veteran commander is banished to an abandoned frontier village, he turns it into an impregnable modern empire.',
+    creator: {
+      name: 'AniSpot Recapped',
+      handle: '@AniSpotRecapped',
+      avatar: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=150&auto=format&fit=crop&q=80',
+      subscribers: '1.2M',
+      isSubscribed: false,
+      isVerified: true
+    },
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=1000&auto=format&fit=crop&q=80',
+    duration: '2:06:55',
+    viewsCount: 16000,
+    viewsDisplay: '16K views',
+    likesCount: 1900,
+    uploadedTime: '8 hours ago',
+    category: 'anime',
+    quality: '4K 60fps'
+  },
+  {
+    id: 'yt_rec_ceo_wife',
+    title: 'He Quit to Escape His New CEO—But She Was His Secret Billionaire Wife',
+    description: 'Urban romance drama full season recap. A humble designer resigns to live peacefully, only to discover his new company chairwoman is his contracted wife.',
+    creator: {
+      name: 'Urban Hero Film',
+      handle: '@UrbanHeroFilm',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+      subscribers: '320K',
+      isSubscribed: false,
+      isVerified: true
+    },
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=1000&auto=format&fit=crop&q=80',
+    duration: '2:24:18',
+    viewsCount: 48000,
+    viewsDisplay: '48K views',
+    likesCount: 3800,
+    uploadedTime: '1 month ago',
+    category: 'entertainment',
+    quality: '1080p HD'
+  },
   {
     id: 'yt_rec_sponsored_1',
     title: 'Reliable cloud infrastructure that scales with your business. Try it free for 30 days',
@@ -157,7 +253,7 @@ const SAMPLE_LONGS: LongVideoItem[] = [
       isMusicBadge: true
     },
     videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1477959858617-67f30bc75b82?w=1000&auto=format&fit=crop&q=80',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1000&auto=format&fit=crop&q=80',
     duration: '3:40',
     viewsCount: 1520000000,
     viewsDisplay: '1.5B views',
@@ -321,6 +417,7 @@ export const LongsFeed: React.FC<LongsFeedProps> = ({
   currentUser,
   onVote,
   onToggleSave,
+  onOpenCreatePost,
   onRequireAuth,
   onSelectShort
 }) => {
@@ -333,6 +430,8 @@ export const LongsFeed: React.FC<LongsFeedProps> = ({
   const [activeMenuVideoId, setActiveMenuVideoId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState<boolean>(false);
+  const [watchSearchInput, setWatchSearchInput] = useState<string>('anime recap');
+  const [selectedWatchChip, setSelectedWatchChip] = useState<string>('All');
   const [newCommentText, setNewCommentText] = useState<string>('');
   const [commentsList, setCommentsList] = useState<Array<{
     id: string;
@@ -685,43 +784,164 @@ export const LongsFeed: React.FC<LongsFeedProps> = ({
 
       </div>
 
-      {/* 5. AUTHENTIC YOUTUBE WATCH PAGE (Overlay with sticky video player, actions, description, and up-next suggestions) */}
+      {/* 5. AUTHENTIC YOUTUBE WATCH PAGE */}
       {activePlayingVideo && (
         <div 
           ref={watchPageRef}
           className="fixed inset-0 z-[70] bg-white text-[#0f0f0f] w-full h-full min-h-screen flex flex-col animate-in fade-in duration-200 overflow-y-auto"
         >
-          {/* Top Bar with Back Navigation */}
-          <header className="sticky top-0 h-14 border-b border-[#00000014] bg-white/95 backdrop-blur-xs px-4 sm:px-6 flex items-center justify-between gap-3 shrink-0 z-50">
-            <button
-              onClick={() => setActivePlayingVideo(null)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-[#0000000d] text-[#0f0f0f] text-sm font-medium transition-all"
-            >
-              <ArrowLeft className="w-5 h-5 stroke-[2]" />
-              <span>Back to feed</span>
-            </button>
+          {/* Top YouTube Navigation Header */}
+          <header className="sticky top-0 h-14 border-b border-[#00000014] bg-white px-4 sm:px-6 flex items-center justify-between gap-4 shrink-0 z-50">
+            {/* Left: Hamburger & Brand Logo */}
+            <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+              <button
+                onClick={() => setActivePlayingVideo(null)}
+                className="p-2 rounded-full hover:bg-[#0000000d] text-[#0f0f0f] transition-colors cursor-pointer"
+                title="Back to feed"
+                aria-label="Back to feed"
+              >
+                <Menu className="w-5 h-5 stroke-[1.75]" />
+              </button>
 
-            <span className="text-sm font-semibold text-[#0f0f0f] truncate max-w-[60%] hidden sm:block">
-              {activePlayingVideo.title}
-            </span>
+              <button
+                onClick={() => setActivePlayingVideo(null)}
+                className="flex items-center gap-1 cursor-pointer focus:outline-none"
+                title="Return to feed"
+              >
+                {/* Brand icon matching Navbar.tsx */}
+                <div className="w-8 h-8 flex items-center justify-center shrink-0">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-6 h-6 transform -rotate-12 transition-transform duration-200 hover:scale-105"
+                  >
+                    <path
+                      d="M7 10v12"
+                      stroke="#00BFFF"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"
+                      fill="#00BFFF"
+                      stroke="#00BFFF"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M7 10v12"
+                      stroke="#ffffff"
+                      strokeWidth="1.75"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </div>
 
-            <button
-              onClick={() => setActivePlayingVideo(null)}
-              className="p-2 rounded-full hover:bg-[#0000000d] text-[#0f0f0f] transition-all"
-              aria-label="Close watch view"
-            >
-              <X className="w-5 h-5 stroke-[2]" />
-            </button>
+                {/* Brand Typography & KE superscript badge */}
+                <div className="relative inline-flex items-end">
+                  <span className="text-[19px] font-bold tracking-tighter lowercase leading-none text-[#0f0f0f]">
+                    buvaki
+                  </span>
+                  <sup className="text-[8.5px] font-normal text-[#606060] ml-0.5 self-start -mt-1.5 select-none leading-none tracking-normal">
+                    KE
+                  </sup>
+                </div>
+              </button>
+            </div>
+
+            {/* Center: Search Box & Voice Mic */}
+            <div className="hidden sm:flex flex-1 max-w-2xl mx-auto items-center justify-center px-2">
+              <div className="flex items-center w-full max-w-[540px] h-10">
+                <div className="flex-1 flex items-center h-full border border-[#cccccc] focus-within:border-[#1c62b9] focus-within:shadow-[inset_0_1px_2px_rgba(0,0,0,0.08)] bg-white rounded-l-full px-4 transition-all">
+                  <input
+                    type="text"
+                    value={watchSearchInput}
+                    onChange={(e) => setWatchSearchInput(e.target.value)}
+                    placeholder="Search"
+                    className="w-full bg-transparent text-sm focus:outline-none text-[#0f0f0f] placeholder-[#606060]"
+                  />
+                  {watchSearchInput && (
+                    <button
+                      onClick={() => setWatchSearchInput('')}
+                      className="p-1 text-[#606060] hover:text-[#0f0f0f] transition-colors"
+                      title="Clear"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                <button
+                  className="h-full px-6 border border-l-0 border-[#cccccc] rounded-r-full flex items-center justify-center bg-[#f8f8f8] hover:bg-[#f0f0f0] text-[#0f0f0f] transition-colors"
+                  title="Search"
+                >
+                  <Search className="w-4 h-4 stroke-[2]" />
+                </button>
+              </div>
+
+              {/* Voice mic button */}
+              <button
+                onClick={() => showToast('Voice search listening...')}
+                className="ml-3 w-10 h-10 rounded-full bg-[#f2f2f2] hover:bg-[#e5e5e5] flex items-center justify-center text-[#0f0f0f] transition-colors shrink-0"
+                title="Search with your voice"
+              >
+                <Mic className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Right: + Create, Bell, User Profile */}
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              <button
+                onClick={() => {
+                  if (onOpenCreatePost) onOpenCreatePost();
+                  else if (onRequireAuth) onRequireAuth('Sign in to create a post');
+                }}
+                className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0000000d] hover:bg-[#00000014] text-[#0f0f0f] text-sm font-medium transition-colors"
+              >
+                <Plus className="w-4 h-4 stroke-[2]" />
+                <span>Create</span>
+              </button>
+
+              <button
+                onClick={() => showToast('9+ new notifications')}
+                className="relative p-2 rounded-full hover:bg-[#0000000d] text-[#0f0f0f] transition-colors"
+                title="Notifications"
+              >
+                <Bell className="w-5 h-5 stroke-[1.75]" />
+                <span className="absolute top-1.5 right-1.5 px-1 py-0.2 bg-[#cc0000] text-white text-[9px] font-bold rounded-full leading-none">
+                  9+
+                </span>
+              </button>
+
+              {currentUser ? (
+                <img
+                  src={currentUser.avatar}
+                  alt={currentUser.username}
+                  className="w-8 h-8 rounded-full object-cover ring-1 ring-black/10 cursor-pointer"
+                  referrerPolicy="no-referrer"
+                  onClick={() => showToast(`Signed in as ${currentUser.username}`)}
+                />
+              ) : (
+                <button
+                  onClick={() => onRequireAuth && onRequireAuth('Sign in to access your channel')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#065fd4] text-[#065fd4] hover:bg-[#065fd4]/10 text-xs font-semibold transition-colors"
+                >
+                  <UserIcon className="w-4 h-4" />
+                  <span>Sign in</span>
+                </button>
+              )}
+            </div>
           </header>
 
           {/* Watch Layout: Main Player + Info Column & Right Up-Next Column */}
-          <div className="w-full max-w-7xl mx-auto p-3 sm:p-6 flex flex-col lg:flex-row gap-6">
+          <div className="w-full max-w-[1720px] mx-auto p-3 sm:p-6 lg:p-7 flex flex-col lg:flex-row gap-6">
             
             {/* Main Stage (Left / Center) */}
-            <div className="flex-1 min-w-0 flex flex-col gap-4">
+            <div className="flex-1 min-w-0 flex flex-col">
               
               {/* 16:9 Video Player */}
-              <div className="w-full aspect-video rounded-xl overflow-hidden bg-black shadow-lg">
+              <div className="w-full aspect-video rounded-xl sm:rounded-2xl overflow-hidden bg-black shadow-md">
                 {isYouTubeUrl(activePlayingVideo.videoUrl) ? (
                   <iframe
                     src={getYouTubeEmbedUrl(activePlayingVideo.videoUrl) || activePlayingVideo.videoUrl}
@@ -745,12 +965,12 @@ export const LongsFeed: React.FC<LongsFeedProps> = ({
               </div>
 
               {/* Title */}
-              <h1 className="text-lg sm:text-xl font-bold text-[#0f0f0f] leading-snug tracking-tight mt-1">
+              <h1 className="text-lg sm:text-xl font-bold text-[#0f0f0f] leading-snug tracking-tight mt-3">
                 {activePlayingVideo.title}
               </h1>
 
               {/* Channel Row & Action Buttons */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-2 border-b border-[#0000000d]">
+              <div className="flex flex-wrap items-center justify-between gap-4 py-2 mt-1 border-b border-[#0000000d]">
                 
                 {/* Channel avatar & Subscribe Button */}
                 <div className="flex items-center gap-3">
@@ -778,22 +998,29 @@ export const LongsFeed: React.FC<LongsFeedProps> = ({
                     onClick={() => toggleSubscribe(activePlayingVideo.creator.handle)}
                     className={`ml-2 px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-all ${
                       (subscribedMap[activePlayingVideo.creator.handle] ?? activePlayingVideo.creator.isSubscribed)
-                        ? 'bg-[#0000000d] hover:bg-[#00000014] text-[#0f0f0f]'
+                        ? 'bg-[#0000000d] hover:bg-[#00000014] text-[#0f0f0f] flex items-center gap-1.5'
                         : 'bg-[#0f0f0f] hover:bg-neutral-800 text-white'
                     }`}
                   >
-                    {(subscribedMap[activePlayingVideo.creator.handle] ?? activePlayingVideo.creator.isSubscribed) ? 'Subscribed' : 'Subscribe'}
+                    {(subscribedMap[activePlayingVideo.creator.handle] ?? activePlayingVideo.creator.isSubscribed) ? (
+                      <>
+                        <Bell className="w-3.5 h-3.5 fill-[#0f0f0f]" />
+                        <span>Subscribed</span>
+                      </>
+                    ) : (
+                      <span>Subscribe</span>
+                    )}
                   </button>
                 </div>
 
-                {/* Actions: Segmented Like/Dislike, Share, Save */}
+                {/* Actions: Segmented Like/Dislike, Share, Download, Clip, Save, More */}
                 <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
                   
                   {/* Segmented Like / Dislike Pill */}
                   <div className="flex items-center bg-[#0000000d] hover:bg-[#00000014] rounded-full text-sm font-medium text-[#0f0f0f] transition-colors">
                     <button
                       onClick={() => toggleLike(activePlayingVideo.id)}
-                      className="flex items-center gap-1.5 px-3.5 py-2 hover:bg-black/5 rounded-l-full"
+                      className="flex items-center gap-2 px-3.5 py-2 hover:bg-black/5 rounded-l-full"
                       title="I like this"
                     >
                       <ThumbsUp className={`w-4 h-4 stroke-[1.75] ${likedMap[activePlayingVideo.id] ? 'fill-[#0f0f0f]' : ''}`} />
@@ -821,19 +1048,46 @@ export const LongsFeed: React.FC<LongsFeedProps> = ({
                         showToast('Link copied to clipboard');
                       }
                     }}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#0000000d] hover:bg-[#00000014] text-[#0f0f0f] text-sm font-medium transition-all"
+                    className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#0000000d] hover:bg-[#00000014] text-[#0f0f0f] text-sm font-medium transition-all"
                   >
                     <Share2 className="w-4 h-4 stroke-[1.75]" />
                     <span>Share</span>
                   </button>
 
+                  {/* Download Pill */}
+                  <button
+                    onClick={() => showToast('Download started for offline viewing')}
+                    className="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#0000000d] hover:bg-[#00000014] text-[#0f0f0f] text-sm font-medium transition-all"
+                  >
+                    <Download className="w-4 h-4 stroke-[1.75]" />
+                    <span>Download</span>
+                  </button>
+
+                  {/* Clip Pill */}
+                  <button
+                    onClick={() => showToast('Create clip feature ready')}
+                    className="hidden md:flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#0000000d] hover:bg-[#00000014] text-[#0f0f0f] text-sm font-medium transition-all"
+                  >
+                    <Scissors className="w-4 h-4 stroke-[1.75]" />
+                    <span>Clip</span>
+                  </button>
+
                   {/* Save Pill */}
                   <button
                     onClick={() => toggleSave(activePlayingVideo.id)}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#0000000d] hover:bg-[#00000014] text-[#0f0f0f] text-sm font-medium transition-all"
+                    className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#0000000d] hover:bg-[#00000014] text-[#0f0f0f] text-sm font-medium transition-all"
                   >
                     <Bookmark className={`w-4 h-4 stroke-[1.75] ${savedMap[activePlayingVideo.id] ? 'fill-[#0f0f0f]' : ''}`} />
                     <span>{savedMap[activePlayingVideo.id] ? 'Saved' : 'Save'}</span>
+                  </button>
+
+                  {/* More Pill */}
+                  <button
+                    onClick={() => showToast('More options')}
+                    className="p-2 rounded-full bg-[#0000000d] hover:bg-[#00000014] text-[#0f0f0f] transition-all"
+                    title="More actions"
+                  >
+                    <MoreHorizontal className="w-4 h-4 stroke-[1.75]" />
                   </button>
                 </div>
 
@@ -842,12 +1096,13 @@ export const LongsFeed: React.FC<LongsFeedProps> = ({
               {/* YouTube Expandable Description Box */}
               <div 
                 onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-                className="p-3.5 rounded-xl bg-[#0000000d] hover:bg-[#00000014] text-sm text-[#0f0f0f] flex flex-col gap-2 transition-colors cursor-pointer"
+                className="p-3.5 rounded-xl bg-[#0000000d] hover:bg-[#00000014] text-sm text-[#0f0f0f] flex flex-col gap-2 transition-colors cursor-pointer mt-3"
               >
-                <div className="flex items-center gap-2 font-bold text-xs sm:text-sm text-[#0f0f0f]">
+                <div className="flex flex-wrap items-center gap-2 font-bold text-xs sm:text-sm text-[#0f0f0f]">
                   <span>{activePlayingVideo.viewsCount.toLocaleString()} views</span>
                   <span>•</span>
                   <span>{activePlayingVideo.uploadedTime}</span>
+                  <span className="text-[#065fd4] font-medium ml-1">#anime #recap #trending</span>
                 </div>
                 <p className={`whitespace-pre-wrap text-sm leading-relaxed text-[#0f0f0f] ${isDescriptionExpanded ? '' : 'line-clamp-2'}`}>
                   {activePlayingVideo.description}
@@ -858,13 +1113,13 @@ export const LongsFeed: React.FC<LongsFeedProps> = ({
               </div>
 
               {/* Comments Section */}
-              <div className="flex flex-col gap-4 mt-4">
+              <div className="flex flex-col gap-4 mt-5">
                 <div className="flex items-center gap-6">
                   <h2 className="text-base sm:text-lg font-bold text-[#0f0f0f]">
                     {commentsList.length + 840} Comments
                   </h2>
-                  <button className="flex items-center gap-1.5 text-xs font-semibold text-[#0f0f0f] hover:bg-[#0000000d] px-2 py-1 rounded-md">
-                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                  <button className="flex items-center gap-1.5 text-xs font-semibold text-[#0f0f0f] hover:bg-[#0000000d] px-2.5 py-1.5 rounded-lg">
+                    <SlidersHorizontal className="w-4 h-4" />
                     <span>Sort by</span>
                   </button>
                 </div>
@@ -963,47 +1218,97 @@ export const LongsFeed: React.FC<LongsFeedProps> = ({
 
             </div>
 
-            {/* Right Column: Up Next / Suggested Videos Sidebar */}
-            <div className="w-full lg:w-96 flex flex-col gap-3 shrink-0">
-              <span className="text-sm font-bold text-[#0f0f0f] mb-1">
-                Up next
-              </span>
-              {allLongs.filter(v => v.id !== activePlayingVideo.id).map((video) => (
-                <div
-                  key={video.id}
-                  onClick={() => {
-                    setActivePlayingVideo(video);
-                    watchPageRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="flex gap-2.5 cursor-pointer group hover:bg-[#00000005] p-1 rounded-xl transition-colors"
-                >
-                  {/* Compact 16:9 Thumbnail */}
-                  <div className="relative w-40 aspect-video rounded-lg overflow-hidden bg-[#e5e5e5] shrink-0">
-                    <img
-                      src={video.thumbnailUrl}
-                      alt={video.title}
-                      className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-200"
-                      referrerPolicy="no-referrer"
-                    />
-                    <span className="absolute bottom-1 right-1 px-1 py-0.2 rounded bg-black/80 text-[10px] font-medium text-white font-sans tracking-tight">
-                      {video.duration}
-                    </span>
-                  </div>
-
-                  {/* Meta */}
-                  <div className="flex flex-col min-w-0 flex-1">
-                    <h4 className="text-xs sm:text-sm font-semibold text-[#0f0f0f] line-clamp-2 leading-snug group-hover:text-black">
-                      {video.title}
-                    </h4>
-                    <span className="text-xs text-[#606060] mt-1 truncate">
-                      {video.creator.name}
-                    </span>
-                    <span className="text-xs text-[#606060]">
-                      {video.viewsDisplay} • {video.uploadedTime}
-                    </span>
-                  </div>
+            {/* Right Column: Up Next / Suggested Videos Sidebar with YouTube Chips Bar */}
+            <div className="w-full lg:w-[400px] xl:w-[420px] flex flex-col gap-3 shrink-0">
+              {/* YouTube Filter Chips Bar */}
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                <div className="flex items-center gap-1.5 flex-1 overflow-x-auto no-scrollbar">
+                  {['All', 'From your search', `From ${activePlayingVideo.creator.name.split(' ')[0]}`, 'Related', 'Recently uploaded'].map((chip) => (
+                    <button
+                      key={chip}
+                      onClick={() => setSelectedWatchChip(chip)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                        selectedWatchChip === chip
+                          ? 'bg-[#0f0f0f] text-white shadow-2xs'
+                          : 'bg-[#0000000d] hover:bg-[#00000014] text-[#0f0f0f]'
+                      }`}
+                    >
+                      {chip}
+                    </button>
+                  ))}
                 </div>
-              ))}
+                <button
+                  onClick={() => showToast('More filters')}
+                  className="w-8 h-8 rounded-full hover:bg-[#0000000d] flex items-center justify-center shrink-0 text-[#0f0f0f]"
+                  title="Next"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Video List */}
+              <div className="flex flex-col gap-2.5">
+                {allLongs.filter(v => v.id !== activePlayingVideo.id).map((video) => (
+                  <div
+                    key={video.id}
+                    onClick={() => {
+                      setActivePlayingVideo(video);
+                      watchPageRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="flex gap-2.5 cursor-pointer group hover:bg-[#00000005] p-1 rounded-xl transition-colors relative"
+                  >
+                    {/* Compact 16:9 Thumbnail */}
+                    <div className="relative w-[168px] aspect-video rounded-xl overflow-hidden bg-[#e5e5e5] shrink-0 shadow-2xs">
+                      <img
+                        src={video.thumbnailUrl}
+                        alt={video.title}
+                        className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-200"
+                        referrerPolicy="no-referrer"
+                      />
+                      <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/85 text-[11px] font-semibold text-white font-mono tracking-tight">
+                        {video.duration}
+                      </span>
+                    </div>
+
+                    {/* Meta */}
+                    <div className="flex flex-col min-w-0 flex-1 pr-6">
+                      <h4 className="text-xs sm:text-sm font-semibold text-[#0f0f0f] line-clamp-2 leading-snug group-hover:text-black">
+                        {video.title}
+                      </h4>
+                      <div className="flex items-center gap-1 mt-1">
+                        <span className="text-xs text-[#606060] truncate">
+                          {video.creator.name}
+                        </span>
+                        {video.creator.isVerified && (
+                          <CheckCircle2 className="w-3 h-3 text-[#606060] shrink-0" />
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-[#606060] mt-0.5">
+                        <span>{video.viewsDisplay}</span>
+                        <span>•</span>
+                        <span>{video.uploadedTime}</span>
+                      </div>
+                      {video.uploadedTime.includes('hour') && (
+                        <span className="self-start mt-1 px-1.5 py-0.2 rounded bg-[#0000000d] text-[10px] font-semibold text-[#606060]">
+                          New
+                        </span>
+                      )}
+                    </div>
+
+                    {/* 3-dots menu button on hover */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        showToast(`Options for ${video.title}`);
+                      }}
+                      className="absolute right-1 top-2 p-1 rounded-full text-transparent group-hover:text-[#0f0f0f] hover:bg-black/10 transition-colors"
+                      title="Action menu"
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
 
           </div>

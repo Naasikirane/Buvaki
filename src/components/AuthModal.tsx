@@ -7,24 +7,19 @@ import {
   Mail, 
   Lock, 
   User as UserIcon, 
-  Sparkles, 
-  CheckCircle2, 
-  ArrowRight, 
   AlertCircle,
-  KeyRound,
+  CheckCircle2,
+  ArrowRight,
   ShieldCheck,
-  Zap,
-  Globe
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { 
   dbLoginWithEmail, 
   dbRegisterWithEmail, 
-  dbLoginWithGoogle, 
-  dbSendFirebaseEmailLink,
-  dbVerifyCodeAndCreateUser,
-  dbSendVerificationCode
+  dbLoginWithGoogle,
+  dbResetPassword
 } from '../lib/firebase';
-import { CURRENT_USER } from '../data/mockData';
 import { GENERIC_AVATARS } from './OnboardingFlow';
 
 interface AuthModalProps {
@@ -45,24 +40,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   defaultTab = 'signin',
 }) => {
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>(defaultTab);
-  const [authMethod, setAuthMethod] = useState<'password' | 'code'>('password');
-  
-  // Sign In fields
-  const [signInEmail, setSignInEmail] = useState('');
-  const [signInPassword, setSignInPassword] = useState('');
+  const [isResetMode, setIsResetMode] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  // Sign Up fields
-  const [signUpEmail, setSignUpEmail] = useState('');
-  const [signUpPassword, setSignUpPassword] = useState('');
-  const [signUpUsername, setSignUpUsername] = useState('');
-  const [signUpGender, setSignUpGender] = useState<'male' | 'female' | 'prefer_not_to_say'>('prefer_not_to_say');
+  // Form Fields
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
+  const [gender, setGender] = useState<'male' | 'female' | 'prefer_not_to_say'>('prefer_not_to_say');
 
-  // Verification Code flow fields
-  const [codeTarget, setCodeTarget] = useState('');
-  const [verificationCode, setVerificationCode] = useState('');
-  const [codeSent, setCodeSent] = useState(false);
-
-  // States
+  // Status & Feedback
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -79,311 +66,289 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const handleTabSwitch = (tab: 'signin' | 'signup') => {
     setActiveTab(tab);
+    setIsResetMode(false);
     resetState();
   };
 
-  // 1. Password Sign In
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!signInEmail.trim() || !signInPassword) {
-      setError('Please enter both your email and password.');
-      return;
-    }
-    setError(null);
-    setIsLoading(true);
-
-    try {
-      const user = await dbLoginWithEmail(signInEmail.trim(), signInPassword);
-      onCompleteAuth(user);
-      onClose();
-    } catch (err: any) {
-      console.error('Sign In error:', err);
-      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-        setError('Incorrect email or password. Please try again or create an account.');
-      } else if (err.code === 'auth/invalid-email') {
-        setError('Please enter a valid email address.');
-      } else {
-        setError(err.message || 'Failed to sign in. Please check your credentials.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // 2. Password Sign Up
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!signUpEmail.trim() || !signUpPassword || !signUpUsername.trim()) {
-      setError('Please provide your username, email, and a secure password.');
-      return;
-    }
-    if (signUpPassword.length < 6) {
-      setError('Password must be at least 6 characters long.');
-      return;
-    }
-    setError(null);
-    setIsLoading(true);
-
-    try {
-      const user = await dbRegisterWithEmail(
-        signUpEmail.trim(), 
-        signUpPassword, 
-        signUpUsername.trim(), 
-        selectedLanguage.name
-      );
-      // Attach gender avatar
-      const avatarUrl = GENERIC_AVATARS[signUpGender]?.url || user.avatar;
-      const finalUser: User = {
-        ...user,
-        gender: signUpGender,
-        avatar: avatarUrl,
-      };
-      onCompleteAuth(finalUser);
-      onClose();
-    } catch (err: any) {
-      console.error('Sign Up error:', err);
-      if (err.code === 'auth/email-already-in-use') {
-        setError('This email is already registered. Please switch to Sign In.');
-      } else if (err.code === 'auth/weak-password') {
-        setError('Password should be at least 6 characters.');
-      } else {
-        setError(err.message || 'Failed to register account.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // 3. Google Sign In
+  // Google 1-Click Sign In
   const handleGoogleAuth = async () => {
     setError(null);
+    setSuccessMsg(null);
     setIsLoading(true);
+
     try {
       const user = await dbLoginWithGoogle(selectedLanguage.name);
       if (user) {
         onCompleteAuth(user);
         onClose();
       }
-      // If user is null, user voluntarily cancelled/closed the popup without completing sign in
+      // If user closed the popup window voluntarily, user is null - do nothing
     } catch (err: any) {
-      if (
-        err?.code !== 'auth/popup-closed-by-user' &&
-        err?.code !== 'auth/cancelled-popup-request' &&
-        !err?.message?.includes('Pending promise was never set')
-      ) {
-        console.warn('Google Auth note:', err?.message || err);
-        setError(err.message || 'Google sign-in was interrupted. You can also sign in using Email or Demo Creator mode.');
-      }
+      console.warn('Google sign-in exception:', err);
+      setError(err?.message || 'Google sign-in could not be completed. You can also sign in with your email below.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 4. Send Verification Code
-  const handleSendCode = async (e: React.FormEvent) => {
+  // Email Sign In
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!codeTarget.trim()) {
-      setError('Please enter your email to receive a verification code.');
+    if (!email.trim() || !password) {
+      setError('Please enter your email and password.');
       return;
     }
-    setError(null);
-    setIsLoading(true);
-    try {
-      await dbSendVerificationCode(codeTarget.trim(), 'email');
-      setCodeSent(true);
-      setSuccessMsg(`A 6-digit verification code was sent to ${codeTarget.trim()}`);
-    } catch (err: any) {
-      console.error('Send code error:', err);
-      setError(err.message || 'Failed to send verification code.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  // 5. Verify Code
-  const handleVerifyCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!verificationCode.trim()) {
-      setError('Please enter the 6-digit code sent to your email.');
-      return;
-    }
     setError(null);
+    setSuccessMsg(null);
     setIsLoading(true);
+
     try {
-      const user = await dbVerifyCodeAndCreateUser(
-        codeTarget.trim(), 
-        verificationCode.trim(), 
-        codeTarget.split('@')[0], 
-        selectedLanguage.name
-      );
+      const user = await dbLoginWithEmail(email.trim(), password);
       onCompleteAuth(user);
       onClose();
     } catch (err: any) {
-      console.error('Verify code error:', err);
-      setError(err.message || 'Invalid or expired verification code.');
+      console.error('Sign In error:', err);
+      setError(err?.message || 'Failed to sign in. Please verify your email and password.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 6. Fast Demo Creator Login
-  const handleDemoLogin = () => {
-    onCompleteAuth(CURRENT_USER);
-    onClose();
+  // Email Sign Up
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanEmail = email.trim();
+    const cleanUsername = username.trim();
+
+    if (!cleanEmail || !password || !cleanUsername) {
+      setError('Please fill in your name, email, and password.');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+
+    setError(null);
+    setSuccessMsg(null);
+    setIsLoading(true);
+
+    try {
+      const avatarUrl = GENERIC_AVATARS[gender]?.url;
+      const user = await dbRegisterWithEmail(
+        cleanEmail,
+        password,
+        cleanUsername,
+        selectedLanguage.name,
+        avatarUrl
+      );
+      const finalUser: User = {
+        ...user,
+        gender,
+        avatar: avatarUrl || user.avatar,
+      };
+      onCompleteAuth(finalUser);
+      onClose();
+    } catch (err: any) {
+      console.error('Sign Up error:', err);
+      setError(err?.message || 'Failed to create account. Please check your details.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Password Reset
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      setError('Please enter your email address to receive password reset instructions.');
+      return;
+    }
+
+    setError(null);
+    setSuccessMsg(null);
+    setIsLoading(true);
+
+    try {
+      await dbResetPassword(email.trim());
+      setSuccessMsg(`A password reset link has been sent to ${email.trim()}. Check your inbox.`);
+    } catch (err: any) {
+      setError(err?.message || 'Could not send password reset email.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div 
       dir={isRTL(selectedLanguage.code) ? 'rtl' : 'ltr'}
-      className="fixed inset-0 z-50 w-full h-full min-h-screen bg-white flex flex-col overflow-hidden animate-in fade-in duration-200 m-0 p-0 rounded-none border-none"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/65 backdrop-blur-xs animate-in fade-in duration-200"
     >
-      {/* Full-width Header Ribbon with Brand & Close Button */}
-      <header className="relative w-full px-4 sm:px-8 py-3.5 flex items-center justify-between border-b border-slate-200 bg-white/95 backdrop-blur-md shrink-0">
-        <div className="flex items-center gap-2.5">
-          <Logo size="sm" />
-          <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-semibold">
-            Free Access
-          </span>
-        </div>
+      {/* Click backdrop to dismiss */}
+      <div 
+        className="fixed inset-0"
+        onClick={onClose}
+        aria-hidden="true"
+      />
 
-        <div className="flex items-center gap-2">
+      {/* Centered Modal Window */}
+      <div 
+        role="dialog"
+        aria-modal="true"
+        aria-label="Sign in to Buvaki"
+        className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-neutral-200 z-10 overflow-hidden flex flex-col max-h-[90vh]"
+      >
+        {/* Top Header Bar */}
+        <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-neutral-100">
+          <div className="flex items-center gap-2">
+            <Logo size={26} />
+            <span className="text-base font-bold tracking-tight text-[#0f0f0f]">
+              Buvaki
+            </span>
+          </div>
+
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full text-slate-400 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 transition-colors"
+            className="p-1.5 rounded-full text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 transition-colors focus:outline-none"
             aria-label="Close"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5 stroke-[2]" />
           </button>
         </div>
-      </header>
 
-      {/* Full-screen Scrollable Content Area */}
-      <main className="flex-1 w-full overflow-y-auto custom-scrollbar bg-white">
-        <div className="w-full max-w-lg mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-4">
-          {/* Prompt Reason Banner if triggered by an interaction */}
+        {/* Scrollable Content */}
+        <div className="p-6 overflow-y-auto custom-scrollbar flex flex-col gap-4">
+          
+          {/* Prompt Reason Banner (Explains why user is prompted, e.g. liking, subscribing, commenting) */}
           {promptReason && (
-            <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs">
-              <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <div>
-                <span className="font-bold block text-amber-900">Sign in required</span>
-                <span>{promptReason}</span>
+            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#def1ff]/60 border border-[#065fd4]/20 text-[#065fd4]">
+              <ShieldCheck className="w-5 h-5 shrink-0 mt-0.5 text-[#065fd4]" />
+              <p className="text-xs font-medium leading-relaxed">
+                {promptReason}
+              </p>
+            </div>
+          )}
+
+          {/* Title and Subtitle */}
+          <div className="text-center">
+            <h2 className="text-xl font-bold text-[#0f0f0f] tracking-tight">
+              {isResetMode
+                ? 'Reset your password'
+                : activeTab === 'signin'
+                ? 'Sign in to Buvaki'
+                : 'Create your Buvaki account'}
+            </h2>
+            <p className="text-xs text-[#606060] mt-1">
+              {isResetMode
+                ? 'Enter your email to receive recovery instructions'
+                : 'Sign in to like videos, leave comments, and subscribe to creators'}
+            </p>
+          </div>
+
+          {/* 1. Continue with Google Button */}
+          {!isResetMode && (
+            <div className="flex flex-col gap-2 pt-1">
+              <button
+                type="button"
+                onClick={handleGoogleAuth}
+                disabled={isLoading}
+                className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl border border-neutral-300 hover:border-neutral-400 bg-white hover:bg-neutral-50 text-[#0f0f0f] text-sm font-semibold shadow-xs active:scale-[0.99] transition-all disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {/* Official Google 4-Color 'G' Logo */}
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.16 0 9.97 0 12s.45 3.84 1.25 5.42l4.03-3.15z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                  />
+                </svg>
+                <span>Continue with Google</span>
+              </button>
+
+              {/* Modern Divider */}
+              <div className="relative flex py-2 items-center">
+                <div className="flex-grow border-t border-neutral-200"></div>
+                <span className="flex-shrink mx-3 text-xs uppercase tracking-wider text-neutral-400 font-medium">
+                  or with email
+                </span>
+                <div className="flex-grow border-t border-neutral-200"></div>
               </div>
             </div>
           )}
 
-          {/* Tab Switcher (Sign In vs Sign Up) */}
-          <div className="flex p-1 rounded-2xl bg-slate-100 border border-slate-200">
-            <button
-              onClick={() => handleTabSwitch('signin')}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'signin'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              Sign In
-            </button>
-            <button
-              onClick={() => handleTabSwitch('signup')}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'signup'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              Create Account
-            </button>
-          </div>
+          {/* Tab Selector: Sign In vs Sign Up */}
+          {!isResetMode && (
+            <div className="flex items-center rounded-xl bg-neutral-100 p-1">
+              <button
+                type="button"
+                onClick={() => handleTabSwitch('signin')}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  activeTab === 'signin'
+                    ? 'bg-white text-[#0f0f0f] shadow-xs'
+                    : 'text-neutral-500 hover:text-[#0f0f0f]'
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTabSwitch('signup')}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  activeTab === 'signup'
+                    ? 'bg-white text-[#0f0f0f] shadow-xs'
+                    : 'text-neutral-500 hover:text-[#0f0f0f]'
+                }`}
+              >
+                Create Account
+              </button>
+            </div>
+          )}
 
-          {/* Error Message */}
+          {/* Feedback Messages */}
           {error && (
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs animate-in fade-in">
-              <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
-              <span>{error}</span>
+            <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs animate-in fade-in">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
+              <span className="leading-snug">{error}</span>
             </div>
           )}
 
-          {/* Success Message */}
           {successMsg && (
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs animate-in fade-in">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>{successMsg}</span>
+            <div className="flex items-start gap-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600" />
+              <span className="leading-snug">{successMsg}</span>
             </div>
           )}
 
-          {/* Quick 1-Click Demo Login */}
-          <button
-            onClick={handleDemoLogin}
-            type="button"
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-2xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-xs font-bold transition-all hover:scale-[1.01] active:scale-[0.99] shadow-sm"
-          >
-            <Zap className="w-4 h-4 text-amber-600" />
-            <span>⚡ 1-Click Instant Demo Login (MayaLin)</span>
-          </button>
-
-          {/* Google 1-Tap Auth */}
-          <button
-            onClick={handleGoogleAuth}
-            disabled={isLoading}
-            type="button"
-            className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold transition-all hover:border-slate-300 disabled:opacity-50 shadow-sm"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24">
-              <path
-                fill="#4285F4"
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-              />
-              <path
-                fill="#34A853"
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-              />
-              <path
-                fill="#EA4335"
-                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-              />
-            </svg>
-            <span>Continue with Google</span>
-          </button>
-
-          <div className="flex items-center gap-3 my-1">
-            <div className="flex-1 h-px bg-slate-200" />
-            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">or with email</span>
-            <div className="flex-1 h-px bg-slate-200" />
-          </div>
-
-          {/* SIGN IN FORM */}
-          {activeTab === 'signin' && (
-            <form onSubmit={handleSignIn} className="flex flex-col gap-3">
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-slate-700">Email Address</label>
+          {/* 2. Form Views */}
+          {isResetMode ? (
+            /* Password Reset Form */
+            <form onSubmit={handlePasswordReset} className="flex flex-col gap-3">
+              <div>
+                <label className="block text-xs font-medium text-neutral-700 mb-1">
+                  Email Address
+                </label>
                 <div className="relative flex items-center">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
+                  <Mail className="absolute left-3 w-4 h-4 text-neutral-400" />
                   <input
                     type="email"
                     required
-                    value={signInEmail}
-                    onChange={(e) => setSignInEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-900 transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-slate-700">Password</label>
-                <div className="relative flex items-center">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
-                  <input
-                    type="password"
-                    required
-                    value={signInPassword}
-                    onChange={(e) => setSignInPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-900 transition-colors"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-neutral-300 focus:outline-none focus:border-[#065fd4] transition-colors"
                   />
                 </div>
               </div>
@@ -391,89 +356,177 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <button
                 type="submit"
                 disabled={isLoading}
-                className="mt-1 w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-md active:scale-98 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                className="mt-2 w-full py-2.5 px-4 rounded-xl bg-[#065fd4] hover:bg-[#065fd4]/90 text-white font-semibold text-sm shadow-xs transition-colors disabled:opacity-60 cursor-pointer"
               >
-                {isLoading ? (
-                  <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                ) : (
-                  <>
-                    <span>Sign In</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </>
-                )}
+                {isLoading ? 'Sending Link...' : 'Send Reset Link'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsResetMode(false);
+                  resetState();
+                }}
+                className="text-xs text-[#065fd4] hover:underline font-medium text-center mt-1"
+              >
+                Back to Sign In
               </button>
             </form>
-          )}
-
-          {/* SIGN UP FORM */}
-          {activeTab === 'signup' && (
-            <form onSubmit={handleSignUp} className="flex flex-col gap-3">
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-slate-700">Username</label>
+          ) : activeTab === 'signin' ? (
+            /* Sign In Form */
+            <form onSubmit={handleSignIn} className="flex flex-col gap-3">
+              <div>
+                <label className="block text-xs font-medium text-neutral-700 mb-1">
+                  Email Address
+                </label>
                 <div className="relative flex items-center">
-                  <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
-                  <input
-                    type="text"
-                    required
-                    value={signUpUsername}
-                    onChange={(e) => setSignUpUsername(e.target.value)}
-                    placeholder="e.g. MayaLin"
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-900 transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-slate-700">Email Address</label>
-                <div className="relative flex items-center">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
+                  <Mail className="absolute left-3 w-4 h-4 text-neutral-400" />
                   <input
                     type="email"
                     required
-                    value={signUpEmail}
-                    onChange={(e) => setSignUpEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-900 transition-colors"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-neutral-300 focus:outline-none focus:border-[#065fd4] transition-colors"
                   />
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold text-slate-700">Password (6+ chars)</label>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-medium text-neutral-700">
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsResetMode(true);
+                      resetState();
+                    }}
+                    className="text-[11px] text-[#065fd4] hover:underline font-medium"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
                 <div className="relative flex items-center">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
+                  <Lock className="absolute left-3 w-4 h-4 text-neutral-400" />
                   <input
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     required
-                    value={signUpPassword}
-                    onChange={(e) => setSignUpPassword(e.target.value)}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-900 transition-colors"
+                    className="w-full pl-9 pr-9 py-2 text-sm rounded-xl border border-neutral-300 focus:outline-none focus:border-[#065fd4] transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 text-neutral-400 hover:text-neutral-600 focus:outline-none"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="mt-2 w-full py-2.5 px-4 rounded-xl bg-[#065fd4] hover:bg-[#065fd4]/90 text-white font-semibold text-sm shadow-xs transition-colors disabled:opacity-60 cursor-pointer"
+              >
+                {isLoading ? 'Signing In...' : 'Sign In'}
+              </button>
+            </form>
+          ) : (
+            /* Sign Up Form */
+            <form onSubmit={handleSignUp} className="flex flex-col gap-3">
+              <div>
+                <label className="block text-xs font-medium text-neutral-700 mb-1">
+                  Your Name / Username
+                </label>
+                <div className="relative flex items-center">
+                  <UserIcon className="absolute left-3 w-4 h-4 text-neutral-400" />
+                  <input
+                    type="text"
+                    required
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="e.g. Alex Chen"
+                    className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-neutral-300 focus:outline-none focus:border-[#065fd4] transition-colors"
                   />
                 </div>
               </div>
 
-              {/* Gender Avatar Selector */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-semibold text-slate-700">Avatar Style</label>
-                <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className="block text-xs font-medium text-neutral-700 mb-1">
+                  Email Address
+                </label>
+                <div className="relative flex items-center">
+                  <Mail className="absolute left-3 w-4 h-4 text-neutral-400" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-neutral-300 focus:outline-none focus:border-[#065fd4] transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-neutral-700 mb-1">
+                  Password (minimum 6 characters)
+                </label>
+                <div className="relative flex items-center">
+                  <Lock className="absolute left-3 w-4 h-4 text-neutral-400" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full pl-9 pr-9 py-2 text-sm rounded-xl border border-neutral-300 focus:outline-none focus:border-[#065fd4] transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 text-neutral-400 hover:text-neutral-600 focus:outline-none"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Avatar Type Selection */}
+              <div>
+                <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                  Choose Profile Avatar
+                </label>
+                <div className="flex items-center gap-2">
                   {[
-                    { key: 'female', label: 'Female', img: GENERIC_AVATARS.female.url },
-                    { key: 'male', label: 'Male', img: GENERIC_AVATARS.male.url },
-                    { key: 'prefer_not_to_say', label: 'Neutral', img: GENERIC_AVATARS.prefer_not_to_say.url },
-                  ].map((g) => (
+                    { key: 'female', label: 'Female' },
+                    { key: 'male', label: 'Male' },
+                    { key: 'prefer_not_to_say', label: 'Neutral' },
+                  ].map((item) => (
                     <button
-                      key={g.key}
+                      key={item.key}
                       type="button"
-                      onClick={() => setSignUpGender(g.key as any)}
-                      className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border text-center transition-all ${
-                        signUpGender === g.key
-                          ? 'border-slate-900 bg-slate-100 text-slate-900 ring-1 ring-slate-900'
-                          : 'border-slate-200 bg-slate-50 text-slate-600 hover:text-slate-900'
+                      onClick={() => setGender(item.key as any)}
+                      className={`flex-1 py-1 px-2 rounded-lg text-xs font-medium border transition-colors flex items-center justify-center gap-1.5 ${
+                        gender === item.key
+                          ? 'border-[#065fd4] bg-[#def1ff]/50 text-[#065fd4] font-semibold'
+                          : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50'
                       }`}
                     >
-                      <img src={g.img} alt={g.label} className="w-8 h-8 rounded-lg object-cover" />
-                      <span className="text-[10px] font-medium">{g.label}</span>
+                      <img
+                        src={GENERIC_AVATARS[item.key]?.url}
+                        alt=""
+                        className="w-4 h-4 rounded-full object-cover shrink-0"
+                      />
+                      <span>{item.label}</span>
                     </button>
                   ))}
                 </div>
@@ -482,32 +535,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <button
                 type="submit"
                 disabled={isLoading}
-                className="mt-1 w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-md active:scale-98 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                className="mt-2 w-full py-2.5 px-4 rounded-xl bg-[#065fd4] hover:bg-[#065fd4]/90 text-white font-semibold text-sm shadow-xs transition-colors disabled:opacity-60 cursor-pointer"
               >
-                {isLoading ? (
-                  <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                ) : (
-                  <>
-                    <span>Create Free Account</span>
-                    <Sparkles className="w-3.5 h-3.5" />
-                  </>
-                )}
+                {isLoading ? 'Creating Account...' : 'Create Account'}
               </button>
             </form>
           )}
 
-          {/* Guest browsing notice */}
-          <div className="text-center pt-2 border-t border-slate-200">
+          {/* Bottom Guest Mode Link */}
+          <div className="pt-2 border-t border-neutral-100 flex flex-col items-center">
             <button
-              onClick={onClose}
               type="button"
-              className="text-xs text-slate-500 hover:text-slate-800 underline decoration-slate-300 underline-offset-4"
+              onClick={onClose}
+              className="text-xs text-neutral-500 hover:text-neutral-800 transition-colors py-1"
             >
-              Continue browsing for free as guest
+              Continue browsing as guest (read-only)
             </button>
           </div>
+
         </div>
-      </main>
+      </div>
     </div>
   );
 };
