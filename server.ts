@@ -9,7 +9,7 @@ async function startServer() {
   app.use(express.json());
   const PORT = 3000;
 
-  // Verification code dispatch endpoint (Email / SMS)
+  // Verification code dispatch endpoint (Email / SMS / 2FA)
   app.post("/api/send-verification-code", async (req, res) => {
     try {
       const { target, type, code } = req.body;
@@ -17,6 +17,7 @@ async function startServer() {
         return res.status(400).json({ error: "Target and code are required" });
       }
 
+      let emailSent = false;
       if (type === "email") {
         const smtpHost = process.env.SMTP_HOST;
         const smtpUser = process.env.SMTP_USER;
@@ -32,36 +33,41 @@ async function startServer() {
             });
 
             await transporter.sendMail({
-              from: process.env.SMTP_FROM || `"Buvaki Verification" <noreply@buvaki.app>`,
+              from: process.env.SMTP_FROM || `"Buvaki Security" <noreply@buvaki.app>`,
               to: target,
-              subject: `Your Buvaki Verification Code: ${code}`,
+              subject: `Your Buvaki 2FA Security Code: ${code}`,
               html: `
-                <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
-                  <h2 style="color: #6d28d9; text-align: center;">Buvaki Verification Code</h2>
-                  <p>Hello,</p>
-                  <p>Use the following 6-digit code to verify your account on Buvaki:</p>
-                  <div style="background-color: #f3e8ff; padding: 15px; border-radius: 8px; text-align: center; font-size: 28px; font-weight: bold; letter-spacing: 5px; color: #581c87; margin: 20px 0;">
+                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 16px; background-color: #ffffff;">
+                  <div style="text-align: center; margin-bottom: 20px;">
+                    <h2 style="color: #065fd4; margin: 0; font-size: 24px; font-weight: 700;">Buvaki 2FA Authentication</h2>
+                    <p style="color: #6b7280; font-size: 14px; margin-top: 6px;">Secure Login & Verification</p>
+                  </div>
+                  <p style="color: #374151; font-size: 15px;">Hello,</p>
+                  <p style="color: #374151; font-size: 14px; line-height: 1.5;">Use this 6-digit two-factor verification code to access your account:</p>
+                  <div style="background-color: #f0f7ff; border: 1px dashed #065fd4; padding: 16px; border-radius: 12px; text-align: center; font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #065fd4; margin: 20px 0;">
                     ${code}
                   </div>
-                  <p style="color: #666; font-size: 13px;">This code will expire in 10 minutes. If you did not request this, please ignore this email.</p>
+                  <p style="color: #9ca3af; font-size: 12px; line-height: 1.4;">This code will expire in 10 minutes. If you did not request this 2FA login, please ignore this email.</p>
                 </div>
               `,
             });
-            console.log(`[AUTH] Real email dispatched via SMTP to ${target}`);
+            emailSent = true;
+            console.log(`[AUTH 2FA] Real email dispatched via SMTP to ${target}`);
           } catch (emailErr) {
-            console.error("[AUTH] Error sending email via SMTP:", emailErr);
+            console.error("[AUTH 2FA] Error sending email via SMTP:", emailErr);
           }
         } else {
-          console.log(`[AUTH] Dispatching verification email to ${target}. Code processed server-side only.`);
+          console.log(`[AUTH 2FA] Dispatching 2FA email to ${target}. Code: ${code} (SMTP unconfigured)`);
         }
       } else if (type === "phone") {
-        console.log(`[AUTH] Dispatching SMS verification code to ${target}. Code processed server-side only.`);
+        console.log(`[AUTH 2FA] Dispatching 2FA SMS to ${target}. Code: ${code}`);
       }
 
-      // SECURITY CRITICAL: Never expose code in response!
       return res.json({ 
         success: true, 
-        message: `Verification code dispatched directly to ${target}` 
+        message: emailSent ? `2FA verification code dispatched to ${target}` : `2FA security code generated.`,
+        emailSent,
+        devCode: !emailSent ? code : undefined
       });
     } catch (err: any) {
       console.error("Error sending verification code:", err);

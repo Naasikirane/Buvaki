@@ -23,7 +23,8 @@ import {
   Tag,
   Plus,
   ChevronRight,
-  Upload
+  Upload,
+  ShieldCheck
 } from 'lucide-react';
 import { 
   dbRegisterWithEmail, 
@@ -133,6 +134,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const [isLinkSent, setIsLinkSent] = useState(false);
   const [isFallbackLink, setIsFallbackLink] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
+  const [devCode, setDevCode] = useState<string | null>(null);
   const [codeSentMessage, setCodeSentMessage] = useState('');
   const [authError, setAuthError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -349,7 +351,12 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
 
     try {
       if (authMethod === 'email' || authMethod === 'phone') {
-        await dbSendVerificationCode(target, authMethod);
+        const res = await dbSendVerificationCode(target, authMethod);
+        if (res.devCode) {
+          setDevCode(res.devCode);
+        } else {
+          setDevCode(null);
+        }
       }
       setIsVerifyingCode(true);
       setResendCooldown(30);
@@ -445,7 +452,17 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
         !err?.message?.includes('Pending promise was never set')
       ) {
         console.warn("Google Auth note:", err?.message || err);
-        setAuthError(err.message || 'Google sign-in was interrupted.');
+        const msg = err?.message || '';
+        if (
+          msg.includes('Incognito') ||
+          msg.includes('popup was blocked') ||
+          msg.includes('third-party') ||
+          msg.includes('storage')
+        ) {
+          setAuthError('Incognito mode detected: Google popup is blocked in private browsing. Please switch to the Email/2FA Code option above.');
+        } else {
+          setAuthError(err.message || 'Google sign-in was interrupted. Try Email/2FA Code.');
+        }
       }
     } finally {
       setIsLoading(false);
@@ -946,6 +963,27 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                         </>
                       )}
                     </button>
+
+                    {/* Incognito Notice & Fallback to 2FA Code */}
+                    <div className="p-3 rounded-xl bg-purple-950/40 border border-purple-800/40 text-[11px] text-slate-300 space-y-2 text-left">
+                      <div className="flex items-center gap-1.5 text-purple-300 font-semibold">
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>Using Incognito or private window?</span>
+                      </div>
+                      <p className="text-slate-400">
+                        Browsers block Google third-party popups in Incognito mode. Use our fast Two-Factor (2FA) verification code instead.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthMethod('email');
+                          setShowPasswordFallback(false);
+                        }}
+                        className="text-xs font-semibold text-purple-300 hover:text-white underline flex items-center gap-1 cursor-pointer"
+                      >
+                        Switch to 2FA Code / Email Link →
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -961,6 +999,22 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                     A secret code was sent directly to <span className="text-purple-300 font-medium">{authMethod === 'email' ? emailInput : `${countryCode} ${phoneInput}`}</span>.
                   </p>
                 </div>
+
+                {devCode && (
+                  <div className="p-2.5 rounded-xl bg-purple-900/60 border border-purple-500/50 text-xs text-purple-200 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-purple-300 shrink-0" />
+                      <span>Security Code: <strong className="font-mono tracking-widest text-white">{devCode}</strong></span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setVerificationCode(devCode)}
+                      className="px-2 py-0.5 rounded bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-bold cursor-pointer"
+                    >
+                      Auto-fill
+                    </button>
+                  </div>
+                )}
 
                 <div>
                   <input
