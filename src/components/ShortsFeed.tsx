@@ -407,6 +407,10 @@ export const ShortsFeed: React.FC<ShortsFeedProps> = ({
             {/* YouTube "Subscribe" Pill Button */}
             <button
               onClick={() => {
+                if (!currentUser && onRequireAuth) {
+                  onRequireAuth('Sign in or create an account to subscribe to creators');
+                  return;
+                }
                 if (onSubscribeToggle) {
                   onSubscribeToggle(currentShort.creator.handle);
                 }
@@ -565,7 +569,15 @@ export const ShortsFeed: React.FC<ShortsFeedProps> = ({
                       {currentShort.creator.handle}
                     </span>
                     <button
-                      onClick={() => onSubscribeToggle && onSubscribeToggle(currentShort.creator.handle)}
+                      onClick={() => {
+                        if (!currentUser && onRequireAuth) {
+                          onRequireAuth('Sign in or create an account to subscribe to creators');
+                          return;
+                        }
+                        if (onSubscribeToggle) {
+                          onSubscribeToggle(currentShort.creator.handle);
+                        }
+                      }}
                       className={`ml-auto px-3 py-1 rounded-full text-[11px] font-bold ${
                         isSubscribed ? 'bg-neutral-800 text-white' : 'bg-white text-black'
                       }`}

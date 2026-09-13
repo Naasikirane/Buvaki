@@ -33,6 +33,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [bioText, setBioText] = useState(user?.bio || '');
   const [postToDelete, setPostToDelete] = useState<Post | null>(null);
 
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
   const handleSaveBio = () => {
     onUpdateBio(bioText);
     setIsEditingBio(false);
@@ -43,7 +45,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     if (!file || !onUpdateAvatar) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+      setUploadError('Please select a valid image file');
+      setTimeout(() => setUploadError(null), 3000);
       return;
     }
 

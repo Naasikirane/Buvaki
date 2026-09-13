@@ -35,6 +35,7 @@ interface PostCardProps {
   onOpenShare?: (post: Post) => void;
   onSubscribeToggle?: (authorId: string) => void;
   isSubscribed?: boolean;
+  onRequireAuth?: (promptReason?: string) => void;
   theme?: Theme;
   isActiveCenter?: boolean;
   onFocusPost?: (post: Post) => void;
@@ -54,6 +55,9 @@ export const PostCard: React.FC<PostCardProps> = ({
   onDeletePost,
   onOpenComments,
   onOpenShare,
+  onSubscribeToggle,
+  isSubscribed,
+  onRequireAuth,
   theme = 'dark',
   isActiveCenter = false,
   onFocusPost,
@@ -70,6 +74,10 @@ export const PostCard: React.FC<PostCardProps> = ({
   const handleInlineCommentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inlineComment.trim()) return;
+    if (!currentUser && onRequireAuth) {
+      onRequireAuth('Sign in or create an account to comment');
+      return;
+    }
     if (onAddComment) {
       onAddComment(post.id, inlineComment.trim());
       setInlineComment('');
@@ -271,15 +279,37 @@ export const PostCard: React.FC<PostCardProps> = ({
           {/* Content Column */}
           <div className="flex-1 min-w-0">
             
-            {/* 1. Header Row: Author Channel Name & Timestamp + 3-dots Menu */}
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex items-baseline gap-2 min-w-0">
+            {/* 1. Header Row: Author Channel Name & Timestamp + Subscribe + 3-dots Menu */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0 flex-wrap">
                 <span className={`text-sm font-medium truncate ${isDark ? 'text-white' : 'text-[#0f0f0f]'}`}>
                   {post.author.username || post.author.handle.replace(/^@/, '')}
                 </span>
                 <span className="text-xs text-[#606060] font-normal shrink-0">
                   {formatRealTimestamp(post.createdAt || post.timestamp)}
                 </span>
+
+                {/* Creator Subscribe button */}
+                {onSubscribeToggle && (!currentUser || (currentUser.id !== post.author.id && currentUser.handle !== post.author.handle)) && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!currentUser && onRequireAuth) {
+                        onRequireAuth('Sign in or create an account to subscribe to creators');
+                        return;
+                      }
+                      onSubscribeToggle(post.author.handle || post.author.id);
+                    }}
+                    className={`ml-1 text-xs px-2.5 py-0.5 rounded-full transition-all cursor-pointer ${
+                      isSubscribed
+                        ? isDark ? 'bg-white/10 text-neutral-300 hover:bg-white/20' : 'bg-black/5 text-[#0f0f0f] hover:bg-black/10'
+                        : isDark ? 'bg-white text-black hover:bg-white/90 font-medium' : 'bg-[#0f0f0f] text-white hover:bg-black/80 font-medium'
+                    }`}
+                  >
+                    {isSubscribed ? 'Subscribed' : 'Subscribe'}
+                  </button>
+                )}
               </div>
 
               {/* 3 dots menu button */}
@@ -313,6 +343,11 @@ export const PostCard: React.FC<PostCardProps> = ({
 
                     <button
                       onClick={() => {
+                        if (!currentUser && onRequireAuth) {
+                          onRequireAuth('Sign in or create an account to save posts to your library');
+                          setShowOptionsMenu(false);
+                          return;
+                        }
                         onToggleSave(post.id);
                         setShowOptionsMenu(false);
                       }}
@@ -527,7 +562,14 @@ export const PostCard: React.FC<PostCardProps> = ({
                     return (
                       <button
                         key={opt.id}
-                        onClick={() => onVotePoll(post.id, opt.id)}
+                        type="button"
+                        onClick={() => {
+                          if (!currentUser && onRequireAuth) {
+                            onRequireAuth('Sign in or create an account to vote in community polls');
+                            return;
+                          }
+                          onVotePoll(post.id, opt.id);
+                        }}
                         className={`w-full relative overflow-hidden p-2.5 rounded-lg border text-left text-xs font-medium transition-all ${
                           isSelected
                             ? isDark ? 'border-[#3ea6ff] bg-[#3ea6ff]/10 text-[#3ea6ff]' : 'border-[#065fd4] bg-[#065fd4]/10 text-[#065fd4]'
@@ -563,7 +605,13 @@ export const PostCard: React.FC<PostCardProps> = ({
           >
             {/* Like / Upvote */}
             <button
-              onClick={() => onVote(post.id, 'up')}
+              onClick={() => {
+                if (!currentUser && onRequireAuth) {
+                  onRequireAuth('Sign in or create an account to like posts');
+                  return;
+                }
+                onVote(post.id, 'up');
+              }}
               className={`flex items-center gap-1.5 py-1 text-xs sm:text-sm font-normal transition-colors ${
                 post.userVote === 'up' 
                   ? 'text-[#065fd4] font-medium' 
@@ -579,7 +627,13 @@ export const PostCard: React.FC<PostCardProps> = ({
 
             {/* Dislike / Downvote */}
             <button
-              onClick={() => onVote(post.id, 'down')}
+              onClick={() => {
+                if (!currentUser && onRequireAuth) {
+                  onRequireAuth('Sign in or create an account to vote on posts');
+                  return;
+                }
+                onVote(post.id, 'down');
+              }}
               className={`flex items-center py-1 transition-colors ${
                 post.userVote === 'down' 
                   ? 'text-[#065fd4] font-medium' 
@@ -661,9 +715,9 @@ export const PostCard: React.FC<PostCardProps> = ({
       {isConfirmDeleteOpen && onDeletePost && (
         <DeletePostConfirmModal
           isOpen={isConfirmDeleteOpen}
-          postTitle={post.title || post.content}
+          post={post}
           onClose={() => setIsConfirmDeleteOpen(false)}
-          onConfirm={async () => {
+          onConfirmDelete={async () => {
             await onDeletePost(post.id);
             setIsConfirmDeleteOpen(false);
           }}

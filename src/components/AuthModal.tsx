@@ -56,7 +56,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   if (!isOpen) return null;
 
-  const t = getTranslation(selectedLanguage.code);
+  const t = getTranslation(selectedLanguage?.code || 'en');
 
   const resetState = () => {
     setError(null);
@@ -77,7 +77,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setIsLoading(true);
 
     try {
-      const user = await dbLoginWithGoogle(selectedLanguage.name);
+      const user = await dbLoginWithGoogle(selectedLanguage?.name || 'English');
       if (user) {
         onCompleteAuth(user);
         onClose();
@@ -141,7 +141,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         cleanEmail,
         password,
         cleanUsername,
-        selectedLanguage.name,
+        selectedLanguage?.name || 'English',
         avatarUrl
       );
       const finalUser: User = {
@@ -183,7 +183,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   return (
     <div 
-      dir={isRTL(selectedLanguage.code) ? 'rtl' : 'ltr'}
+      dir={isRTL(selectedLanguage?.code || 'en') ? 'rtl' : 'ltr'}
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/65 backdrop-blur-xs animate-in fade-in duration-200"
     >
       {/* Click backdrop to dismiss */}
@@ -203,7 +203,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         {/* Top Header Bar */}
         <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-neutral-100">
           <div className="flex items-center gap-2">
-            <Logo size={26} />
+            <Logo size="sm" showText={false} />
             <span className="text-base font-bold tracking-tight text-[#0f0f0f]">
               Buvaki
             </span>

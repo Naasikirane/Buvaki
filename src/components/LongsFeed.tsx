@@ -1196,6 +1196,10 @@ export const LongsFeed: React.FC<LongsFeedProps> = ({
                         <div className="flex items-center gap-3 mt-1 text-xs text-[#606060]">
                           <button 
                             onClick={() => {
+                              if (!currentUser && onRequireAuth) {
+                                onRequireAuth('Sign in to like comments');
+                                return;
+                              }
                               setCommentsList(prev => prev.map(c => c.id === comm.id ? { ...c, userLiked: !c.userLiked, likes: c.likes + (c.userLiked ? -1 : 1) } : c));
                             }}
                             className="flex items-center gap-1 hover:text-[#0f0f0f]"
@@ -1203,10 +1207,26 @@ export const LongsFeed: React.FC<LongsFeedProps> = ({
                             <ThumbsUp className={`w-3.5 h-3.5 ${comm.userLiked ? 'fill-[#0f0f0f] text-[#0f0f0f]' : ''}`} />
                             {comm.likes > 0 && <span>{comm.likes}</span>}
                           </button>
-                          <button className="hover:text-[#0f0f0f]">
+                          <button 
+                            onClick={() => {
+                              if (!currentUser && onRequireAuth) {
+                                onRequireAuth('Sign in to dislike comments');
+                                return;
+                              }
+                            }}
+                            className="hover:text-[#0f0f0f]"
+                          >
                             <ThumbsDown className="w-3.5 h-3.5" />
                           </button>
-                          <button className="font-semibold hover:text-[#0f0f0f] text-[11px] px-2 py-0.5 rounded-full hover:bg-[#0000000d]">
+                          <button 
+                            onClick={() => {
+                              if (!currentUser && onRequireAuth) {
+                                onRequireAuth('Sign in to reply to comments');
+                                return;
+                              }
+                            }}
+                            className="font-semibold hover:text-[#0f0f0f] text-[11px] px-2 py-0.5 rounded-full hover:bg-[#0000000d]"
+                          >
                             Reply
                           </button>
                         </div>

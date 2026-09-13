@@ -348,7 +348,9 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     setIsLoading(true);
 
     try {
-      await dbSendVerificationCode(target, authMethod);
+      if (authMethod === 'email' || authMethod === 'phone') {
+        await dbSendVerificationCode(target, authMethod);
+      }
       setIsVerifyingCode(true);
       setResendCooldown(30);
 

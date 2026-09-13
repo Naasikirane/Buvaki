@@ -47,6 +47,7 @@ import {
   initAuth, 
   ensureSeeded, 
   dbLogout,
+  subscribeToAuthState,
   subscribeToPosts, 
   subscribeToComments, 
   dbCreatePost, 
@@ -67,12 +68,13 @@ export default function App() {
     const saved = localStorage.getItem('buvaki_user');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.id) return parsed;
       } catch (err) {
-        return CURRENT_USER;
+        return null;
       }
     }
-    return CURRENT_USER;
+    return null;
   });
 
   const [posts, setPosts] = useState<Post[]>(() => {
@@ -217,6 +219,14 @@ export default function App() {
   useEffect(() => {
     initAuth().catch(console.warn);
     ensureSeeded().catch(console.warn);
+    const unsubAuth = subscribeToAuthState((user) => {
+      if (user) {
+        setCurrentUser(user);
+      }
+    });
+    return () => {
+      if (unsubAuth) unsubAuth();
+    };
   }, []);
 
   // Save changes locally
@@ -964,6 +974,8 @@ export default function App() {
           setTheme={setTheme}
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+          currentUser={currentUser}
+          onOpenAuth={() => handleRequireAuth()}
         />
 
         {/* Center Main Stage */}
@@ -1071,6 +1083,7 @@ export default function App() {
                             onOpenShare={(p) => setDrawerSharePost(p)}
                             onSubscribeToggle={(authorId) => handleToggleSubscribe(authorId)}
                             isSubscribed={isSub}
+                            onRequireAuth={handleRequireAuth}
                             theme={theme}
                             isActiveCenter={isCenter}
                             onFocusPost={(p) => handleFocusPost(p.id)}
@@ -1170,16 +1183,19 @@ export default function App() {
         onOpenLanguage={() => setIsLanguageModalOpen(true)}
         theme={theme}
         setTheme={setTheme}
+        onRequireAuth={handleRequireAuth}
       />
 
       {/* BOTTOM-SHEET COMMENTS DRAWER (Matching Screenshot 2) */}
       {drawerCommentsPost && (
         <CommentsDrawer
-          post={drawerCommentsPost}
+          isOpen={true}
+          postId={drawerCommentsPost.id}
+          postTitle={drawerCommentsPost.title}
           comments={drawerCommentsList}
           currentUser={currentUser}
           onClose={() => setDrawerCommentsPost(null)}
-          onAddComment={(content, parentId) => handleAddComment(drawerCommentsPost.id, content, parentId)}
+          onAddComment={(_pid, content, parentId) => handleAddComment(drawerCommentsPost.id, content, parentId)}
           onVoteComment={(commentId, dir) => handleVoteComment(commentId, dir, drawerCommentsPost.id)}
           onRequireAuth={handleRequireAuth}
         />
@@ -1188,6 +1204,8 @@ export default function App() {
       {/* BOTTOM-SHEET SHARE DRAWER (Matching Screenshot 3) */}
       {drawerSharePost && (
         <ShareDrawer
+          isOpen={true}
+          currentUser={currentUser}
           post={drawerSharePost}
           onClose={() => setDrawerSharePost(null)}
         />
@@ -1207,6 +1225,7 @@ export default function App() {
           onToggleSave={handleToggleSavePost}
           onVotePoll={handleVotePoll}
           onDeletePost={handleDeletePost}
+          onRequireAuth={handleRequireAuth}
         />
       )}
 

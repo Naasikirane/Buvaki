@@ -75,6 +75,14 @@ export const YouPage: React.FC<YouPageProps> = ({
   const [isBioExpanded, setIsBioExpanded] = useState(false);
   const [channelSearchOpen, setChannelSearchOpen] = useState(false);
   const [channelSearchQuery, setChannelSearchQuery] = useState('');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage((cur) => cur === msg ? null : cur);
+    }, 2500);
+  };
 
   const historyScrollRef = useRef<HTMLDivElement>(null);
   const playlistScrollRef = useRef<HTMLDivElement>(null);
@@ -366,6 +374,34 @@ export const YouPage: React.FC<YouPageProps> = ({
     );
   };
 
+  // If visitor is unauthenticated, show YouTube-style guest welcome screen
+  if (!currentUser) {
+    return (
+      <div className="w-full min-h-[80vh] flex flex-col items-center justify-center px-4 py-16 text-center select-none bg-white">
+        <div className="w-24 h-24 rounded-full bg-[#f2f2f2] flex items-center justify-center mb-6 text-[#606060]">
+          <UserIcon className="w-12 h-12 stroke-[1.5]" />
+        </div>
+        <h2 className="text-2xl font-bold text-[#0f0f0f] mb-2">
+          Enjoy your favorite videos
+        </h2>
+        <p className="text-sm text-[#606060] max-w-md mb-6 leading-relaxed">
+          Sign in to access videos you’ve liked or saved, view your channel, watch history, subscriptions, and playlists.
+        </p>
+        <button
+          onClick={() => {
+            if (onRequireAuth) {
+              onRequireAuth('Sign in or create an account to view your channel, library, and watch history');
+            }
+          }}
+          className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#065fd4] hover:bg-[#065fd4]/90 text-white font-medium text-sm transition-all shadow-sm cursor-pointer active:scale-95"
+        >
+          <UserIcon className="w-4 h-4 stroke-[2]" />
+          <span>Sign in</span>
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full min-h-screen bg-white text-[#0f0f0f] pb-24 select-none">
       
@@ -485,7 +521,7 @@ export const YouPage: React.FC<YouPageProps> = ({
               <div className="flex items-center gap-2">
                 {/* View all button */}
                 <button 
-                  onClick={() => alert('Viewing full watch history')}
+                  onClick={() => showToast('Viewing full watch history')}
                   className="px-3.5 py-1.5 rounded-full border border-[#0000001a] text-xs font-semibold text-[#0f0f0f] hover:bg-[#f2f2f2] transition-colors"
                 >
                   View all
@@ -593,7 +629,7 @@ export const YouPage: React.FC<YouPageProps> = ({
               <div className="flex items-center gap-2">
                 {/* Create playlist button */}
                 <button
-                  onClick={() => alert('Create new playlist')}
+                  onClick={() => showToast('Create new playlist')}
                   className="p-2 rounded-full hover:bg-[#f2f2f2] text-[#0f0f0f] transition-colors"
                   title="Create playlist"
                 >
@@ -602,7 +638,7 @@ export const YouPage: React.FC<YouPageProps> = ({
 
                 {/* View all button */}
                 <button 
-                  onClick={() => alert('Viewing all playlists')}
+                  onClick={() => showToast('Viewing all playlists')}
                   className="px-3.5 py-1.5 rounded-full border border-[#0000001a] text-xs font-semibold text-[#0f0f0f] hover:bg-[#f2f2f2] transition-colors"
                 >
                   View all
@@ -711,7 +747,7 @@ export const YouPage: React.FC<YouPageProps> = ({
             {/* Bottom Right "Edit" Button on Banner */}
             <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4">
               <button
-                onClick={() => alert('Edit channel banner image')}
+                onClick={() => showToast('Edit channel banner image')}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white text-xs font-semibold backdrop-blur-sm shadow-md transition-colors"
               >
                 <Camera className="w-3.5 h-3.5" />
@@ -773,14 +809,14 @@ export const YouPage: React.FC<YouPageProps> = ({
               {/* Action Buttons: Customize channel & Manage videos */}
               <div className="flex items-center flex-wrap gap-3 mt-4">
                 <button
-                  onClick={() => alert('Customizing channel layout')}
+                  onClick={() => showToast('Customizing channel layout')}
                   className="px-4 py-2 rounded-full bg-[#f2f2f2] hover:bg-[#e5e5e5] text-sm font-semibold text-[#0f0f0f] transition-colors"
                 >
                   Customize channel
                 </button>
 
                 <button
-                  onClick={() => alert('Managing videos & analytics')}
+                  onClick={() => showToast('Managing videos & analytics')}
                   className="px-4 py-2 rounded-full bg-[#f2f2f2] hover:bg-[#e5e5e5] text-sm font-semibold text-[#0f0f0f] transition-colors"
                 >
                   Manage videos
@@ -983,6 +1019,13 @@ export const YouPage: React.FC<YouPageProps> = ({
             </div>
           )}
 
+        </div>
+      )}
+
+      {/* Floating Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-16 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 bg-[#0f0f0f] text-white text-xs font-semibold rounded-xl shadow-2xl animate-in fade-in slide-in-from-bottom-3 duration-200">
+          {toastMessage}
         </div>
       )}
 

@@ -41,6 +41,7 @@ interface PostDetailModalProps {
   onToggleSave: (postId: string) => void;
   onVotePoll: (postId: string, optionId: string) => void;
   onDeletePost?: (postId: string) => Promise<void> | void;
+  onRequireAuth?: (promptReason?: string) => void;
 }
 
 export const PostDetailModal: React.FC<PostDetailModalProps> = ({
@@ -55,6 +56,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
   onToggleSave,
   onVotePoll,
   onDeletePost,
+  onRequireAuth,
 }) => {
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
 
@@ -114,12 +116,20 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
   const handleMainCommentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCommentText.trim()) return;
+    if (!currentUser && onRequireAuth) {
+      onRequireAuth('Sign in or create an account to post a comment');
+      return;
+    }
     onAddComment(post.id, newCommentText.trim());
     setNewCommentText('');
   };
 
   const handleReplySubmit = (parentId: string) => {
     if (!replyText.trim()) return;
+    if (!currentUser && onRequireAuth) {
+      onRequireAuth('Sign in or create an account to reply to comments');
+      return;
+    }
     onAddComment(post.id, replyText.trim(), parentId);
     setReplyText('');
     setReplyingToId(null);
@@ -155,14 +165,26 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
             {/* Comment Voting */}
             <div className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-slate-200">
               <button
-                onClick={() => onVoteComment(comment.id, 'up')}
+                onClick={() => {
+                  if (!currentUser && onRequireAuth) {
+                    onRequireAuth('Sign in or create an account to vote on comments');
+                    return;
+                  }
+                  onVoteComment(comment.id, 'up');
+                }}
                 className={`p-0.5 hover:text-sky-600 ${comment.userVote === 'up' ? 'text-sky-600 font-bold' : 'text-slate-400'}`}
               >
                 ▲
               </button>
               <span className="text-[11px] font-mono text-slate-700 font-bold px-1">{comment.score}</span>
               <button
-                onClick={() => onVoteComment(comment.id, 'down')}
+                onClick={() => {
+                  if (!currentUser && onRequireAuth) {
+                    onRequireAuth('Sign in or create an account to vote on comments');
+                    return;
+                  }
+                  onVoteComment(comment.id, 'down');
+                }}
                 className={`p-0.5 hover:text-rose-500 ${comment.userVote === 'down' ? 'text-rose-500 font-bold' : 'text-slate-400'}`}
               >
                 ▼
@@ -176,7 +198,13 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
 
           <div className="flex items-center gap-3 pt-1 text-[11px] text-slate-500">
             <button
-              onClick={() => setReplyingToId(isReplying ? null : comment.id)}
+              onClick={() => {
+                if (!currentUser && onRequireAuth) {
+                  onRequireAuth('Sign in or create an account to reply to comments');
+                  return;
+                }
+                setReplyingToId(isReplying ? null : comment.id);
+              }}
               className="flex items-center gap-1 hover:text-slate-900 font-medium"
             >
               <CornerDownRight className="w-3.5 h-3.5" />
@@ -252,14 +280,26 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({
             {/* Voting */}
             <div className="flex flex-col items-center gap-1 p-1 rounded-xl bg-slate-50 border border-slate-200 h-fit">
               <button
-                onClick={() => onVotePost(post.id, 'up')}
+                onClick={() => {
+                  if (!currentUser && onRequireAuth) {
+                    onRequireAuth('Sign in or create an account to like posts');
+                    return;
+                  }
+                  onVotePost(post.id, 'up');
+                }}
                 className={`p-1.5 rounded-lg ${post.userVote === 'up' ? 'text-sky-600 bg-sky-50' : 'text-slate-400 hover:text-slate-700'}`}
               >
                 <ArrowBigUp className="w-6 h-6" />
               </button>
               <span className="text-sm font-bold font-mono text-slate-900">{post.score}</span>
               <button
-                onClick={() => onVotePost(post.id, 'down')}
+                onClick={() => {
+                  if (!currentUser && onRequireAuth) {
+                    onRequireAuth('Sign in or create an account to vote on posts');
+                    return;
+                  }
+                  onVotePost(post.id, 'down');
+                }}
                 className={`p-1.5 rounded-lg ${post.userVote === 'down' ? 'text-rose-600 bg-rose-50' : 'text-slate-400 hover:text-slate-700'}`}
               >
                 <ArrowBigDown className="w-6 h-6" />

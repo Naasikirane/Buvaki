@@ -35,6 +35,7 @@ interface MobileNavProps {
   onOpenLanguage: () => void;
   theme: Theme;
   setTheme: (theme: Theme) => void;
+  onRequireAuth?: (promptReason?: string) => void;
 }
 
 export const MobileNav: React.FC<MobileNavProps> = ({
@@ -51,6 +52,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
   onOpenLanguage,
   theme,
   setTheme,
+  onRequireAuth,
 }) => {
   const t = getTranslation(selectedLanguage.code);
 
@@ -95,7 +97,13 @@ export const MobileNav: React.FC<MobileNavProps> = ({
 
         {/* Center Floating (+) Post Button */}
         <button
-          onClick={onOpenCreatePost}
+          onClick={() => {
+            if (!currentUser && onRequireAuth) {
+              onRequireAuth('Sign in or create an account to create a post');
+              return;
+            }
+            onOpenCreatePost();
+          }}
           className="flex items-center justify-center w-11 h-11 -mt-4 rounded-full bg-slate-900 hover:bg-slate-800 text-white shadow-lg active:scale-95 transition-all border-2 border-white"
           aria-label={t.createPost}
         >
@@ -118,7 +126,13 @@ export const MobileNav: React.FC<MobileNavProps> = ({
 
         {/* You / Profile Tab */}
         <button
-          onClick={onOpenProfile}
+          onClick={() => {
+            if (!currentUser && onRequireAuth) {
+              onRequireAuth('Sign in to access your channel and saved library');
+              return;
+            }
+            onOpenProfile();
+          }}
           className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
             viewMode === 'you' ? 'text-[#0f0f0f] font-semibold' : 'text-slate-500 hover:text-slate-900'
           }`}

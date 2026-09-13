@@ -324,7 +324,13 @@ export const CommentsDrawer: React.FC<CommentsDrawerProps> = ({
                                 </p>
                                 <div className="flex items-center gap-3 mt-1 text-slate-500 text-xs">
                                   <button
-                                    onClick={() => onVoteComment(reply.id, 'up')}
+                                    onClick={() => {
+                                      if (!currentUser) {
+                                        onRequireAuth('Sign in or create an account to like comments.');
+                                        return;
+                                      }
+                                      onVoteComment(reply.id, 'up');
+                                    }}
                                     className={`flex items-center gap-1 p-0.5 hover:text-slate-900 ${
                                       reply.userVote === 'up' ? 'text-sky-600 font-bold' : ''
                                     }`}
@@ -333,7 +339,13 @@ export const CommentsDrawer: React.FC<CommentsDrawerProps> = ({
                                     {reply.score > 0 && <span className="text-[11px]">{reply.score}</span>}
                                   </button>
                                   <button
-                                    onClick={() => onVoteComment(reply.id, 'down')}
+                                    onClick={() => {
+                                      if (!currentUser) {
+                                        onRequireAuth('Sign in or create an account to vote on comments.');
+                                        return;
+                                      }
+                                      onVoteComment(reply.id, 'down');
+                                    }}
                                     className={`p-0.5 hover:text-slate-900 ${
                                       reply.userVote === 'down' ? 'text-sky-600 font-bold' : ''
                                     }`}

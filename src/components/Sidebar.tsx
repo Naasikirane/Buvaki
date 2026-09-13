@@ -1,5 +1,5 @@
 import React from 'react';
-import { FilterSort, ViewMode, SupportedLanguage, Theme } from '../types';
+import { FilterSort, ViewMode, SupportedLanguage, Theme, User } from '../types';
 import { getTranslation } from '../lib/translations';
 import { FlagIcon } from './FlagIcon';
 import { 
@@ -11,7 +11,7 @@ import {
   Clapperboard,
   Tv,
   Users,
-  User,
+  User as UserIcon,
   BarChart2,
   TrendingUp,
   ChevronRight,
@@ -33,6 +33,8 @@ interface SidebarProps {
   onSelectTab?: (tab: string) => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  currentUser?: User | null;
+  onOpenAuth?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -48,6 +50,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setTheme,
   isCollapsed = true,
   onToggleCollapse,
+  currentUser,
+  onOpenAuth,
 }) => {
   const t = getTranslation(selectedLanguage.code);
 
@@ -153,6 +157,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* You */}
         <button
           onClick={() => {
+            if (!currentUser && onOpenAuth) {
+              onOpenAuth();
+              return;
+            }
             onToggleSavedOnly(false);
             setViewMode('you');
           }}
@@ -163,7 +171,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           }`}
           title="You"
         >
-          <User className={`w-5 h-5 mb-1.5 ${viewMode === 'you' ? 'text-[#0f0f0f] stroke-[2.25] fill-[#0f0f0f]' : 'text-[#0f0f0f] stroke-[1.75]'}`} />
+          <UserIcon className={`w-5 h-5 mb-1.5 ${viewMode === 'you' ? 'text-[#0f0f0f] stroke-[2.25] fill-[#0f0f0f]' : 'text-[#0f0f0f] stroke-[1.75]'}`} />
           <span className="text-[10px] leading-tight font-normal text-center truncate max-w-full">
             You
           </span>
@@ -286,6 +294,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         </div>
 
+        {/* Guest Sign-in prompt matching YouTube */}
+        {!currentUser && (
+          <div className="px-3 py-4 border-b border-[#0000001a] flex flex-col items-start gap-2.5">
+            <p className="text-sm text-[#0f0f0f] leading-snug">
+              Sign in to like videos, comment, and subscribe.
+            </p>
+            <button
+              onClick={() => {
+                if (onOpenAuth) onOpenAuth();
+                if (onToggleCollapse) onToggleCollapse();
+              }}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-[#065fd4] hover:bg-[#def1ff] text-[#065fd4] font-medium text-sm transition-colors cursor-pointer"
+            >
+              <UserIcon className="w-4 h-4 stroke-[2]" />
+              <span>Sign in</span>
+            </button>
+          </div>
+        )}
+
         {/* Subscriptions Section (Matching YouTube Screenshot) */}
         <div className="flex flex-col gap-0.5 border-b border-[#0000001a] py-3">
           <div className="flex items-center justify-between px-3 py-1 text-base font-bold text-[#0f0f0f] group cursor-pointer">
@@ -337,6 +364,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="flex flex-col gap-0.5 border-b border-[#0000001a] py-3">
           <button
             onClick={() => {
+              if (!currentUser && onOpenAuth) {
+                onOpenAuth();
+                if (onToggleCollapse) onToggleCollapse();
+                return;
+              }
               onToggleSavedOnly(false);
               setViewMode('you');
               if (onToggleCollapse) onToggleCollapse();
@@ -347,7 +379,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 : 'text-[#0f0f0f] hover:bg-[#f2f2f2] font-normal'
             }`}
           >
-            <User className={`w-5 h-5 ${viewMode === 'you' ? 'text-[#0f0f0f] stroke-[2.25] fill-[#0f0f0f]' : 'text-[#0f0f0f] stroke-[1.75]'}`} />
+            <UserIcon className={`w-5 h-5 ${viewMode === 'you' ? 'text-[#0f0f0f] stroke-[2.25] fill-[#0f0f0f]' : 'text-[#0f0f0f] stroke-[1.75]'}`} />
             <span>You</span>
           </button>
         </div>
