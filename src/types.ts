@@ -41,8 +41,7 @@ export interface User {
   petName?: string;
   occupation?: string;
   niche?: string;
-  twoFactorEnabled?: boolean;
-  authProvider?: 'google' | 'email' | '2fa' | 'phone';
+  authProvider?: 'google' | 'email' | 'phone';
 }
 
 export interface PollOption {

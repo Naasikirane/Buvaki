@@ -735,20 +735,18 @@ export const dbLoginWithGoogle = async (langName: string): Promise<User | null> 
     }
 
     if (errCode === 'auth/popup-blocked') {
-      throw new Error('Google sign-in popup was blocked by your browser (common in Incognito mode). Please allow popups or use 2FA Verification Code.');
+      throw new Error('Google sign-in popup was blocked by your browser. Please allow popups for this site and try again.');
     }
 
     if (errCode === 'auth/unauthorized-domain') {
-      throw new Error('This domain is restricted for Google OAuth in Incognito or iframe. Please use 2FA Verification Code or Email sign-in.');
+      throw new Error('This domain is not authorized in Google OAuth settings.');
     }
 
     if (
       errCode === 'auth/operation-not-supported-in-this-environment' || 
-      errCode === 'auth/web-storage-unsupported' ||
-      errMsg.includes('storage') ||
-      errMsg.includes('third-party')
+      errCode === 'auth/web-storage-unsupported'
     ) {
-      throw new Error('Third-party cookies and web storage are disabled in Incognito mode. Please use 2FA Verification Code or Email sign-in.');
+      throw new Error('Third-party cookies or storage are restricted in your browser. Please allow cookies or open the app in a normal window.');
     }
 
     if (errMsg.includes('Pending promise was never set') || errMsg.includes('INTERNAL ASSERTION FAILED')) {
@@ -845,124 +843,6 @@ export const dbCheckAndCompleteEmailLinkSignIn = async (langName: string = 'Engl
     }
   }
   return null;
-};
-
-// Real Verification Code Generator & Backend Dispatch (for Email / Phone 2FA OTP)
-export interface SendCodeResult {
-  success: boolean;
-  devCode?: string;
-  message?: string;
-  emailSent?: boolean;
-}
-
-export const dbSendVerificationCode = async (target: string, type: 'email' | 'phone'): Promise<SendCodeResult> => {
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const docId = target.toLowerCase().replace(/[^a-z0-9_]/g, '');
-  const codeRef = doc(db, 'verificationCodes', docId);
-  
-  // 1. Store code securely in Firestore with 10 min expiration
-  await setDoc(codeRef, sanitizeForFirestore({
-    target,
-    type,
-    code,
-    createdAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString()
-  }));
-
-  let devCode: string | undefined = undefined;
-  let message: string | undefined = undefined;
-  let emailSent: boolean = false;
-
-  // 2. Call backend server to dispatch email / SMS directly to target
-  try {
-    const res = await fetch('/api/send-verification-code', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ target, type, code })
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.devCode) {
-        devCode = data.devCode;
-      }
-      emailSent = !!data.emailSent;
-      message = data.message;
-    }
-  } catch (apiErr) {
-    console.error('Failed calling send-verification-code API:', apiErr);
-  }
-
-  // Fallback demo code if email was not delivered through SMTP (e.g. preview environment / sandbox)
-  if (!emailSent && !devCode) {
-    devCode = code;
-  }
-
-  return { success: true, devCode, message, emailSent };
-};
-
-export const dbVerifyCodeAndCreateUser = async (
-  target: string, 
-  inputCode: string, 
-  username?: string, 
-  langName: string = 'English'
-): Promise<User> => {
-  const docId = target.toLowerCase().replace(/[^a-z0-9_]/g, '');
-  const codeRef = doc(db, 'verificationCodes', docId);
-  const snap = await getDoc(codeRef);
-
-  if (!snap.exists()) {
-    throw new Error('Verification code not found or expired. Please request a new 2FA code.');
-  }
-
-  const data = snap.data();
-  if (data.expiresAt && new Date(data.expiresAt).getTime() < Date.now()) {
-    throw new Error('Verification code has expired. Please request a new 2FA code.');
-  }
-
-  if (data.code !== inputCode.trim()) {
-    throw new Error('Incorrect verification code. Please check the 6-digit code and try again.');
-  }
-
-  // Code verified! Clean up used code
-  try {
-    await deleteDoc(codeRef);
-  } catch (delErr) {
-    console.warn('Code cleanup warning:', delErr);
-  }
-
-  const userId = `user_${docId}`;
-  const existing = await dbGetUserProfile(userId);
-  if (existing) {
-    const updatedUser: User = {
-      ...existing,
-      twoFactorEnabled: true,
-      authProvider: '2fa',
-      status: 'online'
-    };
-    await dbSaveUserProfile(updatedUser);
-    localStorage.setItem('buvaki_user', JSON.stringify(updatedUser));
-    return updatedUser;
-  }
-
-  const handleName = username?.trim() || target.split('@')[0] || `user_${docId.slice(-4)}`;
-  const cleanHandle = `@${handleName.toLowerCase().replace(/[^a-z0-9_]/g, '') || 'user'}`;
-  const newUser: User = {
-    id: userId,
-    username: handleName,
-    handle: cleanHandle,
-    avatar: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`,
-    bio: `Verified via 2FA Code • ${langName}`,
-    karma: 200,
-    badges: ['2FA Verified', 'Protected Account'],
-    joinedDate: 'Today',
-    status: 'online',
-    statusText: `Speaking ${langName}`,
-    twoFactorEnabled: true,
-    authProvider: '2fa'
-  };
-  await dbSaveUserProfile(newUser);
-  localStorage.setItem('buvaki_user', JSON.stringify(newUser));
-  return newUser;
 };
 
 export const dbLogout = async (): Promise<void> => {

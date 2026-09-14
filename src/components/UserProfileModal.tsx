@@ -231,20 +231,6 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             <Calendar className="w-3.5 h-3.5 text-violet-400" />
             <span>Member since {user.joinedDate}</span>
           </div>
-
-          {/* Security & 2FA Status */}
-          <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/60 border border-violet-900/30 text-xs">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span className="text-slate-300 font-medium">Security:</span>
-              <span className="text-emerald-300 font-semibold">
-                {user.twoFactorEnabled ? '2FA Protected' : 'Protected Account'}
-              </span>
-            </div>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-800/60 text-emerald-300 font-mono">
-              {user.authProvider === 'google' ? 'Google Auth' : user.twoFactorEnabled ? '2FA Code' : 'Email Verified'}
-            </span>
-          </div>
         </div>
 
         {/* Navigation Tabs */}

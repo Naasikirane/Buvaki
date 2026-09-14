@@ -2,78 +2,11 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
-import nodemailer from "nodemailer";
 
 async function startServer() {
   const app = express();
   app.use(express.json());
   const PORT = 3000;
-
-  // Verification code dispatch endpoint (Email / SMS / 2FA)
-  app.post("/api/send-verification-code", async (req, res) => {
-    try {
-      const { target, type, code } = req.body;
-      if (!target || !code) {
-        return res.status(400).json({ error: "Target and code are required" });
-      }
-
-      let emailSent = false;
-      if (type === "email") {
-        const smtpHost = process.env.SMTP_HOST;
-        const smtpUser = process.env.SMTP_USER;
-        const smtpPass = process.env.SMTP_PASS;
-
-        if (smtpHost && smtpUser && smtpPass) {
-          try {
-            const transporter = nodemailer.createTransport({
-              host: smtpHost,
-              port: Number(process.env.SMTP_PORT) || 587,
-              secure: process.env.SMTP_SECURE === "true",
-              auth: { user: smtpUser, pass: smtpPass },
-            });
-
-            await transporter.sendMail({
-              from: process.env.SMTP_FROM || `"Buvaki Security" <noreply@buvaki.app>`,
-              to: target,
-              subject: `Your Buvaki 2FA Security Code: ${code}`,
-              html: `
-                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 16px; background-color: #ffffff;">
-                  <div style="text-align: center; margin-bottom: 20px;">
-                    <h2 style="color: #065fd4; margin: 0; font-size: 24px; font-weight: 700;">Buvaki 2FA Authentication</h2>
-                    <p style="color: #6b7280; font-size: 14px; margin-top: 6px;">Secure Login & Verification</p>
-                  </div>
-                  <p style="color: #374151; font-size: 15px;">Hello,</p>
-                  <p style="color: #374151; font-size: 14px; line-height: 1.5;">Use this 6-digit two-factor verification code to access your account:</p>
-                  <div style="background-color: #f0f7ff; border: 1px dashed #065fd4; padding: 16px; border-radius: 12px; text-align: center; font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #065fd4; margin: 20px 0;">
-                    ${code}
-                  </div>
-                  <p style="color: #9ca3af; font-size: 12px; line-height: 1.4;">This code will expire in 10 minutes. If you did not request this 2FA login, please ignore this email.</p>
-                </div>
-              `,
-            });
-            emailSent = true;
-            console.log(`[AUTH 2FA] Real email dispatched via SMTP to ${target}`);
-          } catch (emailErr) {
-            console.error("[AUTH 2FA] Error sending email via SMTP:", emailErr);
-          }
-        } else {
-          console.log(`[AUTH 2FA] Dispatching 2FA email to ${target}. Code: ${code} (SMTP unconfigured)`);
-        }
-      } else if (type === "phone") {
-        console.log(`[AUTH 2FA] Dispatching 2FA SMS to ${target}. Code: ${code}`);
-      }
-
-      return res.json({ 
-        success: true, 
-        message: emailSent ? `2FA verification code dispatched to ${target}` : `2FA security code generated.`,
-        emailSent,
-        devCode: !emailSent ? code : undefined
-      });
-    } catch (err: any) {
-      console.error("Error sending verification code:", err);
-      return res.status(500).json({ error: "Failed to send verification code" });
-    }
-  });
 
   // Google Translate & Gemini AI Translation endpoint
   app.post("/api/translate", async (req, res) => {

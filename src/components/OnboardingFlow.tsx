@@ -6,13 +6,10 @@ import { FlagIcon } from './FlagIcon';
 import { 
   Globe, 
   Mail, 
-  Phone, 
   ArrowRight, 
   CheckCircle2, 
-  KeyRound, 
   User as UserIcon, 
   Lock,
-  MessageSquareCode,
   Camera,
   Sparkles,
   Calendar,
@@ -23,17 +20,12 @@ import {
   Tag,
   Plus,
   ChevronRight,
-  Upload,
-  ShieldCheck
+  Upload
 } from 'lucide-react';
 import { 
   dbRegisterWithEmail, 
   dbLoginWithEmail, 
   dbLoginWithGoogle, 
-  dbSendVerificationCode, 
-  dbSendFirebaseEmailLink,
-  dbCompleteEmailLinkDirectly,
-  dbVerifyCodeAndCreateUser,
   dbSaveUserProfile 
 } from '../lib/firebase';
 
@@ -122,34 +114,16 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const [customInterestInput, setCustomInterestInput] = useState<string>('');
 
   // Auth Form states
-  const [authMethod, setAuthMethod] = useState<'email' | 'phone' | 'google'>('email');
   const [emailInput, setEmailInput] = useState('');
-  const [phoneInput, setPhoneInput] = useState('');
-  const [countryCode, setCountryCode] = useState('+1');
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
-  
-  // Verification code / Link state
-  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
-  const [isLinkSent, setIsLinkSent] = useState(false);
-  const [isFallbackLink, setIsFallbackLink] = useState(false);
-  const [verificationCode, setVerificationCode] = useState('');
-  const [devCode, setDevCode] = useState<string | null>(null);
-  const [codeSentMessage, setCodeSentMessage] = useState('');
   const [authError, setAuthError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
-  const [showPasswordFallback, setShowPasswordFallback] = useState(false);
 
-  // Clear errors and link states on step change
+  // Clear errors on step change
   useEffect(() => {
     setAuthError('');
-    setIsVerifyingCode(false);
-    setIsLinkSent(false);
-    setIsFallbackLink(false);
-    setVerificationCode('');
-    setShowPasswordFallback(false);
-  }, [currentStep, authMethod]);
+  }, [currentStep]);
 
   // Auto-proceed from splash screen after 3 seconds (3000ms)
   useEffect(() => {
@@ -159,15 +133,6 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     }, 3000);
     return () => clearTimeout(timer);
   }, [currentStep, setStep]);
-
-  // Cooldown timer for resending code
-  useEffect(() => {
-    if (resendCooldown <= 0) return;
-    const timer = setInterval(() => {
-      setResendCooldown((prev) => prev - 1);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [resendCooldown]);
 
   const handleLanguagePick = (lang: SupportedLanguage) => {
     onSelectLanguage(lang);
@@ -306,7 +271,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     setCustomInterestInput('');
   };
 
-  // Direct Password Auth (Sign In or Sign Up)
+  // Direct Email/Password Auth (Sign In or Sign Up)
   const handleDirectAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
@@ -322,115 +287,11 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       }
     } catch (err: any) {
       console.error("Auth error:", err);
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-        setAuthError('Invalid credentials. You can also sign in via Email Verification Code or Google.');
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setAuthError('Invalid credentials. Please verify your email and password, or continue with Google.');
       } else {
         setAuthError(err.message || 'Authentication failed. Please check your credentials.');
       }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Handle Request OTP Verification Code (Email or Phone)
-  const handleSendCode = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    setAuthError('');
-
-    const target = authMethod === 'email' ? emailInput : `${countryCode}${phoneInput}`;
-    if (authMethod === 'email' && !emailInput.includes('@')) {
-      setAuthError('Please enter a valid email address.');
-      return;
-    }
-    if (authMethod === 'phone' && phoneInput.trim().length < 6) {
-      setAuthError('Please enter a valid phone number.');
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      if (authMethod === 'email' || authMethod === 'phone') {
-        const res = await dbSendVerificationCode(target, authMethod);
-        if (res.devCode) {
-          setDevCode(res.devCode);
-        } else {
-          setDevCode(null);
-        }
-      }
-      setIsVerifyingCode(true);
-      setResendCooldown(30);
-
-      if (authMethod === 'email') {
-        setCodeSentMessage(`Verification code sent to ${emailInput}`);
-      } else {
-        setCodeSentMessage(`SMS verification code sent to ${countryCode} ${phoneInput}`);
-      }
-    } catch (err: any) {
-      setAuthError(err.message || 'Failed to send verification code.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Official Firebase Email Link Verification
-  const handleSendFirebaseEmailLink = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    setAuthError('');
-    if (!emailInput || !emailInput.includes('@')) {
-      setAuthError('Please enter a valid email address.');
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const res = await dbSendFirebaseEmailLink(emailInput, currentStep === 'signup' ? usernameInput : undefined);
-      setIsLinkSent(true);
-      setIsFallbackLink(!!res.isFallback);
-      setResendCooldown(30);
-      setCodeSentMessage(`Verification link sent to ${emailInput}`);
-    } catch (err: any) {
-      setAuthError(err.message || 'Failed to send verification link. Please check your email.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Direct Link Verification Execution
-  const handleDirectLinkVerification = async () => {
-    setAuthError('');
-    setIsLoading(true);
-    try {
-      const user = await dbCompleteEmailLinkDirectly(
-        emailInput,
-        usernameInput || emailInput.split('@')[0],
-        selectedLanguage.name
-      );
-      startProfileStep(user);
-    } catch (err: any) {
-      setAuthError(err.message || 'Verification failed. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Handle Code Verification Submission
-  const handleVerifyAndSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError('');
-    setIsLoading(true);
-
-    const target = authMethod === 'email' ? emailInput : `${countryCode}${phoneInput}`;
-
-    try {
-      const user = await dbVerifyCodeAndCreateUser(
-        target, 
-        verificationCode, 
-        usernameInput || (authMethod === 'email' ? emailInput.split('@')[0] : `user_${phoneInput.slice(-4)}`), 
-        selectedLanguage.name
-      );
-      startProfileStep(user);
-    } catch (err: any) {
-      setAuthError(err.message || 'Invalid verification code. Please check and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -452,17 +313,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
         !err?.message?.includes('Pending promise was never set')
       ) {
         console.warn("Google Auth note:", err?.message || err);
-        const msg = err?.message || '';
-        if (
-          msg.includes('Incognito') ||
-          msg.includes('popup was blocked') ||
-          msg.includes('third-party') ||
-          msg.includes('storage')
-        ) {
-          setAuthError('Incognito mode detected: Google popup is blocked in private browsing. Please switch to the Email/2FA Code option above.');
-        } else {
-          setAuthError(err.message || 'Google sign-in was interrupted. Try Email/2FA Code.');
-        }
+        setAuthError(err?.message || 'Google sign-in could not be completed. Please try again.');
       }
     } finally {
       setIsLoading(false);
@@ -636,443 +487,116 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
               </div>
             )}
 
-            {/* Code sent notice banner */}
-            {codeSentMessage && isVerifyingCode && (
-              <div className="p-3 rounded-xl bg-purple-950/80 border border-purple-700/80 text-purple-200 text-xs space-y-1">
-                <div className="font-semibold flex items-center gap-1.5 text-purple-300">
-                  <MessageSquareCode className="w-4 h-4" />
-                  <span>{codeSentMessage}</span>
-                </div>
-                <p className="text-[11px] text-slate-400">
-                  Please enter the 6-digit code sent to your device or inbox.
-                </p>
+            {/* Main Auth Body */}
+            <div className="space-y-4">
+              {/* 1. Continue with Google Button */}
+              <button
+                type="button"
+                onClick={handleGoogleAuth}
+                disabled={isLoading}
+                className="w-full py-3.5 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-semibold text-xs flex items-center justify-center gap-3 transition-all shadow-md active:scale-[0.99] disabled:opacity-60 cursor-pointer"
+              >
+                {isLoading ? (
+                  <div className="w-4 h-4 border-2 border-slate-900/30 border-t-slate-900 rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                      <path
+                        fill="#4285F4"
+                        d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.16 0 9.97 0 12s.45 3.84 1.25 5.42l4.03-3.15z"
+                      />
+                      <path
+                        fill="#EA4335"
+                        d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                      />
+                    </svg>
+                    <span>{t.continueWithGoogle || 'Continue with Google'}</span>
+                  </>
+                )}
+              </button>
+
+              {/* Modern Divider */}
+              <div className="relative flex py-1 items-center">
+                <div className="flex-grow border-t border-slate-800"></div>
+                <span className="flex-shrink mx-3 text-[11px] uppercase tracking-wider text-slate-500 font-medium">
+                  or with email
+                </span>
+                <div className="flex-grow border-t border-slate-800"></div>
               </div>
-            )}
 
-            {/* Link sent screen vs Form screen */}
-            {isLinkSent ? (
-              <div className="text-center space-y-4 animate-fadeIn py-1">
-                <div className="relative inline-flex p-3.5 rounded-full bg-purple-950/80 border border-purple-500/50 text-purple-400">
-                  <div className="absolute inset-0 rounded-full bg-purple-500/20 blur-xl animate-pulse" />
-                  <Mail className="w-7 h-7 relative z-10" />
+              {/* Email / Password Form */}
+              <form onSubmit={handleDirectAuth} className="space-y-3">
+                {currentStep === 'signup' && (
+                  <div>
+                    <label className="block text-xs font-medium text-slate-300 mb-1">{t.username || 'Username'}</label>
+                    <div className="relative">
+                      <UserIcon className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+                      <input
+                        type="text"
+                        required
+                        placeholder="yourname"
+                        value={usernameInput}
+                        onChange={(e) => setUsernameInput(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">{t.emailAddress || 'Email'}</label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+                    <input
+                      type="email"
+                      required
+                      placeholder="name@example.com"
+                      value={emailInput}
+                      onChange={(e) => setEmailInput(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-1">
-                  <h3 className="text-base sm:text-lg font-bold text-white">Verification Link Sent</h3>
-                  <p className="text-xs text-slate-300 max-w-sm mx-auto leading-relaxed">
-                    We sent a verification link to <span className="font-semibold text-purple-300">{emailInput}</span>
-                  </p>
-                  <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
-                    Check your inbox or click below to complete {currentStep === 'signup' ? 'registration' : 'sign in'}.
-                  </p>
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">{t.password || 'Password'}</label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+                    <input
+                      type="password"
+                      required
+                      placeholder="••••••••"
+                      value={passwordInput}
+                      onChange={(e) => setPasswordInput(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
+                    />
+                  </div>
                 </div>
 
-                {/* Primary Instant Verification Button */}
                 <button
-                  type="button"
-                  onClick={handleDirectLinkVerification}
-                  disabled={isLoading}
-                  className="w-full py-3.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg shadow-purple-600/40 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50"
+                  type="submit"
+                  disabled={isLoading || !emailInput || !passwordInput}
+                  className="w-full mt-2 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 cursor-pointer"
                 >
                   {isLoading ? (
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : (
                     <>
-                      <CheckCircle2 className="w-4 h-4 text-purple-200" />
-                      <span>Complete Verification & Enter App</span>
+                      <span>{currentStep === 'signup' ? (t.createAccount || 'Create Account') : (t.signIn || 'Sign In')}</span>
+                      <ArrowRight className="w-4 h-4" />
                     </>
                   )}
                 </button>
-
-                {isFallbackLink && (
-                  <div className="p-3 rounded-xl bg-purple-950/50 border border-purple-800/60 text-left text-[11px] text-purple-200 leading-relaxed">
-                    <span className="font-semibold text-purple-300">Firebase Auth Notice:</span> Email Link Sign-In provider is disabled in Firebase Console (<code className="text-purple-300 bg-purple-900/60 px-1 py-0.5 rounded">auth/operation-not-allowed</code>). Click <span className="underline font-semibold text-purple-300">Complete Verification</span> above to sign in right away!
-                  </div>
-                )}
-
-                <div className="pt-1 space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => handleSendFirebaseEmailLink()}
-                    disabled={resendCooldown > 0 || isLoading}
-                    className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-medium transition-all disabled:opacity-50"
-                  >
-                    {isLoading ? (
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
-                    ) : resendCooldown > 0 ? (
-                      `Resend Link (${resendCooldown}s)`
-                    ) : (
-                      'Resend Verification Link'
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsLinkSent(false)}
-                    className="w-full py-2 rounded-xl text-slate-400 hover:text-slate-200 text-xs font-medium transition-all"
-                  >
-                    Change Email Address
-                  </button>
-                </div>
-              </div>
-            ) : !isVerifyingCode ? (
-              /* --- Choose Auth Method & Enter Details --- */
-              <div className="space-y-5">
-                
-                {/* Method selector tabs */}
-                <div className="flex items-center p-1 bg-slate-950/90 rounded-2xl border border-slate-800 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setAuthMethod('email')}
-                    className={`flex-1 py-2 rounded-xl font-medium transition-all flex items-center justify-center gap-1.5 ${
-                      authMethod === 'email'
-                        ? 'bg-purple-600 text-white shadow-md'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    <Mail className="w-3.5 h-3.5" />
-                    <span>Email Link</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setAuthMethod('google')}
-                    className={`flex-1 py-2 rounded-xl font-medium transition-all flex items-center justify-center gap-1.5 ${
-                      authMethod === 'google'
-                        ? 'bg-purple-600 text-white shadow-md'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    <span className="font-bold">G</span>
-                    <span>{t.google}</span>
-                  </button>
-                </div>
-
-                {/* EMAIL FORM (Official Link Method) */}
-                {authMethod === 'email' && (
-                  <form onSubmit={handleSendFirebaseEmailLink} className="space-y-3.5">
-                    {currentStep === 'signup' && (
-                      <div>
-                        <label className="block text-xs font-medium text-slate-300 mb-1">{t.username}</label>
-                        <div className="relative">
-                          <UserIcon className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-                          <input
-                            type="text"
-                            required
-                            placeholder={t.username}
-                            value={usernameInput || ''}
-                            onChange={(e) => setUsernameInput(e.target.value)}
-                            className="w-full pl-9 pr-3 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    <div>
-                      <label className="block text-xs font-medium text-slate-300 mb-1">{t.emailAddress}</label>
-                      <div className="relative">
-                        <Mail className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-                        <input
-                          type="email"
-                          required
-                          placeholder="name@example.com"
-                          value={emailInput || ''}
-                          onChange={(e) => setEmailInput(e.target.value)}
-                          className="w-full pl-9 pr-3 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
-                        />
-                      </div>
-                    </div>
-
-                    {showPasswordFallback ? (
-                      <div className="space-y-3 pt-1 animate-fadeIn">
-                        <div>
-                          <label className="block text-xs font-medium text-slate-300 mb-1">{t.password}</label>
-                          <div className="relative">
-                            <Lock className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-                            <input
-                              type="password"
-                              required
-                              placeholder="••••••••"
-                              value={passwordInput || ''}
-                              onChange={(e) => setPasswordInput(e.target.value)}
-                              className="w-full pl-9 pr-3 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={handleDirectAuth}
-                            disabled={isLoading}
-                            className="flex-1 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-lg shadow-purple-600/30 flex items-center justify-center gap-1.5 transition-all"
-                          >
-                            {isLoading ? (
-                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            ) : (
-                              <span>{currentStep === 'signup' ? t.createAccount : t.signIn}</span>
-                            )}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setShowPasswordFallback(false)}
-                            className="px-3 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition-all"
-                          >
-                            Back
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <button
-                          type="submit"
-                          disabled={isLoading || !emailInput}
-                          className="w-full py-3.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50"
-                        >
-                          {isLoading ? (
-                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          ) : (
-                            <>
-                              <Mail className="w-4 h-4 text-purple-200" />
-                              <span>{currentStep === 'signup' ? 'Send Sign Up Link' : 'Send Sign In Link'}</span>
-                              <ArrowRight className="w-4 h-4" />
-                            </>
-                          )}
-                        </button>
-
-                        <div className="pt-1 flex items-center justify-between text-[11px] text-slate-400">
-                          <span className="flex items-center gap-1 text-purple-300">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            Official passwordless sign in link
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setShowPasswordFallback(true)}
-                            className="text-slate-400 hover:text-slate-200 underline"
-                          >
-                            Password
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </form>
-                )}
-
-                {/* PHONE FORM */}
-                {authMethod === 'phone' && (
-                  <form onSubmit={handleSendCode} className="space-y-3">
-                    {currentStep === 'signup' && (
-                      <div>
-                        <label className="block text-xs text-slate-400 mb-1">{t.username}</label>
-                        <div className="relative">
-                          <UserIcon className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-                          <input
-                            type="text"
-                            required
-                            placeholder={t.username}
-                            value={usernameInput}
-                            onChange={(e) => setUsernameInput(e.target.value)}
-                            className="w-full pl-9 pr-3 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1">{t.phoneNumber}</label>
-                      <div className="flex gap-2">
-                        <select
-                          value={countryCode || '+1'}
-                          onChange={(e) => setCountryCode(e.target.value)}
-                          className="bg-slate-950/90 border border-slate-800 rounded-xl text-xs text-slate-300 px-2 py-2.5 focus:outline-none focus:border-purple-500"
-                        >
-                          <option value="+1">🇺🇸 +1</option>
-                          <option value="+44">🇬🇧 +44</option>
-                          <option value="+33">🇫🇷 +33</option>
-                          <option value="+49">🇩🇪 +49</option>
-                          <option value="+81">🇯🇵 +81</option>
-                          <option value="+86">🇨🇳 +86</option>
-                          <option value="+55">🇧🇷 +55</option>
-                          <option value="+91">🇮🇳 +91</option>
-                          <option value="+254">🇰🇪 +254</option>
-                        </select>
-                        
-                        <div className="relative flex-1">
-                          <Phone className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-                          <input
-                            type="tel"
-                            required
-                            placeholder="555-0199"
-                            value={phoneInput || ''}
-                            onChange={(e) => setPhoneInput(e.target.value)}
-                            className="w-full pl-9 pr-3 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={isLoading}
-                      className="w-full mt-2 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2 transition-all"
-                    >
-                      {isLoading ? (
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      ) : (
-                        <>
-                          <span>{t.sendVerificationCode}</span>
-                          <ArrowRight className="w-4 h-4" />
-                        </>
-                      )}
-                    </button>
-                  </form>
-                )}
-
-                {/* GOOGLE FORM */}
-                {authMethod === 'google' && (
-                  <div className="space-y-4 py-2 text-center">
-                    <button
-                      type="button"
-                      onClick={handleGoogleAuth}
-                      disabled={isLoading}
-                      className="w-full py-3.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 font-semibold flex items-center justify-center gap-3 transition-all transform hover:-translate-y-0.5"
-                    >
-                      {isLoading ? (
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      ) : (
-                        <>
-                          <svg className="w-5 h-5" viewBox="0 0 24 24">
-                            <path
-                              fill="#4285F4"
-                              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                            />
-                            <path
-                              fill="#34A853"
-                              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                            />
-                            <path
-                              fill="#FBBC05"
-                              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                            />
-                            <path
-                              fill="#EA4335"
-                              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                            />
-                          </svg>
-                          <span>{t.continueWithGoogle}</span>
-                        </>
-                      )}
-                    </button>
-
-                    {/* Incognito Notice & Fallback to 2FA Code */}
-                    <div className="p-3 rounded-xl bg-purple-950/40 border border-purple-800/40 text-[11px] text-slate-300 space-y-2 text-left">
-                      <div className="flex items-center gap-1.5 text-purple-300 font-semibold">
-                        <ShieldCheck className="w-4 h-4" />
-                        <span>Using Incognito or private window?</span>
-                      </div>
-                      <p className="text-slate-400">
-                        Browsers block Google third-party popups in Incognito mode. Use our fast Two-Factor (2FA) verification code instead.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAuthMethod('email');
-                          setShowPasswordFallback(false);
-                        }}
-                        className="text-xs font-semibold text-purple-300 hover:text-white underline flex items-center gap-1 cursor-pointer"
-                      >
-                        Switch to 2FA Code / Email Link →
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              /* --- Verification Code Entry Screen (OTP) --- */
-              <form onSubmit={handleVerifyAndSubmit} className="space-y-4 animate-fadeIn">
-                <div className="text-center space-y-1.5">
-                  <div className="inline-flex p-3 rounded-full bg-purple-950/80 border border-purple-700/60 text-purple-400 mb-1">
-                    <KeyRound className="w-6 h-6 animate-pulse" />
-                  </div>
-                  <h4 className="text-sm font-bold text-slate-100">{t.enterVerificationCode}</h4>
-                  <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                    A secret code was sent directly to <span className="text-purple-300 font-medium">{authMethod === 'email' ? emailInput : `${countryCode} ${phoneInput}`}</span>.
-                  </p>
-                </div>
-
-                {devCode && (
-                  <div className="p-2.5 rounded-xl bg-purple-900/60 border border-purple-500/50 text-xs text-purple-200 flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-purple-300 shrink-0" />
-                      <span>Security Code: <strong className="font-mono tracking-widest text-white">{devCode}</strong></span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setVerificationCode(devCode)}
-                      className="px-2 py-0.5 rounded bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-bold cursor-pointer"
-                    >
-                      Auto-fill
-                    </button>
-                  </div>
-                )}
-
-                <div>
-                  <input
-                    type="text"
-                    required
-                    maxLength={6}
-                    placeholder="• • • • • •"
-                    value={verificationCode || ''}
-                    onChange={(e) => setVerificationCode(e.target.value)}
-                    className="w-full text-center tracking-[0.5em] font-mono text-xl py-3 bg-slate-950/90 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-purple-500 placeholder-slate-600"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between text-xs px-1 text-slate-400">
-                  <span>Didn't receive the code?</span>
-                  <button
-                    type="button"
-                    onClick={() => handleSendCode()}
-                    disabled={resendCooldown > 0 || isLoading}
-                    className="text-purple-400 hover:text-purple-300 font-semibold disabled:opacity-50 transition-colors"
-                  >
-                    {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Code'}
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setIsVerifyingCode(false)}
-                    className="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs hover:bg-slate-700 transition-all"
-                  >
-                    {t.back}
-                  </button>
-
-                  <button
-                    type="submit"
-                    disabled={isLoading || verificationCode.length < 6}
-                    className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-lg shadow-purple-600/30 flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
-                  >
-                    {isLoading ? (
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <span>{t.verifyAndSignIn}</span>
-                        <CheckCircle2 className="w-4 h-4" />
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] text-slate-400 flex items-start gap-2">
-                  <Lock className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
-                  <span>
-                    To ensure secure ownership, verification codes are transmitted directly to your email or SMS. Never share your code with anyone.
-                  </span>
-                </div>
               </form>
-            )}
+            </div>
 
             {/* Toggle between Sign In and Sign Up */}
             <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
