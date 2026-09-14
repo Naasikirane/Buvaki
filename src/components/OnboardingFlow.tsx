@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { SUPPORTED_LANGUAGES, SupportedLanguage, User } from '../types';
+import { SUPPORTED_LANGUAGES, SupportedLanguage, User, COUNTRY_CODES } from '../types';
 import { getTranslation, isRTL } from '../lib/translations';
 import { Logo } from './Logo';
 import { FlagIcon } from './FlagIcon';
 import { 
   Globe, 
   Mail, 
+  Phone,
   ArrowRight, 
   CheckCircle2, 
   User as UserIcon, 
@@ -20,14 +21,20 @@ import {
   Tag,
   Plus,
   ChevronRight,
-  Upload
+  Upload,
+  KeyRound,
+  RefreshCw
 } from 'lucide-react';
 import { 
   dbRegisterWithEmail, 
   dbLoginWithEmail, 
   dbLoginWithGoogle, 
-  dbSaveUserProfile 
+  dbSaveUserProfile,
+  dbSetupRecaptcha,
+  dbSendPhoneVerificationCode,
+  dbVerifyPhoneCode
 } from '../lib/firebase';
+import type { ConfirmationResult } from 'firebase/auth';
 
 export type OnboardingStep = 'splash' | 'language' | 'signin' | 'signup' | 'profile';
 
@@ -114,15 +121,34 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const [customInterestInput, setCustomInterestInput] = useState<string>('');
 
   // Auth Form states
+  const [authMode, setAuthMode] = useState<'email' | 'phone'>('email');
   const [emailInput, setEmailInput] = useState('');
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
+  const [countryCode, setCountryCode] = useState('+1');
+  const [phoneInput, setPhoneInput] = useState('');
+  const [phoneConfirmation, setPhoneConfirmation] = useState<ConfirmationResult | null>(null);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [isVerifyingPhoneCode, setIsVerifyingPhoneCode] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [authError, setAuthError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Clear errors on step change
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
+  // Clear errors and temporary codes on step change
   useEffect(() => {
     setAuthError('');
+    setIsVerifyingPhoneCode(false);
+    setVerificationCode('');
+    setPhoneConfirmation(null);
   }, [currentStep]);
 
   // Auto-proceed from splash screen after 3 seconds (3000ms)
@@ -315,6 +341,67 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
         console.warn("Google Auth note:", err?.message || err);
         setAuthError(err?.message || 'Google sign-in could not be completed. Please try again.');
       }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Official Firebase Phone Sign In/Up: Send SMS Code
+  const handleSendPhoneCode = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setAuthError('');
+
+    const cleanNumber = phoneInput.replace(/[^0-9]/g, '');
+    if (!cleanNumber || cleanNumber.length < 5) {
+      setAuthError('Please enter a valid phone number.');
+      return;
+    }
+
+    const fullPhoneNumber = `${countryCode}${cleanNumber}`;
+    setIsLoading(true);
+
+    try {
+      const verifier = dbSetupRecaptcha('recaptcha-onboarding-container', () => {
+        setAuthError('Security verification expired. Please request the code again.');
+      });
+      const confirmation = await dbSendPhoneVerificationCode(fullPhoneNumber, verifier);
+      setPhoneConfirmation(confirmation);
+      setIsVerifyingPhoneCode(true);
+      setResendCooldown(60);
+    } catch (err: any) {
+      console.error('Phone sign-in send error:', err);
+      setAuthError(err.message || 'Failed to send SMS verification code.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Official Firebase Phone Sign In/Up: Confirm SMS Code
+  const handleVerifyPhoneCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!phoneConfirmation) {
+      setAuthError('No active phone verification. Please request a new code.');
+      return;
+    }
+    if (!verificationCode || verificationCode.trim().length < 6) {
+      setAuthError('Please enter the 6-digit SMS verification code.');
+      return;
+    }
+
+    setAuthError('');
+    setIsLoading(true);
+
+    try {
+      const user = await dbVerifyPhoneCode(
+        phoneConfirmation, 
+        verificationCode.trim(), 
+        usernameInput || undefined, 
+        selectedLanguage.name
+      );
+      startProfileStep(user);
+    } catch (err: any) {
+      console.error('Phone verification error:', err);
+      setAuthError(err.message || 'SMS code verification failed. Please check the code.');
     } finally {
       setIsLoading(false);
     }
@@ -527,75 +614,256 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
               <div className="relative flex py-1 items-center">
                 <div className="flex-grow border-t border-slate-800"></div>
                 <span className="flex-shrink mx-3 text-[11px] uppercase tracking-wider text-slate-500 font-medium">
-                  or with email
+                  or sign in with
                 </span>
                 <div className="flex-grow border-t border-slate-800"></div>
               </div>
 
-              {/* Email / Password Form */}
-              <form onSubmit={handleDirectAuth} className="space-y-3">
-                {currentStep === 'signup' && (
+              {/* Method Switcher: Email vs Phone */}
+              <div className="flex items-center p-1 bg-slate-950/80 rounded-xl border border-slate-800 text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode('email');
+                    setAuthError('');
+                    setIsVerifyingPhoneCode(false);
+                  }}
+                  className={`flex-1 py-1.5 rounded-lg font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    authMode === 'email'
+                      ? 'bg-purple-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  <span>{t.email || 'Email'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode('phone');
+                    setAuthError('');
+                  }}
+                  className={`flex-1 py-1.5 rounded-lg font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    authMode === 'phone'
+                      ? 'bg-purple-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <Phone className="w-3.5 h-3.5" />
+                  <span>{t.phone || 'Phone'}</span>
+                </button>
+              </div>
+
+              {/* 2A. Email / Password Form */}
+              {authMode === 'email' && (
+                <form onSubmit={handleDirectAuth} className="space-y-3">
+                  {currentStep === 'signup' && (
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1">{t.username || 'Username'}</label>
+                      <div className="relative">
+                        <UserIcon className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+                        <input
+                          type="text"
+                          required
+                          placeholder="yourname"
+                          value={usernameInput}
+                          onChange={(e) => setUsernameInput(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">{t.username || 'Username'}</label>
+                    <label className="block text-xs font-medium text-slate-300 mb-1">{t.emailAddress || 'Email'}</label>
                     <div className="relative">
-                      <UserIcon className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+                      <Mail className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
                       <input
-                        type="text"
+                        type="email"
                         required
-                        placeholder="yourname"
-                        value={usernameInput}
-                        onChange={(e) => setUsernameInput(e.target.value)}
+                        placeholder="name@example.com"
+                        value={emailInput}
+                        onChange={(e) => setEmailInput(e.target.value)}
                         className="w-full pl-9 pr-3 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
                       />
                     </div>
                   </div>
-                )}
 
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">{t.emailAddress || 'Email'}</label>
-                  <div className="relative">
-                    <Mail className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-                    <input
-                      type="email"
-                      required
-                      placeholder="name@example.com"
-                      value={emailInput}
-                      onChange={(e) => setEmailInput(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
-                    />
+                  <div>
+                    <label className="block text-xs font-medium text-slate-300 mb-1">{t.password || 'Password'}</label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+                      <input
+                        type="password"
+                        required
+                        placeholder="••••••••"
+                        value={passwordInput}
+                        onChange={(e) => setPasswordInput(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
+                      />
+                    </div>
                   </div>
-                </div>
 
+                  <button
+                    type="submit"
+                    disabled={isLoading || !emailInput || !passwordInput}
+                    className="w-full mt-2 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 cursor-pointer"
+                  >
+                    {isLoading ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <span>{currentStep === 'signup' ? (t.createAccount || 'Create Account') : (t.signIn || 'Sign In')}</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
+
+              {/* 2B. Official Firebase Phone Sign In / Up */}
+              {authMode === 'phone' && (
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">{t.password || 'Password'}</label>
-                  <div className="relative">
-                    <Lock className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-                    <input
-                      type="password"
-                      required
-                      placeholder="••••••••"
-                      value={passwordInput}
-                      onChange={(e) => setPasswordInput(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
-                    />
-                  </div>
-                </div>
+                  {!isVerifyingPhoneCode ? (
+                    /* Step 1: Input Phone Number & Country Code */
+                    <form onSubmit={handleSendPhoneCode} className="space-y-3">
+                      {currentStep === 'signup' && (
+                        <div>
+                          <label className="block text-xs font-medium text-slate-300 mb-1">{t.username || 'Username'}</label>
+                          <div className="relative">
+                            <UserIcon className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+                            <input
+                              type="text"
+                              placeholder="yourname"
+                              value={usernameInput}
+                              onChange={(e) => setUsernameInput(e.target.value)}
+                              className="w-full pl-9 pr-3 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
+                            />
+                          </div>
+                        </div>
+                      )}
 
-                <button
-                  type="submit"
-                  disabled={isLoading || !emailInput || !passwordInput}
-                  className="w-full mt-2 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 cursor-pointer"
-                >
-                  {isLoading ? (
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <div>
+                        <label className="block text-xs font-medium text-slate-300 mb-1">{t.phoneNumber || 'Phone Number'}</label>
+                        <div className="flex gap-2">
+                          <select
+                            value={countryCode}
+                            onChange={(e) => setCountryCode(e.target.value)}
+                            className="bg-slate-950/90 border border-slate-800 rounded-xl text-xs text-slate-200 px-2.5 py-2.5 focus:outline-none focus:border-purple-500 shrink-0"
+                          >
+                            {COUNTRY_CODES.map((c) => (
+                              <option key={c.code} value={c.code} className="bg-slate-900 text-slate-200">
+                                {c.flag} {c.code}
+                              </option>
+                            ))}
+                          </select>
+
+                          <div className="relative flex-1">
+                            <Phone className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+                            <input
+                              type="tel"
+                              required
+                              placeholder="555-0199"
+                              value={phoneInput}
+                              onChange={(e) => setPhoneInput(e.target.value)}
+                              className="w-full pl-9 pr-3 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors font-mono"
+                            />
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-1">
+                          Official Firebase SMS verification code will be sent to your phone.
+                        </p>
+                      </div>
+
+                      {/* Invisible Firebase reCAPTCHA container */}
+                      <div id="recaptcha-onboarding-container"></div>
+
+                      <button
+                        type="submit"
+                        disabled={isLoading || !phoneInput.trim()}
+                        className="w-full mt-2 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 cursor-pointer"
+                      >
+                        {isLoading ? (
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            <span>{t.sendVerificationCode || 'Send SMS Code'}</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </>
+                        )}
+                      </button>
+                    </form>
                   ) : (
-                    <>
-                      <span>{currentStep === 'signup' ? (t.createAccount || 'Create Account') : (t.signIn || 'Sign In')}</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
+                    /* Step 2: Verify 6-digit SMS code */
+                    <form onSubmit={handleVerifyPhoneCode} className="space-y-4">
+                      <div className="text-center space-y-1">
+                        <div className="inline-flex p-2.5 rounded-full bg-purple-950/80 border border-purple-600/40 text-purple-300 mb-1">
+                          <KeyRound className="w-5 h-5" />
+                        </div>
+                        <h4 className="text-sm font-bold text-white">{t.enterVerificationCode || 'Enter Verification Code'}</h4>
+                        <p className="text-xs text-slate-400">
+                          Code sent to <span className="font-semibold text-purple-300">{countryCode} {phoneInput}</span>
+                        </p>
+                      </div>
+
+                      <div>
+                        <input
+                          type="text"
+                          required
+                          maxLength={6}
+                          autoFocus
+                          placeholder="••••••"
+                          value={verificationCode}
+                          onChange={(e) => setVerificationCode(e.target.value.replace(/[^0-9]/g, ''))}
+                          className="w-full text-center tracking-[0.5em] font-mono text-xl py-3 bg-slate-950/90 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-purple-500 placeholder-slate-600"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs px-1 text-slate-400">
+                        <span>Didn't get code?</span>
+                        <button
+                          type="button"
+                          onClick={handleSendPhoneCode}
+                          disabled={resendCooldown > 0 || isLoading}
+                          className="text-purple-400 hover:text-purple-300 font-semibold disabled:opacity-50 transition-colors flex items-center gap-1 cursor-pointer"
+                        >
+                          <RefreshCw className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`} />
+                          <span>{resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend SMS'}</span>
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsVerifyingPhoneCode(false);
+                            setVerificationCode('');
+                            setAuthError('');
+                          }}
+                          className="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs hover:bg-slate-700 transition-all cursor-pointer"
+                        >
+                          {t.back || 'Back'}
+                        </button>
+
+                        <button
+                          type="submit"
+                          disabled={isLoading || verificationCode.length < 6}
+                          className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-lg shadow-purple-600/30 flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
+                        >
+                          {isLoading ? (
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          ) : (
+                            <>
+                              <span>{currentStep === 'signup' ? (t.createAccount || 'Create Account') : (t.verifyAndSignIn || 'Verify & Sign In')}</span>
+                              <CheckCircle2 className="w-4 h-4" />
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </form>
                   )}
-                </button>
-              </form>
+                </div>
+              )}
             </div>
 
             {/* Toggle between Sign In and Sign Up */}

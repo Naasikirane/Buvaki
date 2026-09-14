@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { User, SupportedLanguage } from '../types';
+import React, { useState, useEffect } from 'react';
+import { User, SupportedLanguage, COUNTRY_CODES } from '../types';
 import { Logo } from './Logo';
 import { 
   X, 
@@ -9,15 +9,22 @@ import {
   AlertCircle, 
   CheckCircle2, 
   Eye, 
-  EyeOff
+  EyeOff,
+  Phone,
+  KeyRound,
+  RefreshCw
 } from 'lucide-react';
 import { 
   dbLoginWithEmail, 
   dbRegisterWithEmail, 
   dbLoginWithGoogle,
-  dbResetPassword
+  dbResetPassword,
+  dbSetupRecaptcha,
+  dbSendPhoneVerificationCode,
+  dbVerifyPhoneCode
 } from '../lib/firebase';
 import { GENERIC_AVATARS } from './OnboardingFlow';
+import type { ConfirmationResult } from 'firebase/auth';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -37,6 +44,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   defaultTab = 'signin',
 }) => {
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>(defaultTab);
+  const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
   const [isResetMode, setIsResetMode] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -46,10 +54,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [username, setUsername] = useState('');
   const [gender, setGender] = useState<'male' | 'female' | 'prefer_not_to_say'>('prefer_not_to_say');
 
+  // Phone Auth Fields
+  const [countryCode, setCountryCode] = useState('+1');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneConfirmation, setPhoneConfirmation] = useState<ConfirmationResult | null>(null);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
   // Status & Feedback
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   if (!isOpen) return null;
 
@@ -57,6 +82,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setError(null);
     setSuccessMsg(null);
     setIsLoading(false);
+    setIsVerifyingPhone(false);
+    setVerificationCode('');
+    setPhoneConfirmation(null);
   };
 
   const handleTabSwitch = (tab: 'signin' | 'signup') => {
@@ -177,6 +205,70 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
+  // Official Firebase Phone Auth: Send SMS Code
+  const handleSendPhoneCode = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setError(null);
+    setSuccessMsg(null);
+
+    const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
+    if (!cleanNumber || cleanNumber.length < 5) {
+      setError('Please enter a valid phone number.');
+      return;
+    }
+
+    const fullPhoneNumber = `${countryCode}${cleanNumber}`;
+    setIsLoading(true);
+
+    try {
+      const verifier = dbSetupRecaptcha('recaptcha-modal-container', () => {
+        setError('Security verification expired. Please request the code again.');
+      });
+      const confirmation = await dbSendPhoneVerificationCode(fullPhoneNumber, verifier);
+      setPhoneConfirmation(confirmation);
+      setIsVerifyingPhone(true);
+      setResendCooldown(60);
+      setSuccessMsg(`Verification code sent via SMS to ${fullPhoneNumber}`);
+    } catch (err: any) {
+      console.error('Phone sign-in send error:', err);
+      setError(err?.message || 'Failed to send SMS verification code.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Official Firebase Phone Auth: Confirm SMS Code
+  const handleVerifyPhoneCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!phoneConfirmation) {
+      setError('No active phone verification session found.');
+      return;
+    }
+    if (!verificationCode || verificationCode.trim().length < 6) {
+      setError('Please enter the 6-digit SMS verification code.');
+      return;
+    }
+
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      const user = await dbVerifyPhoneCode(
+        phoneConfirmation,
+        verificationCode.trim(),
+        username.trim() || undefined,
+        selectedLanguage?.name || 'English'
+      );
+      onCompleteAuth(user);
+      onClose();
+    } catch (err: any) {
+      console.error('Phone verification error:', err);
+      setError(err?.message || 'SMS code verification failed. Please check the code and try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
@@ -268,9 +360,44 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <div className="relative flex py-1.5 items-center">
                 <div className="flex-grow border-t border-neutral-200"></div>
                 <span className="flex-shrink mx-3 text-xs uppercase tracking-wider text-neutral-400 font-medium">
-                  or continue with email
+                  or continue with
                 </span>
                 <div className="flex-grow border-t border-neutral-200"></div>
+              </div>
+
+              {/* Email vs Phone method toggle */}
+              <div className="flex items-center rounded-xl bg-neutral-100 p-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMethod('email');
+                    resetState();
+                  }}
+                  className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    authMethod === 'email'
+                      ? 'bg-white text-[#0f0f0f] shadow-xs'
+                      : 'text-neutral-500 hover:text-[#0f0f0f]'
+                  }`}
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  <span>Email</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMethod('phone');
+                    resetState();
+                  }}
+                  className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    authMethod === 'phone'
+                      ? 'bg-white text-[#0f0f0f] shadow-xs'
+                      : 'text-neutral-500 hover:text-[#0f0f0f]'
+                  }`}
+                >
+                  <Phone className="w-3.5 h-3.5" />
+                  <span>Phone Number</span>
+                </button>
               </div>
             </div>
           )}
@@ -359,6 +486,138 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 Back to Sign In
               </button>
             </form>
+          ) : authMethod === 'phone' ? (
+            /* Official Firebase Phone Authentication */
+            <div>
+              {!isVerifyingPhone ? (
+                /* Step 1: Input Phone Number & Country Code */
+                <form onSubmit={handleSendPhoneCode} className="flex flex-col gap-3">
+                  {activeTab === 'signup' && (
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-700 mb-1">
+                        Your Name / Username
+                      </label>
+                      <div className="relative flex items-center">
+                        <UserIcon className="absolute left-3 w-4 h-4 text-neutral-400" />
+                        <input
+                          type="text"
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                          placeholder="e.g. Alex Chen"
+                          className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-neutral-300 focus:outline-none focus:border-[#065fd4] transition-colors"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-700 mb-1">
+                      Phone Number
+                    </label>
+                    <div className="flex gap-2">
+                      <select
+                        value={countryCode}
+                        onChange={(e) => setCountryCode(e.target.value)}
+                        className="bg-neutral-50 border border-neutral-300 rounded-xl text-xs text-neutral-800 px-2.5 py-2 focus:outline-none focus:border-[#065fd4] shrink-0"
+                      >
+                        {COUNTRY_CODES.map((c) => (
+                          <option key={c.code} value={c.code}>
+                            {c.flag} {c.code}
+                          </option>
+                        ))}
+                      </select>
+
+                      <div className="relative flex-1 flex items-center">
+                        <Phone className="absolute left-3 w-4 h-4 text-neutral-400" />
+                        <input
+                          type="tel"
+                          required
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value)}
+                          placeholder="555-0199"
+                          className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-neutral-300 focus:outline-none focus:border-[#065fd4] font-mono transition-colors"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-neutral-500 mt-1">
+                      Official Firebase SMS verification code will be sent to your phone.
+                    </p>
+                  </div>
+
+                  {/* Firebase reCAPTCHA target container */}
+                  <div id="recaptcha-modal-container"></div>
+
+                  <button
+                    type="submit"
+                    disabled={isLoading || !phoneNumber.trim()}
+                    className="mt-2 w-full py-2.5 px-4 rounded-xl bg-[#065fd4] hover:bg-[#065fd4]/90 text-white font-semibold text-sm shadow-xs transition-colors disabled:opacity-60 cursor-pointer"
+                  >
+                    {isLoading ? 'Sending SMS Code...' : 'Send Verification Code'}
+                  </button>
+                </form>
+              ) : (
+                /* Step 2: 6-digit Code Entry */
+                <form onSubmit={handleVerifyPhoneCode} className="flex flex-col gap-3.5">
+                  <div className="text-center">
+                    <div className="inline-flex p-2 rounded-full bg-blue-50 text-[#065fd4] mb-1">
+                      <KeyRound className="w-5 h-5" />
+                    </div>
+                    <h4 className="text-sm font-semibold text-neutral-900">Enter Verification Code</h4>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      SMS code sent to <span className="font-semibold text-[#065fd4]">{countryCode} {phoneNumber}</span>
+                    </p>
+                  </div>
+
+                  <div>
+                    <input
+                      type="text"
+                      required
+                      maxLength={6}
+                      autoFocus
+                      placeholder="••••••"
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value.replace(/[^0-9]/g, ''))}
+                      className="w-full text-center tracking-[0.5em] font-mono text-xl py-2.5 bg-neutral-50 border border-neutral-300 rounded-xl text-neutral-900 focus:outline-none focus:border-[#065fd4]"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-neutral-500 px-1">
+                    <span>Didn't get code?</span>
+                    <button
+                      type="button"
+                      onClick={handleSendPhoneCode}
+                      disabled={resendCooldown > 0 || isLoading}
+                      className="text-[#065fd4] hover:underline font-medium disabled:opacity-50 flex items-center gap-1 cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`} />
+                      <span>{resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend SMS'}</span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsVerifyingPhone(false);
+                        setVerificationCode('');
+                        setError(null);
+                      }}
+                      className="flex-1 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold transition-colors cursor-pointer"
+                    >
+                      Back
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={isLoading || verificationCode.length < 6}
+                      className="flex-1 py-2 rounded-xl bg-[#065fd4] hover:bg-[#065fd4]/90 text-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-60 cursor-pointer"
+                    >
+                      {isLoading ? 'Verifying...' : activeTab === 'signup' ? 'Create Account' : 'Verify & Sign In'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           ) : activeTab === 'signin' ? (
             /* Sign In Form */
             <form onSubmit={handleSignIn} className="flex flex-col gap-3">

@@ -33,7 +33,10 @@ import {
   signInWithEmailLink,
   sendEmailVerification,
   sendPasswordResetEmail,
-  signOut as firebaseSignOut
+  signOut as firebaseSignOut,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  ConfirmationResult
 } from 'firebase/auth';
 
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -850,6 +853,129 @@ export const dbLogout = async (): Promise<void> => {
     await firebaseSignOut(auth);
   } catch (err) {
     console.error("Firebase logout error:", err);
+  }
+};
+
+// Official Firebase Phone Authentication Helpers
+export const dbSetupRecaptcha = (
+  containerIdOrElement: string | HTMLElement, 
+  onExpire?: () => void
+): RecaptchaVerifier => {
+  if (typeof window !== 'undefined') {
+    if ((window as any).recaptchaVerifier) {
+      try {
+        (window as any).recaptchaVerifier.clear();
+      } catch (e) {
+        // ignore
+      }
+      (window as any).recaptchaVerifier = null;
+    }
+  }
+
+  const verifier = new RecaptchaVerifier(auth, containerIdOrElement, {
+    size: 'invisible',
+    callback: () => {
+      // reCAPTCHA solved
+    },
+    'expired-callback': () => {
+      if (onExpire) onExpire();
+    }
+  });
+
+  if (typeof window !== 'undefined') {
+    (window as any).recaptchaVerifier = verifier;
+  }
+  return verifier;
+};
+
+export const dbSendPhoneVerificationCode = async (
+  phoneNumber: string,
+  appVerifier: RecaptchaVerifier
+): Promise<ConfirmationResult> => {
+  const cleanPhone = phoneNumber.trim();
+  try {
+    const confirmationResult = await signInWithPhoneNumber(auth, cleanPhone, appVerifier);
+    return confirmationResult;
+  } catch (err: any) {
+    console.error('Firebase Phone Auth send error:', err);
+    if (err?.code === 'auth/invalid-phone-number') {
+      throw new Error('Invalid phone number format. Please include your international country code (e.g. +1234567890).');
+    }
+    if (err?.code === 'auth/missing-phone-number') {
+      throw new Error('Please enter a phone number.');
+    }
+    if (err?.code === 'auth/quota-exceeded') {
+      throw new Error('SMS quota exceeded. Please try again later or sign in with Google or Email.');
+    }
+    if (err?.code === 'auth/captcha-check-failed') {
+      throw new Error('reCAPTCHA security check failed. Please refresh and try again.');
+    }
+    if (err?.code === 'auth/operation-not-allowed' || err?.code === 'auth/admin-restricted-operation') {
+      throw new Error('Phone sign-in is not enabled in your Firebase Console. Please enable "Phone" under Authentication > Sign-in method in Firebase Console.');
+    }
+    if (err?.code === 'auth/too-many-requests') {
+      throw new Error('Too many requests. Please wait a moment and try again.');
+    }
+    throw new Error(err?.message || 'Failed to send SMS verification code.');
+  }
+};
+
+export const dbVerifyPhoneCode = async (
+  confirmationResult: ConfirmationResult,
+  code: string,
+  username?: string,
+  langName: string = 'English'
+): Promise<User> => {
+  const cleanCode = code.trim();
+  try {
+    const userCredential = await confirmationResult.confirm(cleanCode);
+    const fbUser = userCredential.user;
+
+    // Check if user already exists in Firestore
+    const existing = await dbGetUserProfile(fbUser.uid);
+    if (existing) {
+      const updatedUser: User = {
+        ...existing,
+        phoneNumber: fbUser.phoneNumber || existing.phoneNumber,
+        authProvider: 'phone',
+        status: 'online'
+      };
+      await dbSaveUserProfile(updatedUser);
+      localStorage.setItem('buvaki_user', JSON.stringify(updatedUser));
+      return updatedUser;
+    }
+
+    // New User profile
+    const phoneSuffix = fbUser.phoneNumber ? fbUser.phoneNumber.slice(-4) : 'user';
+    const cleanUsername = username?.trim() || `User_${phoneSuffix}`;
+    const cleanHandle = `@${cleanUsername.toLowerCase().replace(/[^a-z0-9_]/g, '') || 'user'}`;
+    const newUser: User = {
+      id: fbUser.uid,
+      username: cleanUsername,
+      handle: cleanHandle,
+      phoneNumber: fbUser.phoneNumber || undefined,
+      avatar: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80`,
+      bio: `Phone Verified • ${langName}`,
+      karma: 150,
+      badges: ['Phone Verified', 'Buvaki Member'],
+      joinedDate: 'Today',
+      status: 'online',
+      statusText: `Speaking ${langName}`,
+      authProvider: 'phone'
+    };
+
+    await dbSaveUserProfile(newUser);
+    localStorage.setItem('buvaki_user', JSON.stringify(newUser));
+    return newUser;
+  } catch (err: any) {
+    console.error('Firebase Phone Auth verify error:', err);
+    if (err?.code === 'auth/invalid-verification-code') {
+      throw new Error('Invalid SMS verification code. Please check the 6-digit code and try again.');
+    }
+    if (err?.code === 'auth/code-expired') {
+      throw new Error('Verification code has expired. Please request a new code.');
+    }
+    throw new Error(err?.message || 'Verification failed. Please try again.');
   }
 };
 

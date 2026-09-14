@@ -22,6 +22,32 @@ export const SUPPORTED_LANGUAGES: SupportedLanguage[] = [
   { code: 'sw', name: 'Swahili', nativeName: 'Kiswahili', flag: '🇰🇪' },
 ];
 
+export interface CountryCode {
+  code: string;
+  country: string;
+  flag: string;
+}
+
+export const COUNTRY_CODES: CountryCode[] = [
+  { code: '+1', country: 'United States / Canada', flag: '🇺🇸' },
+  { code: '+44', country: 'United Kingdom', flag: '🇬🇧' },
+  { code: '+254', country: 'Kenya', flag: '🇰🇪' },
+  { code: '+256', country: 'Uganda', flag: '🇺🇬' },
+  { code: '+255', country: 'Tanzania', flag: '🇹🇿' },
+  { code: '+250', country: 'Rwanda', flag: '🇷🇼' },
+  { code: '+234', country: 'Nigeria', flag: '🇳🇬' },
+  { code: '+27', country: 'South Africa', flag: '🇿🇦' },
+  { code: '+91', country: 'India', flag: '🇮🇳' },
+  { code: '+33', country: 'France', flag: '🇫🇷' },
+  { code: '+49', country: 'Germany', flag: '🇩🇪' },
+  { code: '+81', country: 'Japan', flag: '🇯🇵' },
+  { code: '+55', country: 'Brazil', flag: '🇧🇷' },
+  { code: '+86', country: 'China', flag: '🇨🇳' },
+  { code: '+61', country: 'Australia', flag: '🇦🇺' },
+  { code: '+971', country: 'UAE', flag: '🇦🇪' },
+  { code: '+966', country: 'Saudi Arabia', flag: '🇸🇦' },
+];
+
 export interface User {
   id: string;
   username: string;
@@ -41,6 +67,7 @@ export interface User {
   petName?: string;
   occupation?: string;
   niche?: string;
+  phoneNumber?: string;
   authProvider?: 'google' | 'email' | 'phone';
 }
 
