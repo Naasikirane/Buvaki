@@ -438,7 +438,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
               {/* Row 2: Title */}
               <div className="space-y-1">
                 <h2 className="text-2xl sm:text-3xl font-semibold text-neutral-900 tracking-tight">
-                  Sign in
+                  Sign in/Sign up
                 </h2>
               </div>
 
