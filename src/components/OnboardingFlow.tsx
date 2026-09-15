@@ -438,41 +438,8 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
               {/* Row 2: Title */}
               <div className="space-y-1">
                 <h2 className="text-2xl sm:text-3xl font-semibold text-neutral-900 tracking-tight">
-                  {currentStep === 'signin' ? 'Sign in' : 'Sign up'}
+                  Sign in
                 </h2>
-
-                {/* Row 3: Don't have an account? Sign up */}
-                <p className="text-sm text-neutral-600">
-                  {currentStep === 'signin' ? (
-                    <>
-                      Don't have an account?{' '}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAuthError('');
-                          setStep('signup');
-                        }}
-                        className="text-[#22c55e] hover:text-[#16a34a] font-semibold hover:underline cursor-pointer transition-colors"
-                      >
-                        Sign up
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      Already have an account?{' '}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAuthError('');
-                          setStep('signin');
-                        }}
-                        className="text-[#22c55e] hover:text-[#16a34a] font-semibold hover:underline cursor-pointer transition-colors"
-                      >
-                        Sign in
-                      </button>
-                    </>
-                  )}
-                </p>
               </div>
 
               {/* Error banner if any */}

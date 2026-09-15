@@ -112,43 +112,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
             )}
 
-            {/* Titles & Switcher */}
+            {/* Titles */}
             <div className="space-y-1">
               <h2 className="text-2xl sm:text-3xl font-semibold text-neutral-900 tracking-tight">
-                {activeTab === 'signin' ? 'Sign in' : 'Sign up'}
+                Sign in
               </h2>
-
-              <p className="text-sm text-neutral-600">
-                {activeTab === 'signin' ? (
-                  <>
-                    Don't have an account?{' '}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setError(null);
-                        setActiveTab('signup');
-                      }}
-                      className="text-[#22c55e] hover:text-[#16a34a] font-semibold hover:underline cursor-pointer transition-colors"
-                    >
-                      Sign up
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    Already have an account?{' '}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setError(null);
-                        setActiveTab('signin');
-                      }}
-                      className="text-[#22c55e] hover:text-[#16a34a] font-semibold hover:underline cursor-pointer transition-colors"
-                    >
-                      Sign in
-                    </button>
-                  </>
-                )}
-              </p>
             </div>
 
             {/* Error banner if any */}
