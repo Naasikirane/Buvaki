@@ -1,16 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { SUPPORTED_LANGUAGES, SupportedLanguage, User, COUNTRY_CODES } from '../types';
+import { SUPPORTED_LANGUAGES, SupportedLanguage, User } from '../types';
 import { getTranslation, isRTL } from '../lib/translations';
 import { Logo } from './Logo';
 import { FlagIcon } from './FlagIcon';
 import { 
   Globe, 
-  Mail, 
-  Phone,
   ArrowRight, 
   CheckCircle2, 
   User as UserIcon, 
-  Lock,
   Camera,
   Sparkles,
   Calendar,
@@ -21,20 +18,12 @@ import {
   Tag,
   Plus,
   ChevronRight,
-  Upload,
-  KeyRound,
-  RefreshCw
+  Upload
 } from 'lucide-react';
 import { 
-  dbRegisterWithEmail, 
-  dbLoginWithEmail, 
   dbLoginWithGoogle, 
-  dbSaveUserProfile,
-  dbSetupRecaptcha,
-  dbSendPhoneVerificationCode,
-  dbVerifyPhoneCode
+  dbSaveUserProfile
 } from '../lib/firebase';
-import type { ConfirmationResult } from 'firebase/auth';
 
 export type OnboardingStep = 'splash' | 'language' | 'signin' | 'signup' | 'profile';
 
@@ -121,34 +110,12 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const [customInterestInput, setCustomInterestInput] = useState<string>('');
 
   // Auth Form states
-  const [authMode, setAuthMode] = useState<'email' | 'phone'>('email');
-  const [emailInput, setEmailInput] = useState('');
-  const [usernameInput, setUsernameInput] = useState('');
-  const [passwordInput, setPasswordInput] = useState('');
-  const [countryCode, setCountryCode] = useState('+1');
-  const [phoneInput, setPhoneInput] = useState('');
-  const [phoneConfirmation, setPhoneConfirmation] = useState<ConfirmationResult | null>(null);
-  const [verificationCode, setVerificationCode] = useState('');
-  const [isVerifyingPhoneCode, setIsVerifyingPhoneCode] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
   const [authError, setAuthError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Resend cooldown timer
-  useEffect(() => {
-    if (resendCooldown <= 0) return;
-    const timer = setInterval(() => {
-      setResendCooldown((prev) => prev - 1);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [resendCooldown]);
-
-  // Clear errors and temporary codes on step change
+  // Clear errors on step change
   useEffect(() => {
     setAuthError('');
-    setIsVerifyingPhoneCode(false);
-    setVerificationCode('');
-    setPhoneConfirmation(null);
   }, [currentStep]);
 
   // Auto-proceed from splash screen after 3 seconds (3000ms)
@@ -297,32 +264,6 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     setCustomInterestInput('');
   };
 
-  // Direct Email/Password Auth (Sign In or Sign Up)
-  const handleDirectAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError('');
-    setIsLoading(true);
-
-    try {
-      if (currentStep === 'signup') {
-        const u = await dbRegisterWithEmail(emailInput, passwordInput, usernameInput || emailInput.split('@')[0], selectedLanguage.name);
-        startProfileStep(u);
-      } else {
-        const u = await dbLoginWithEmail(emailInput, passwordInput);
-        startProfileStep(u);
-      }
-    } catch (err: any) {
-      console.error("Auth error:", err);
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-        setAuthError('Invalid credentials. Please verify your email and password, or continue with Google.');
-      } else {
-        setAuthError(err.message || 'Authentication failed. Please check your credentials.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   // Real Google OAuth Login
   const handleGoogleAuth = async () => {
     setAuthError('');
@@ -341,67 +282,6 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
         console.warn("Google Auth note:", err?.message || err);
         setAuthError(err?.message || 'Google sign-in could not be completed. Please try again.');
       }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Official Firebase Phone Sign In/Up: Send SMS Code
-  const handleSendPhoneCode = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    setAuthError('');
-
-    const cleanNumber = phoneInput.replace(/[^0-9]/g, '');
-    if (!cleanNumber || cleanNumber.length < 5) {
-      setAuthError('Please enter a valid phone number.');
-      return;
-    }
-
-    const fullPhoneNumber = `${countryCode}${cleanNumber}`;
-    setIsLoading(true);
-
-    try {
-      const verifier = dbSetupRecaptcha('recaptcha-onboarding-container', () => {
-        setAuthError('Security verification expired. Please request the code again.');
-      });
-      const confirmation = await dbSendPhoneVerificationCode(fullPhoneNumber, verifier);
-      setPhoneConfirmation(confirmation);
-      setIsVerifyingPhoneCode(true);
-      setResendCooldown(60);
-    } catch (err: any) {
-      console.error('Phone sign-in send error:', err);
-      setAuthError(err.message || 'Failed to send SMS verification code.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Official Firebase Phone Sign In/Up: Confirm SMS Code
-  const handleVerifyPhoneCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!phoneConfirmation) {
-      setAuthError('No active phone verification. Please request a new code.');
-      return;
-    }
-    if (!verificationCode || verificationCode.trim().length < 6) {
-      setAuthError('Please enter the 6-digit SMS verification code.');
-      return;
-    }
-
-    setAuthError('');
-    setIsLoading(true);
-
-    try {
-      const user = await dbVerifyPhoneCode(
-        phoneConfirmation, 
-        verificationCode.trim(), 
-        usernameInput || undefined, 
-        selectedLanguage.name
-      );
-      startProfileStep(user);
-    } catch (err: any) {
-      console.error('Phone verification error:', err);
-      setAuthError(err.message || 'SMS code verification failed. Please check the code.');
     } finally {
       setIsLoading(false);
     }
@@ -505,89 +385,115 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       )}
 
       {/* ---------------------------------------------------- */}
-      {/* SCREEN 3 & 4: REAL SIGN IN / SIGN UP                  */}
+      {/* SCREEN 3 & 4: GOOGLE SIGN IN / SIGN UP               */}
       {/* ---------------------------------------------------- */}
       {(currentStep === 'signin' || currentStep === 'signup') && (
-        <div className="relative z-10 max-w-md w-full animate-fadeIn">
+        <div className="relative z-10 max-w-[420px] w-full px-4 animate-fadeIn flex flex-col items-center">
           
-          <div className="relative bg-slate-900/80 backdrop-blur-2xl border border-slate-800/90 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+          {/* Main Card Container with Left Curved Gradient Accent & Wireframe Watermark */}
+          <div className="relative w-full bg-white rounded-[26px] shadow-2xl border border-neutral-100/90 p-7 sm:p-8 overflow-hidden">
             
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Logo size="sm" showText={true} />
-              </div>
-              <button
-                type="button"
-                onClick={() => setStep('language')}
-                className="px-2.5 py-1 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs flex items-center gap-1.5 transition-all"
-                title="Change language"
-              >
-                <FlagIcon code={selectedLanguage.code} size="sm" />
-                <span className="font-semibold">{selectedLanguage.code.toUpperCase()}</span>
-              </button>
-            </div>
+            {/* Distinctive left curved gradient border accent matching the reference image */}
+            <div className="absolute left-0 top-0 bottom-0 w-2 bg-gradient-to-b from-[#22c55e] via-[#10b981] to-[#06b6d4] rounded-l-[26px]" />
 
-            {/* Mode Switcher & Title */}
-            <div className="space-y-3">
-              <div className="flex bg-slate-950/90 p-1 rounded-2xl border border-slate-800">
+            {/* Subtle geometric wireframe background lines like in reference image */}
+            <svg
+              className="absolute right-0 top-0 bottom-0 w-3/5 h-full opacity-[0.16] pointer-events-none stroke-[#22c55e]"
+              viewBox="0 0 300 200"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d="M50 0L120 70L220 20L300 80L300 0Z" strokeWidth="1" />
+              <path d="M120 70L160 140L260 120L300 80" strokeWidth="1" />
+              <path d="M50 0L80 120L160 140" strokeWidth="1" />
+              <path d="M80 120L130 200L220 200L260 120" strokeWidth="1" />
+              <path d="M160 140L220 200" strokeWidth="1" />
+              <path d="M220 20L260 120L300 200" strokeWidth="1" />
+              <path d="M0 60L50 0L80 120L0 150Z" strokeWidth="1" />
+            </svg>
+
+            {/* Content Body */}
+            <div className="relative z-10 pl-2 sm:pl-3 space-y-6">
+              
+              {/* Row 1: [logo] buvaki */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Logo size="sm" showText={false} />
+                  <span className="font-bold text-neutral-900 text-xl tracking-tight lowercase font-sans">
+                    buvaki
+                  </span>
+                </div>
+
                 <button
                   type="button"
-                  onClick={() => setStep('signin')}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
-                    currentStep === 'signin'
-                      ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
+                  onClick={() => setStep('language')}
+                  className="px-2.5 py-1 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title="Change language"
                 >
-                  {t.signIn || 'Sign In'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStep('signup')}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
-                    currentStep === 'signup'
-                      ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  {t.signUp || 'Sign Up'}
+                  <FlagIcon code={selectedLanguage.code} size="sm" />
+                  <span className="font-semibold">{selectedLanguage.code.toUpperCase()}</span>
                 </button>
               </div>
 
-              <div className="text-center space-y-0.5">
-                <h2 className="text-xl font-extrabold text-white tracking-tight">
-                  {currentStep === 'signup' ? (t.createAccount || 'Create Your Account') : (t.signIn || 'Sign In to Buvaki')}
+              {/* Row 2: Title */}
+              <div className="space-y-1">
+                <h2 className="text-2xl sm:text-3xl font-semibold text-neutral-900 tracking-tight">
+                  {currentStep === 'signin' ? 'Sign in' : 'Sign up'}
                 </h2>
-                <p className="text-xs text-slate-400">
-                  {currentStep === 'signup'
-                    ? 'Join community discussions & live channels'
-                    : 'Welcome back! Sign in to continue'}
+
+                {/* Row 3: Don't have an account? Sign up */}
+                <p className="text-sm text-neutral-600">
+                  {currentStep === 'signin' ? (
+                    <>
+                      Don't have an account?{' '}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthError('');
+                          setStep('signup');
+                        }}
+                        className="text-[#22c55e] hover:text-[#16a34a] font-semibold hover:underline cursor-pointer transition-colors"
+                      >
+                        Sign up
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      Already have an account?{' '}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthError('');
+                          setStep('signin');
+                        }}
+                        className="text-[#22c55e] hover:text-[#16a34a] font-semibold hover:underline cursor-pointer transition-colors"
+                      >
+                        Sign in
+                      </button>
+                    </>
+                  )}
                 </p>
               </div>
-            </div>
 
-            {/* Error banner */}
-            {authError && (
-              <div className="p-3 rounded-xl bg-red-950/80 border border-red-800/80 text-red-300 text-xs leading-relaxed animate-shake">
-                {authError}
-              </div>
-            )}
+              {/* Error banner if any */}
+              {authError && (
+                <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs leading-relaxed animate-shake">
+                  {authError}
+                </div>
+              )}
 
-            {/* Main Auth Body */}
-            <div className="space-y-4">
-              {/* 1. Continue with Google Button */}
+              {/* Row 4: [Continue with Google] */}
               <button
                 type="button"
                 onClick={handleGoogleAuth}
                 disabled={isLoading}
-                className="w-full py-3.5 px-4 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-semibold text-xs flex items-center justify-center gap-3 transition-all shadow-md active:scale-[0.99] disabled:opacity-60 cursor-pointer"
+                className="w-full py-3.5 px-6 rounded-2xl border-2 border-[#22c55e] hover:border-[#16a34a] bg-white hover:bg-[#22c55e]/5 text-[#16a34a] hover:text-[#15803d] font-semibold text-base sm:text-lg flex items-center justify-center gap-3 shadow-xs active:scale-[0.99] transition-all disabled:opacity-60 cursor-pointer"
               >
                 {isLoading ? (
-                  <div className="w-4 h-4 border-2 border-slate-900/30 border-t-slate-900 rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-[#22c55e]/30 border-t-[#22c55e] rounded-full animate-spin" />
                 ) : (
                   <>
-                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                       <path
                         fill="#4285F4"
                         d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
@@ -605,304 +511,38 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                         d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
                       />
                     </svg>
-                    <span>{t.continueWithGoogle || 'Continue with Google'}</span>
+                    <span>Continue with Google</span>
                   </>
                 )}
               </button>
 
-              {/* Modern Divider */}
-              <div className="relative flex py-1 items-center">
-                <div className="flex-grow border-t border-slate-800"></div>
-                <span className="flex-shrink mx-3 text-[11px] uppercase tracking-wider text-slate-500 font-medium">
-                  or sign in with
-                </span>
-                <div className="flex-grow border-t border-slate-800"></div>
-              </div>
-
-              {/* Method Switcher: Email vs Phone */}
-              <div className="flex items-center p-1 bg-slate-950/80 rounded-xl border border-slate-800 text-xs">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthMode('email');
-                    setAuthError('');
-                    setIsVerifyingPhoneCode(false);
-                  }}
-                  className={`flex-1 py-1.5 rounded-lg font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                    authMode === 'email'
-                      ? 'bg-purple-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <Mail className="w-3.5 h-3.5" />
-                  <span>{t.email || 'Email'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthMode('phone');
-                    setAuthError('');
-                  }}
-                  className={`flex-1 py-1.5 rounded-lg font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                    authMode === 'phone'
-                      ? 'bg-purple-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <Phone className="w-3.5 h-3.5" />
-                  <span>{t.phone || 'Phone'}</span>
-                </button>
-              </div>
-
-              {/* 2A. Email / Password Form */}
-              {authMode === 'email' && (
-                <form onSubmit={handleDirectAuth} className="space-y-3">
-                  {currentStep === 'signup' && (
-                    <div>
-                      <label className="block text-xs font-medium text-slate-300 mb-1">{t.username || 'Username'}</label>
-                      <div className="relative">
-                        <UserIcon className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-                        <input
-                          type="text"
-                          required
-                          placeholder="yourname"
-                          value={usernameInput}
-                          onChange={(e) => setUsernameInput(e.target.value)}
-                          className="w-full pl-9 pr-3 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">{t.emailAddress || 'Email'}</label>
-                    <div className="relative">
-                      <Mail className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-                      <input
-                        type="email"
-                        required
-                        placeholder="name@example.com"
-                        value={emailInput}
-                        onChange={(e) => setEmailInput(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">{t.password || 'Password'}</label>
-                    <div className="relative">
-                      <Lock className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-                      <input
-                        type="password"
-                        required
-                        placeholder="••••••••"
-                        value={passwordInput}
-                        onChange={(e) => setPasswordInput(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isLoading || !emailInput || !passwordInput}
-                    className="w-full mt-2 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 cursor-pointer"
-                  >
-                    {isLoading ? (
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <span>{currentStep === 'signup' ? (t.createAccount || 'Create Account') : (t.signIn || 'Sign In')}</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </>
-                    )}
-                  </button>
-                </form>
-              )}
-
-              {/* 2B. Official Firebase Phone Sign In / Up */}
-              {authMode === 'phone' && (
-                <div>
-                  {!isVerifyingPhoneCode ? (
-                    /* Step 1: Input Phone Number & Country Code */
-                    <form onSubmit={handleSendPhoneCode} className="space-y-3">
-                      {currentStep === 'signup' && (
-                        <div>
-                          <label className="block text-xs font-medium text-slate-300 mb-1">{t.username || 'Username'}</label>
-                          <div className="relative">
-                            <UserIcon className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-                            <input
-                              type="text"
-                              placeholder="yourname"
-                              value={usernameInput}
-                              onChange={(e) => setUsernameInput(e.target.value)}
-                              className="w-full pl-9 pr-3 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      <div>
-                        <label className="block text-xs font-medium text-slate-300 mb-1">{t.phoneNumber || 'Phone Number'}</label>
-                        <div className="flex gap-2">
-                          <select
-                            value={countryCode}
-                            onChange={(e) => setCountryCode(e.target.value)}
-                            className="bg-slate-950/90 border border-slate-800 rounded-xl text-xs text-slate-200 px-2.5 py-2.5 focus:outline-none focus:border-purple-500 shrink-0"
-                          >
-                            {COUNTRY_CODES.map((c) => (
-                              <option key={c.code} value={c.code} className="bg-slate-900 text-slate-200">
-                                {c.flag} {c.code}
-                              </option>
-                            ))}
-                          </select>
-
-                          <div className="relative flex-1">
-                            <Phone className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-                            <input
-                              type="tel"
-                              required
-                              placeholder="555-0199"
-                              value={phoneInput}
-                              onChange={(e) => setPhoneInput(e.target.value)}
-                              className="w-full pl-9 pr-3 py-2.5 bg-slate-950/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors font-mono"
-                            />
-                          </div>
-                        </div>
-                        <p className="text-[11px] text-slate-500 mt-1">
-                          Official Firebase SMS verification code will be sent to your phone.
-                        </p>
-                      </div>
-
-                      {/* Invisible Firebase reCAPTCHA container */}
-                      <div id="recaptcha-onboarding-container"></div>
-
-                      <button
-                        type="submit"
-                        disabled={isLoading || !phoneInput.trim()}
-                        className="w-full mt-2 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 cursor-pointer"
-                      >
-                        {isLoading ? (
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        ) : (
-                          <>
-                            <span>{t.sendVerificationCode || 'Send SMS Code'}</span>
-                            <ArrowRight className="w-4 h-4" />
-                          </>
-                        )}
-                      </button>
-                    </form>
-                  ) : (
-                    /* Step 2: Verify 6-digit SMS code */
-                    <form onSubmit={handleVerifyPhoneCode} className="space-y-4">
-                      <div className="text-center space-y-1">
-                        <div className="inline-flex p-2.5 rounded-full bg-purple-950/80 border border-purple-600/40 text-purple-300 mb-1">
-                          <KeyRound className="w-5 h-5" />
-                        </div>
-                        <h4 className="text-sm font-bold text-white">{t.enterVerificationCode || 'Enter Verification Code'}</h4>
-                        <p className="text-xs text-slate-400">
-                          Code sent to <span className="font-semibold text-purple-300">{countryCode} {phoneInput}</span>
-                        </p>
-                      </div>
-
-                      <div>
-                        <input
-                          type="text"
-                          required
-                          maxLength={6}
-                          autoFocus
-                          placeholder="••••••"
-                          value={verificationCode}
-                          onChange={(e) => setVerificationCode(e.target.value.replace(/[^0-9]/g, ''))}
-                          className="w-full text-center tracking-[0.5em] font-mono text-xl py-3 bg-slate-950/90 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-purple-500 placeholder-slate-600"
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between text-xs px-1 text-slate-400">
-                        <span>Didn't get code?</span>
-                        <button
-                          type="button"
-                          onClick={handleSendPhoneCode}
-                          disabled={resendCooldown > 0 || isLoading}
-                          className="text-purple-400 hover:text-purple-300 font-semibold disabled:opacity-50 transition-colors flex items-center gap-1 cursor-pointer"
-                        >
-                          <RefreshCw className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`} />
-                          <span>{resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend SMS'}</span>
-                        </button>
-                      </div>
-
-                      <div className="flex items-center gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsVerifyingPhoneCode(false);
-                            setVerificationCode('');
-                            setAuthError('');
-                          }}
-                          className="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs hover:bg-slate-700 transition-all cursor-pointer"
-                        >
-                          {t.back || 'Back'}
-                        </button>
-
-                        <button
-                          type="submit"
-                          disabled={isLoading || verificationCode.length < 6}
-                          className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-lg shadow-purple-600/30 flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
-                        >
-                          {isLoading ? (
-                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          ) : (
-                            <>
-                              <span>{currentStep === 'signup' ? (t.createAccount || 'Create Account') : (t.verifyAndSignIn || 'Verify & Sign In')}</span>
-                              <CheckCircle2 className="w-4 h-4" />
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </form>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Toggle between Sign In and Sign Up */}
-            <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-              {currentStep === 'signin' ? (
-                <>
-                  <span>{t.dontHaveAccount || "Don't have an account?"}</span>
-                  <button
-                    type="button"
-                    onClick={() => setStep('signup')}
-                    className="text-purple-400 hover:text-purple-300 font-bold px-3 py-1.5 rounded-xl bg-purple-950/60 hover:bg-purple-900/60 border border-purple-800/60 transition-all text-xs"
-                  >
-                    {t.signUp || 'Sign Up'}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <span>{t.alreadyHaveAccount || 'Already have an account?'}</span>
-                  <button
-                    type="button"
-                    onClick={() => setStep('signin')}
-                    className="text-purple-400 hover:text-purple-300 font-bold px-3 py-1.5 rounded-xl bg-purple-950/60 hover:bg-purple-900/60 border border-purple-800/60 transition-all text-xs"
-                  >
-                    {t.signIn || 'Sign In'}
-                  </button>
-                </>
-              )}
-            </div>
-
-            {/* Skip Option */}
-            <div className="text-center">
-              <button
-                onClick={onSkipToApp}
-                className="text-xs text-slate-500 hover:text-slate-400 underline transition-colors"
-              >
-                {t.continueWithoutSigningIn}
-              </button>
             </div>
           </div>
+
+          {/* Indicator dots below the card matching reference image */}
+          <div className="flex items-center justify-center gap-2 mt-4">
+            <div
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                currentStep === 'signin' ? 'w-8 bg-[#22c55e]' : 'w-5 bg-neutral-300'
+              }`}
+            />
+            <div
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                currentStep === 'signup' ? 'w-8 bg-[#22c55e]' : 'w-5 bg-neutral-300'
+              }`}
+            />
+          </div>
+
+          {/* Subtle Guest / Skip Option */}
+          <div className="mt-4 text-center">
+            <button
+              onClick={onSkipToApp}
+              className="text-xs text-slate-400 hover:text-slate-200 underline transition-colors cursor-pointer"
+            >
+              {t.continueWithoutSigningIn}
+            </button>
+          </div>
+
         </div>
       )}
 

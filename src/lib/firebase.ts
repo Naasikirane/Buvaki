@@ -910,13 +910,27 @@ export const dbSendPhoneVerificationCode = async (
     if (err?.code === 'auth/captcha-check-failed') {
       throw new Error('reCAPTCHA security check failed. Please refresh and try again.');
     }
+    if (err?.code === 'auth/unauthorized-domain') {
+      const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'current domain';
+      throw new Error(
+        `[auth/unauthorized-domain] This domain (${currentHost}) is not authorized in Firebase. Please add "${currentHost}" (or "run.app") to Firebase Console > Authentication > Settings > Authorized domains.`
+      );
+    }
     if (err?.code === 'auth/operation-not-allowed' || err?.code === 'auth/admin-restricted-operation') {
-      throw new Error('Phone sign-in is not enabled in your Firebase Console. Please enable "Phone" under Authentication > Sign-in method in Firebase Console.');
+      const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'current domain';
+      throw new Error(
+        `[${err?.code}] Firebase blocked the phone verification request. Common causes: ` +
+        `1) Authorized Domains: Ensure "${currentHost}" (or "run.app") is added in Firebase Console > Authentication > Settings > Authorized domains. ` +
+        `2) API Key Restrictions: In Google Cloud Console > Credentials, ensure your API key allows "Identity Toolkit API". ` +
+        `3) User Actions: In Firebase Console > Authentication > Settings > User actions, ensure "Enable create (sign-up)" is checked.`
+      );
     }
     if (err?.code === 'auth/too-many-requests') {
       throw new Error('Too many requests. Please wait a moment and try again.');
     }
-    throw new Error(err?.message || 'Failed to send SMS verification code.');
+    throw new Error(
+      err?.code ? `[${err.code}] ${err.message || 'Failed to send SMS verification code.'}` : (err?.message || 'Failed to send SMS verification code.')
+    );
   }
 };
 
