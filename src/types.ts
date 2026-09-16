@@ -69,6 +69,8 @@ export interface User {
   niche?: string;
   phoneNumber?: string;
   authProvider?: 'google' | 'email' | 'phone';
+  isProfileCompleted?: boolean;
+  isFirstTimeUser?: boolean;
 }
 
 export interface PollOption {

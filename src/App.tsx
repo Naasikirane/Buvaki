@@ -15,6 +15,8 @@ import { UserProfileModal } from './components/UserProfileModal';
 import { NotificationsModal } from './components/NotificationsModal';
 import { LanguageSelectorModal } from './components/LanguageSelectorModal';
 import { AuthModal } from './components/AuthModal';
+import { OnboardingFlow, OnboardingStep } from './components/OnboardingFlow';
+import { FirstTimeUserProfileSetup } from './components/FirstTimeUserProfileSetup';
 
 import { 
   Post, 
@@ -76,6 +78,12 @@ export default function App() {
     }
     return null;
   });
+
+  // Visitor onboarding state: tracks if user is visiting for the first time
+  const [hasVisited, setHasVisited] = useState<boolean>(() => {
+    return localStorage.getItem('buvaki_visited') === 'true' || localStorage.getItem('buvaki_user') !== null;
+  });
+  const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>('splash');
 
   const [posts, setPosts] = useState<Post[]>(() => {
     const saved = localStorage.getItem('buvaki_posts');
@@ -937,6 +945,27 @@ export default function App() {
 
   const t = getTranslation(selectedLanguage.code);
 
+  // If visitor is using the website for the first time, guide through Buvaki onboarding
+  if (!hasVisited && !currentUser) {
+    return (
+      <OnboardingFlow
+        currentStep={onboardingStep}
+        setStep={setOnboardingStep}
+        selectedLanguage={selectedLanguage}
+        onSelectLanguage={handleSelectLanguage}
+        onCompleteAuth={(user) => {
+          handleCompleteAuth(user);
+          setHasVisited(true);
+          localStorage.setItem('buvaki_visited', 'true');
+        }}
+        onSkipToApp={() => {
+          setHasVisited(true);
+          localStorage.setItem('buvaki_visited', 'true');
+        }}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white text-[#0f0f0f] font-sans transition-colors duration-200 antialiased pb-16 lg:pb-0">
       
@@ -1294,6 +1323,20 @@ export default function App() {
         promptReason={authModalPrompt}
         selectedLanguage={selectedLanguage}
       />
+
+      {/* First-Time User Profile Setup Overlay if logged in with incomplete profile */}
+      {currentUser && (currentUser.isFirstTimeUser || !currentUser.isProfileCompleted) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm overflow-y-auto">
+          <FirstTimeUserProfileSetup
+            initialUser={currentUser}
+            onComplete={(completedUser) => {
+              setCurrentUser(completedUser);
+              localStorage.setItem('buvaki_user', JSON.stringify(completedUser));
+            }}
+            selectedLanguage={selectedLanguage}
+          />
+        </div>
+      )}
 
     </div>
   );

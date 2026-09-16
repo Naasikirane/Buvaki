@@ -705,20 +705,28 @@ export const dbLoginWithGoogle = async (langName: string): Promise<User | null> 
     }
 
     const existing = await dbGetUserProfile(res.user.uid);
-    if (existing) return existing;
+    if (existing) {
+      if (existing.isProfileCompleted) {
+        return { ...existing, isFirstTimeUser: false };
+      }
+      return { ...existing, isFirstTimeUser: true };
+    }
 
     const name = res.user.displayName || 'Google User';
-    const handle = `@${name.toLowerCase().replace(/[^a-z0-9_]/g, '')}`;
+    const cleanHandle = name.toLowerCase().replace(/[^a-z0-9_]/g, '') || 'member';
     const newUser: User = {
       id: res.user.uid,
       username: name,
-      handle,
+      handle: `@${cleanHandle}`,
       avatar: res.user.photoURL || `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80`,
-      bio: `Google Authenticated • Language: ${langName}`,
+      bio: '',
       karma: 250,
       badges: ['Google Verified', 'Buvaki Pioneer'],
       joinedDate: 'Today',
-      status: 'online'
+      status: 'online',
+      isProfileCompleted: false,
+      isFirstTimeUser: true,
+      authProvider: 'google'
     };
     await dbSaveUserProfile(newUser);
     return newUser;

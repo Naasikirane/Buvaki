@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, SupportedLanguage } from '../types';
 import { Logo } from './Logo';
 import { X } from 'lucide-react';
 import { dbLoginWithGoogle } from '../lib/firebase';
+import { FirstTimeUserProfileSetup } from './FirstTimeUserProfileSetup';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -24,8 +25,42 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>(defaultTab);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingFirstTimeUser, setPendingFirstTimeUser] = useState<User | null>(null);
+
+  // Reset state on modal open/close
+  useEffect(() => {
+    if (!isOpen) {
+      setPendingFirstTimeUser(null);
+      setError(null);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
+
+  // First-time user profile setup flow
+  if (pendingFirstTimeUser) {
+    return (
+      <div 
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setPendingFirstTimeUser(null);
+            onClose();
+          }
+        }}
+      >
+        <FirstTimeUserProfileSetup
+          initialUser={pendingFirstTimeUser}
+          onComplete={(completedUser) => {
+            onCompleteAuth(completedUser);
+            setPendingFirstTimeUser(null);
+            onClose();
+          }}
+          selectedLanguage={selectedLanguage}
+        />
+      </div>
+    );
+  }
 
   // Google 1-Click Sign In / Sign Up
   const handleGoogleAuth = async () => {
@@ -35,8 +70,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     try {
       const user = await dbLoginWithGoogle(selectedLanguage?.name || 'English');
       if (user) {
-        onCompleteAuth(user);
-        onClose();
+        if (user.isFirstTimeUser || !user.isProfileCompleted) {
+          setPendingFirstTimeUser(user);
+        } else {
+          onCompleteAuth(user);
+          onClose();
+        }
       }
     } catch (err: any) {
       if (
