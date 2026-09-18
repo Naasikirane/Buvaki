@@ -36,7 +36,8 @@ import {
   signOut as firebaseSignOut,
   RecaptchaVerifier,
   signInWithPhoneNumber,
-  ConfirmationResult
+  ConfirmationResult,
+  getAdditionalUserInfo
 } from 'firebase/auth';
 
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -610,7 +611,13 @@ export const dbLoginWithEmail = async (email: string, pass: string): Promise<Use
   try {
     const res = await signInWithEmailAndPassword(auth, cleanEmail, pass);
     const existing = await dbGetUserProfile(res.user.uid);
-    if (existing) return existing;
+    if (existing) {
+      return {
+        ...existing,
+        isFirstTimeUser: false,
+        isProfileCompleted: true
+      };
+    }
 
     const name = cleanEmail.split('@')[0];
     const handle = `@${name.toLowerCase().replace(/[^a-z0-9_]/g, '') || 'user'}`;
@@ -658,8 +665,13 @@ export const subscribeToAuthState = (onUserChanged: (user: User | null) => void)
       try {
         const profile = await dbGetUserProfile(fbUser.uid);
         if (profile) {
-          localStorage.setItem('buvaki_user', JSON.stringify(profile));
-          onUserChanged(profile);
+          const sanitizedProfile: User = {
+            ...profile,
+            isFirstTimeUser: false,
+            isProfileCompleted: true,
+          };
+          localStorage.setItem('buvaki_user', JSON.stringify(sanitizedProfile));
+          onUserChanged(sanitizedProfile);
           return;
         }
         const name = fbUser.displayName || fbUser.email?.split('@')[0] || 'User';
@@ -673,7 +685,9 @@ export const subscribeToAuthState = (onUserChanged: (user: User | null) => void)
           karma: 250,
           badges: ['Verified User'],
           joinedDate: 'Today',
-          status: 'online'
+          status: 'online',
+          isFirstTimeUser: false,
+          isProfileCompleted: true,
         };
         await dbSaveUserProfile(newProfile);
         localStorage.setItem('buvaki_user', JSON.stringify(newProfile));
@@ -704,14 +718,24 @@ export const dbLoginWithGoogle = async (langName: string): Promise<User | null> 
       return null;
     }
 
+    const additionalInfo = getAdditionalUserInfo(res);
+    const isNewFirebaseUser = additionalInfo?.isNewUser ?? false;
+
     const existing = await dbGetUserProfile(res.user.uid);
     if (existing) {
-      if (existing.isProfileCompleted) {
-        return { ...existing, isFirstTimeUser: false };
+      // Returning user logging in: NEVER trigger first-time profile creation workflow
+      const existingUser: User = { 
+        ...existing, 
+        isFirstTimeUser: false, 
+        isProfileCompleted: true 
+      };
+      if (!existing.isProfileCompleted) {
+        dbSaveUserProfile(existingUser).catch(() => {});
       }
-      return { ...existing, isFirstTimeUser: true };
+      return existingUser;
     }
 
+    // Completely new account created for the first time
     const name = res.user.displayName || 'Google User';
     const cleanHandle = name.toLowerCase().replace(/[^a-z0-9_]/g, '') || 'member';
     const newUser: User = {
@@ -725,7 +749,7 @@ export const dbLoginWithGoogle = async (langName: string): Promise<User | null> 
       joinedDate: 'Today',
       status: 'online',
       isProfileCompleted: false,
-      isFirstTimeUser: true,
+      isFirstTimeUser: isNewFirebaseUser,
       authProvider: 'google'
     };
     await dbSaveUserProfile(newUser);

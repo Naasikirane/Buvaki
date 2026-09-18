@@ -22,9 +22,24 @@ import {
   Clapperboard,
   Sparkles,
   ExternalLink,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Edit,
+  Upload,
+  RotateCcw,
+  X,
+  Calendar,
+  Tag,
+  ShieldCheck,
+  Award,
+  LogOut,
+  Info,
+  MessageSquare,
+  Smile,
+  AtSign
 } from 'lucide-react';
 import { Post, User } from '../types';
+import { dbSaveUserProfile } from '../lib/firebase';
+import { PRESET_INTERESTS, getGenericAvatarByGender } from './OnboardingFlow';
 
 // Asset paths
 import buvakiAvatar from '../assets/images/buvaki_avatar_1789246881670.jpg';
@@ -37,6 +52,11 @@ interface YouPageProps {
   onSelectPost?: (post: Post) => void;
   onRequireAuth?: (promptReason?: string) => void;
   onNavigateToFeed?: () => void;
+  onUpdateUser?: (user: User) => void;
+  userPosts?: Post[];
+  savedPosts?: Post[];
+  onOpenCreatePost?: () => void;
+  onLogout?: () => void;
 }
 
 interface HistoryItem {
@@ -67,21 +87,155 @@ export const YouPage: React.FC<YouPageProps> = ({
   onSelectPost,
   onRequireAuth,
   onNavigateToFeed,
+  onUpdateUser,
+  userPosts = [],
+  savedPosts = [],
+  onOpenCreatePost,
+  onLogout,
 }) => {
   // 'overview' corresponds to You_expectations.png
   // 'channel' corresponds to You_expectations2.png
   const [subView, setSubView] = useState<'overview' | 'channel'>('overview');
-  const [channelTab, setChannelTab] = useState<'videos' | 'shorts' | 'playlists' | 'posts'>('videos');
+  const [channelTab, setChannelTab] = useState<'videos' | 'shorts' | 'playlists' | 'posts' | 'about'>('videos');
   const [isBioExpanded, setIsBioExpanded] = useState(false);
   const [channelSearchOpen, setChannelSearchOpen] = useState(false);
   const [channelSearchQuery, setChannelSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Sync profile details from currentUser
+  const displayName = currentUser?.username || 'Buvaki story';
+  const displayHandle = currentUser?.handle
+    ? (currentUser.handle.startsWith('@') ? currentUser.handle : `@${currentUser.handle}`)
+    : '@buvaki';
+  const displayAvatar = currentUser?.avatar || buvakiAvatar;
+  const displayBio = currentUser?.bio || 'Welcome to Buvaki Story! Here, we bring you just fragments of most things. The main are anime, fantasy tales, manga adaptations, and original universe lore.';
+  const displayInterests = currentUser?.interests || [];
+  const displayGender = currentUser?.gender;
+  const displayDob = currentUser?.dob;
+  const displayKarma = currentUser?.karma ?? 100;
+  const displayJoined = currentUser?.joinedDate || 'Recently';
+  const displayBadges = currentUser?.badges && currentUser.badges.length > 0
+    ? currentUser.badges 
+    : ['Verified Member'];
+
+  // Edit profile customization state
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editUsername, setEditUsername] = useState('');
+  const [editHandle, setEditHandle] = useState('');
+  const [editAvatar, setEditAvatar] = useState('');
+  const [editBio, setEditBio] = useState('');
+  const [editGender, setEditGender] = useState<'male' | 'female' | 'prefer_not_to_say'>('prefer_not_to_say');
+  const [editDob, setEditDob] = useState('');
+  const [editInterests, setEditInterests] = useState<string[]>([]);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => {
       setToastMessage((cur) => cur === msg ? null : cur);
     }, 2500);
+  };
+
+  const openEditModal = () => {
+    if (!currentUser) {
+      if (onRequireAuth) onRequireAuth('Sign in or create an account to customize your profile');
+      return;
+    }
+    setEditUsername(currentUser.username || '');
+    setEditHandle(currentUser.handle ? currentUser.handle.replace(/^@/, '') : '');
+    setEditAvatar(currentUser.avatar || '');
+    setEditBio(currentUser.bio || '');
+    setEditGender((currentUser.gender as any) || 'prefer_not_to_say');
+    setEditDob(currentUser.dob || '');
+    setEditInterests(currentUser.interests || []);
+    setIsEditModalOpen(true);
+  };
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('Please upload a valid image file');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (!result) return;
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_DIM = 400;
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > MAX_DIM) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          }
+        } else {
+          if (height > MAX_DIM) {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+          setEditAvatar(dataUrl);
+        }
+      };
+      img.src = result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser) return;
+    if (!editUsername.trim()) {
+      showToast('Username cannot be empty');
+      return;
+    }
+    setIsSavingProfile(true);
+    try {
+      const sanitizedHandle = `@${editHandle.trim().replace(/^@/, '') || 'member'}`;
+      const effectiveAvatar = editAvatar || currentUser.avatar || getGenericAvatarByGender(editGender);
+      const updatedUser: User = {
+        ...currentUser,
+        username: editUsername.trim(),
+        handle: sanitizedHandle,
+        avatar: effectiveAvatar,
+        bio: editBio.trim(),
+        gender: editGender,
+        dob: editDob || undefined,
+        interests: editInterests,
+        isProfileCompleted: true,
+        isFirstTimeUser: false,
+      };
+
+      await dbSaveUserProfile(updatedUser);
+      if (onUpdateUser) {
+        onUpdateUser(updatedUser);
+      }
+      setIsEditModalOpen(false);
+      showToast('Profile updated successfully!');
+    } catch (err: any) {
+      console.error('Failed to save profile:', err);
+      showToast('Failed to update profile. Please try again.');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const toggleInterest = (tag: string) => {
+    setEditInterests((prev) =>
+      prev.includes(tag) ? prev.filter((i) => i !== tag) : [...prev, tag]
+    );
   };
 
   const historyScrollRef = useRef<HTMLDivElement>(null);
@@ -195,58 +349,58 @@ export const YouPage: React.FC<YouPageProps> = ({
   const channelVideos: ChannelVideo[] = [
     {
       id: 'chan_1',
-      title: 'The older I get @buvaki',
+      title: `The older I get ${displayHandle}`,
       views: '1.4K views',
       timeAgo: '3 weeks ago',
-      duration: '1:42',
+      duration: '3:20',
       thumbnail: '',
       thumbnailType: 'pagoda',
     },
     {
       id: 'chan_2',
-      title: 'Love Dragon @buvaki',
-      views: '2.8K views',
+      title: 'Love Dragon [Part 1: The Encounter]',
+      views: '4.8K views',
       timeAgo: '1 month ago',
-      duration: '3:15',
+      duration: '12:45',
       thumbnail: loveDragonThumb,
       thumbnailType: 'dragon',
     },
     {
       id: 'chan_3',
-      title: 'Fragments of Fantasy: Chapter I @buvaki',
-      views: '4.5K views',
+      title: 'Fragments of Fantasy — World Exploration & Character Sketches',
+      views: '890 views',
       timeAgo: '2 months ago',
-      duration: '5:20',
+      duration: '8:12',
       thumbnail: '',
       thumbnailType: 'fantasy',
     },
     {
       id: 'chan_4',
-      title: 'Whispering Winds: The Origin Story',
-      views: '920 views',
+      title: 'The Empress Secret Manuscript [Chapter 1]',
+      views: '15K views',
       timeAgo: '3 months ago',
-      duration: '4:08',
-      thumbnail: '',
+      duration: '45:10',
+      thumbnail: empressNovelThumb,
       thumbnailType: 'chapter',
     },
   ];
 
-  // Helper to trigger video player
+  // Handle opening video or media
   const handleOpenVideo = (title: string, author: string, thumbUrl: string) => {
     if (onSelectPost) {
       const mockPost: Post = {
-        id: 'post_' + Math.random().toString(36).substring(2, 8),
+        id: 'post_' + Math.random().toString(36).substr(2, 9),
         title,
         content: `Now playing: ${title} by ${author}`,
         author: {
-          id: 'u_' + author.toLowerCase().replace(/\s+/g, '_'),
-          username: author,
-          handle: '@' + author.toLowerCase().replace(/\s+/g, '_'),
-          avatar: thumbUrl || buvakiAvatar,
-          bio: 'Creator on Buvaki',
-          karma: 100,
-          badges: ['Creator'],
-          joinedDate: '2026',
+          id: currentUser?.id || 'u_' + author.toLowerCase().replace(/\s+/g, '_'),
+          username: currentUser?.username || author,
+          handle: currentUser?.handle || '@' + author.toLowerCase().replace(/\s+/g, '_'),
+          avatar: currentUser?.avatar || thumbUrl || buvakiAvatar,
+          bio: currentUser?.bio || 'Creator on Buvaki',
+          karma: currentUser?.karma || 100,
+          badges: currentUser?.badges || ['Creator'],
+          joinedDate: currentUser?.joinedDate || '2026',
           status: 'online',
         },
         subBuvakiId: 'music',
@@ -325,7 +479,7 @@ export const YouPage: React.FC<YouPageProps> = ({
               The older I get
             </span>
             <span className="text-sky-200 text-sm font-semibold block mt-0.5">
-              @buvaki
+              {displayHandle}
             </span>
           </div>
         </div>
@@ -346,7 +500,7 @@ export const YouPage: React.FC<YouPageProps> = ({
               Love Dragon
             </span>
             <span className="text-rose-300 text-sm font-bold drop-shadow">
-              @buvaki
+              {displayHandle}
             </span>
           </div>
         </div>
@@ -360,7 +514,7 @@ export const YouPage: React.FC<YouPageProps> = ({
           <span className="text-white font-extrabold text-base sm:text-lg text-center drop-shadow">
             Fragments of Fantasy
           </span>
-          <span className="text-slate-300 text-xs mt-0.5">@buvaki</span>
+          <span className="text-slate-300 text-xs mt-0.5">{displayHandle}</span>
         </div>
       );
     }
@@ -406,7 +560,7 @@ export const YouPage: React.FC<YouPageProps> = ({
     <div className="w-full min-h-screen bg-white text-[#0f0f0f] pb-24 select-none">
       
       {/* =========================================================================
-          VIEW 1: YOU OVERVIEW (Matches You_expectations.png)
+          VIEW 1: YOU OVERVIEW (Matches You_expectations.png with Synced Profile Details)
          ========================================================================= */}
       {subView === 'overview' && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
@@ -415,7 +569,7 @@ export const YouPage: React.FC<YouPageProps> = ({
           <div 
             onClick={() => setSubView('channel')}
             className="group cursor-pointer flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-6 p-3 sm:p-4 -mx-3 sm:-mx-4 rounded-2xl transition-all duration-150 hover:bg-[#00000008]"
-            title="Press anywhere to view Buvaki story channel"
+            title={`View channel for ${displayName}`}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
@@ -425,48 +579,105 @@ export const YouPage: React.FC<YouPageProps> = ({
               }
             }}
           >
-            {/* Big Circular Avatar with winged emblem */}
-            <div className="relative shrink-0">
+            {/* Big Circular Avatar with synced photo and hover edit shortcut */}
+            <div className="relative shrink-0 group/avatar">
               <img
-                src={buvakiAvatar}
-                alt="Buvaki story"
+                src={displayAvatar}
+                alt={displayName}
                 className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full object-cover ring-2 ring-black/10 shadow-sm group-hover:ring-black/25 transition-all"
                 referrerPolicy="no-referrer"
               />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openEditModal();
+                }}
+                className="absolute bottom-0 right-0 p-2 rounded-full bg-white border border-neutral-200 shadow-md text-neutral-700 hover:text-black hover:bg-neutral-50 transition-all cursor-pointer opacity-90 group-hover/avatar:opacity-100"
+                title="Change profile picture"
+              >
+                <Camera className="w-3.5 h-3.5" />
+              </button>
             </div>
 
-            {/* Name, Handle & Action Buttons */}
+            {/* Name, Handle, Badges, Interests & Action Buttons */}
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl lg:text-[34px] font-bold text-[#0f0f0f] leading-tight flex items-center gap-2">
-                <span>Buvaki story</span>
-              </h1>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-2xl sm:text-3xl lg:text-[34px] font-bold text-[#0f0f0f] leading-tight">
+                  {displayName}
+                </h1>
+                {displayBadges.length > 0 && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-semibold">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>{displayBadges[0]}</span>
+                  </span>
+                )}
+              </div>
 
-              {/* Sub-line: @buvaki • View channel */}
-              <div className="flex items-center gap-2 mt-1 text-sm text-[#606060]">
-                <span className="font-normal">@buvaki</span>
+              {/* Sub-line: @handle • View channel • stats */}
+              <div className="flex items-center flex-wrap gap-2 mt-1 text-sm text-[#606060]">
+                <span className="font-semibold text-neutral-800">{displayHandle}</span>
                 <span>•</span>
                 <span className="font-medium text-[#0f0f0f] group-hover:underline flex items-center gap-0.5">
                   View channel
                   <ChevronRight className="w-4 h-4 text-[#606060]" />
                 </span>
+                <span>•</span>
+                <span>{displayKarma} karma</span>
+                <span>•</span>
+                <span>Joined {displayJoined}</span>
               </div>
 
-              {/* Action Buttons: Switch account & Google Account */}
+              {/* Bio Snippet preview */}
+              {displayBio && (
+                <p className="text-xs sm:text-sm text-[#606060] mt-1.5 line-clamp-1 max-w-2xl leading-relaxed">
+                  {displayBio}
+                </p>
+              )}
+
+              {/* Synced Topics of Interest from Created Profile */}
+              {displayInterests.length > 0 && (
+                <div className="flex items-center flex-wrap gap-1.5 mt-2.5">
+                  {displayInterests.map((interest) => (
+                    <span
+                      key={interest}
+                      className="px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-800 text-xs font-medium"
+                    >
+                      #{interest}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Action Buttons: Customize channel, Switch account & Google Account */}
               <div 
                 className="flex items-center flex-wrap gap-2.5 mt-3.5"
                 onClick={(e) => {
                   // Prevent outer click if clicking buttons directly
                   e.stopPropagation();
-                  setSubView('channel');
                 }}
               >
+                {/* Customize Channel / Edit Profile */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openEditModal();
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-[#0000001a] bg-white hover:bg-[#f2f2f2] text-xs font-semibold text-[#0f0f0f] transition-colors cursor-pointer"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-[#0f0f0f]" />
+                  <span>Customize channel</span>
+                </button>
+
                 {/* Switch Account */}
                 <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     if (onRequireAuth) onRequireAuth('Switch or manage accounts on Buvaki');
                   }}
-                  className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-[#0000001a] bg-white hover:bg-[#f2f2f2] text-xs font-semibold text-[#0f0f0f] transition-colors"
+                  className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-[#0000001a] bg-white hover:bg-[#f2f2f2] text-xs font-semibold text-[#0f0f0f] transition-colors cursor-pointer"
                 >
                   <UserIcon className="w-3.5 h-3.5 text-[#0f0f0f] stroke-[2]" />
                   <span>Switch account</span>
@@ -474,11 +685,16 @@ export const YouPage: React.FC<YouPageProps> = ({
 
                 {/* Google Account */}
                 <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (onRequireAuth) onRequireAuth('Connect with your Google Account');
+                    if (currentUser.authProvider === 'google') {
+                      showToast('Signed in with Google Account');
+                    } else if (onRequireAuth) {
+                      onRequireAuth('Connect with your Google Account');
+                    }
                   }}
-                  className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-[#0000001a] bg-white hover:bg-[#f2f2f2] text-xs font-semibold text-[#0f0f0f] transition-colors"
+                  className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-[#0000001a] bg-white hover:bg-[#f2f2f2] text-xs font-semibold text-[#0f0f0f] transition-colors cursor-pointer"
                 >
                   {/* Google 'G' Icon */}
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
@@ -499,7 +715,7 @@ export const YouPage: React.FC<YouPageProps> = ({
                       d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
                     />
                   </svg>
-                  <span>Google Account</span>
+                  <span>{currentUser.authProvider === 'google' ? 'Google Account Connected' : 'Google Account'}</span>
                 </button>
               </div>
 
@@ -522,7 +738,7 @@ export const YouPage: React.FC<YouPageProps> = ({
                 {/* View all button */}
                 <button 
                   onClick={() => showToast('Viewing full watch history')}
-                  className="px-3.5 py-1.5 rounded-full border border-[#0000001a] text-xs font-semibold text-[#0f0f0f] hover:bg-[#f2f2f2] transition-colors"
+                  className="px-3.5 py-1.5 rounded-full border border-[#0000001a] text-xs font-semibold text-[#0f0f0f] hover:bg-[#f2f2f2] transition-colors cursor-pointer"
                 >
                   View all
                 </button>
@@ -530,14 +746,14 @@ export const YouPage: React.FC<YouPageProps> = ({
                 {/* Left/Right scroll arrows */}
                 <button
                   onClick={() => scrollContainer(historyScrollRef, 'left')}
-                  className="w-9 h-9 rounded-full border border-[#0000001a] flex items-center justify-center hover:bg-[#f2f2f2] text-[#0f0f0f] transition-colors"
+                  className="w-9 h-9 rounded-full border border-[#0000001a] flex items-center justify-center hover:bg-[#f2f2f2] text-[#0f0f0f] transition-colors cursor-pointer"
                   aria-label="Scroll history left"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => scrollContainer(historyScrollRef, 'right')}
-                  className="w-9 h-9 rounded-full border border-[#0000001a] flex items-center justify-center hover:bg-[#f2f2f2] text-[#0f0f0f] transition-colors"
+                  className="w-9 h-9 rounded-full border border-[#0000001a] flex items-center justify-center hover:bg-[#f2f2f2] text-[#0f0f0f] transition-colors cursor-pointer"
                   aria-label="Scroll history right"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -545,55 +761,54 @@ export const YouPage: React.FC<YouPageProps> = ({
               </div>
             </div>
 
-            {/* Horizontal Video Scroll Container */}
+            {/* Horizontal Video History Scroll */}
             <div 
               ref={historyScrollRef}
               className="flex items-start gap-4 overflow-x-auto no-scrollbar pb-3 pt-1 scroll-smooth"
             >
-              {historyVideos.map((item) => (
+              {historyVideos.map((video) => (
                 <div 
-                  key={item.id}
-                  onClick={() => handleOpenVideo(item.title, item.channel, item.thumbnail)}
-                  className="group flex-shrink-0 w-[260px] sm:w-[280px] md:w-[295px] cursor-pointer"
+                  key={video.id}
+                  onClick={() => handleOpenVideo(video.title, video.channel, video.thumbnail)}
+                  className="group flex-shrink-0 w-[230px] sm:w-[250px] cursor-pointer"
                 >
-                  {/* Thumbnail 16:9 */}
+                  {/* Thumbnail container */}
                   <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-black/5 ring-1 ring-black/5">
-                    {renderThumbnail(item)}
+                    {renderThumbnail(video)}
 
-                    {/* Bottom Right Duration Badge */}
-                    <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/80 text-white text-[11px] font-medium tracking-tight flex items-center gap-1">
-                      {item.isAudio && (
-                        <span className="text-[10px]">♫</span>
-                      )}
-                      <span>{item.duration}</span>
+                    {/* Duration badge */}
+                    <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/80 text-white text-[11px] font-medium tracking-tight">
+                      {video.duration}
                     </div>
 
-                    {/* Hover Play Overlay */}
-                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                    {/* Hover Play Button */}
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <div className="w-10 h-10 rounded-full bg-black/70 text-white flex items-center justify-center">
                         <Play className="w-5 h-5 fill-white ml-0.5" />
                       </div>
                     </div>
                   </div>
 
-                  {/* Title & Metadata */}
-                  <div className="flex items-start justify-between gap-2 mt-3 px-0.5">
+                  {/* Video Meta Info */}
+                  <div className="flex items-start justify-between gap-2 mt-2.5 px-0.5">
                     <div className="min-w-0 flex-1">
                       <h3 className="text-sm font-semibold text-[#0f0f0f] leading-snug line-clamp-2 group-hover:text-black">
-                        {item.title}
+                        {video.title}
                       </h3>
                       
+                      {/* Channel Name with optional badge */}
                       <div className="flex items-center gap-1 mt-1 text-xs text-[#606060]">
-                        <span className="truncate">{item.channel}</span>
-                        {item.verified && (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-[#606060] fill-black/10 shrink-0" />
+                        <span className="truncate">{video.channel}</span>
+                        {video.verified && (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#606060] shrink-0" />
                         )}
                       </div>
 
+                      {/* Views and Time */}
                       <div className="text-xs text-[#606060] mt-0.5">
-                        <span>{item.views}</span>
+                        <span>{video.views}</span>
                         <span className="mx-1">•</span>
-                        <span>{item.timeAgo}</span>
+                        <span>{video.timeAgo}</span>
                       </div>
                     </div>
 
@@ -630,7 +845,7 @@ export const YouPage: React.FC<YouPageProps> = ({
                 {/* Create playlist button */}
                 <button
                   onClick={() => showToast('Create new playlist')}
-                  className="p-2 rounded-full hover:bg-[#f2f2f2] text-[#0f0f0f] transition-colors"
+                  className="p-2 rounded-full hover:bg-[#f2f2f2] text-[#0f0f0f] transition-colors cursor-pointer"
                   title="Create playlist"
                 >
                   <Plus className="w-4 h-4 stroke-[2.5]" />
@@ -639,7 +854,7 @@ export const YouPage: React.FC<YouPageProps> = ({
                 {/* View all button */}
                 <button 
                   onClick={() => showToast('Viewing all playlists')}
-                  className="px-3.5 py-1.5 rounded-full border border-[#0000001a] text-xs font-semibold text-[#0f0f0f] hover:bg-[#f2f2f2] transition-colors"
+                  className="px-3.5 py-1.5 rounded-full border border-[#0000001a] text-xs font-semibold text-[#0f0f0f] hover:bg-[#f2f2f2] transition-colors cursor-pointer"
                 >
                   View all
                 </button>
@@ -647,14 +862,14 @@ export const YouPage: React.FC<YouPageProps> = ({
                 {/* Left/Right scroll arrows */}
                 <button
                   onClick={() => scrollContainer(playlistScrollRef, 'left')}
-                  className="w-9 h-9 rounded-full border border-[#0000001a] flex items-center justify-center hover:bg-[#f2f2f2] text-[#0f0f0f] transition-colors"
+                  className="w-9 h-9 rounded-full border border-[#0000001a] flex items-center justify-center hover:bg-[#f2f2f2] text-[#0f0f0f] transition-colors cursor-pointer"
                   aria-label="Scroll playlists left"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => scrollContainer(playlistScrollRef, 'right')}
-                  className="w-9 h-9 rounded-full border border-[#0000001a] flex items-center justify-center hover:bg-[#f2f2f2] text-[#0f0f0f] transition-colors"
+                  className="w-9 h-9 rounded-full border border-[#0000001a] flex items-center justify-center hover:bg-[#f2f2f2] text-[#0f0f0f] transition-colors cursor-pointer"
                   aria-label="Scroll playlists right"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -670,7 +885,7 @@ export const YouPage: React.FC<YouPageProps> = ({
               {playlists.map((pl) => (
                 <div 
                   key={pl.id}
-                  onClick={() => handleOpenVideo(pl.title, 'Buvaki story', pl.thumbnail)}
+                  onClick={() => handleOpenVideo(pl.title, displayName, pl.thumbnail)}
                   className="group flex-shrink-0 w-[240px] sm:w-[260px] cursor-pointer"
                 >
                   {/* Playlist Thumbnail with Overlay */}
@@ -719,7 +934,7 @@ export const YouPage: React.FC<YouPageProps> = ({
       )}
 
       {/* =========================================================================
-          VIEW 2: BUVAKI STORY CHANNEL (Matches You_expectations2.png)
+          VIEW 2: BUVAKI STORY CHANNEL (Matches You_expectations2.png with Synced Profile Details)
          ========================================================================= */}
       {subView === 'channel' && (
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-10 py-3 sm:py-6">
@@ -728,7 +943,7 @@ export const YouPage: React.FC<YouPageProps> = ({
           <div className="flex items-center gap-3 mb-4">
             <button
               onClick={() => setSubView('overview')}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-[#f2f2f2] text-sm font-medium text-[#0f0f0f] transition-colors"
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-[#f2f2f2] text-sm font-medium text-[#0f0f0f] transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Back to You</span>
@@ -739,7 +954,7 @@ export const YouPage: React.FC<YouPageProps> = ({
           <div className="relative w-full h-36 sm:h-48 md:h-56 lg:h-64 rounded-2xl overflow-hidden shadow-sm ring-1 ring-black/5">
             <img
               src={buvakiBanner}
-              alt="Buvaki Story Channel Banner"
+              alt="Channel Banner"
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
             />
@@ -748,7 +963,7 @@ export const YouPage: React.FC<YouPageProps> = ({
             <div className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4">
               <button
                 onClick={() => showToast('Edit channel banner image')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white text-xs font-semibold backdrop-blur-sm shadow-md transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white text-xs font-semibold backdrop-blur-sm shadow-md transition-colors cursor-pointer"
               >
                 <Camera className="w-3.5 h-3.5" />
                 <span>Edit</span>
@@ -756,70 +971,118 @@ export const YouPage: React.FC<YouPageProps> = ({
             </div>
           </div>
 
-          {/* Channel Header Details */}
+          {/* Channel Header Details Synced with Created Profile */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 mt-6 px-1">
             
             {/* Big Channel Avatar */}
-            <div className="relative shrink-0">
+            <div className="relative shrink-0 group/avatar">
               <img
-                src={buvakiAvatar}
-                alt="Buvaki story"
+                src={displayAvatar}
+                alt={displayName}
                 className="w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full object-cover ring-4 ring-white shadow-md"
                 referrerPolicy="no-referrer"
               />
+              <button
+                type="button"
+                onClick={openEditModal}
+                className="absolute bottom-1 right-1 p-2 rounded-full bg-white border border-neutral-200 shadow-md text-neutral-700 hover:text-black hover:bg-neutral-50 transition-all cursor-pointer"
+                title="Change profile picture"
+              >
+                <Camera className="w-4 h-4" />
+              </button>
             </div>
 
             {/* Channel Info & Bio */}
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#0f0f0f] tracking-tight">
-                Buvaki story
-              </h1>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#0f0f0f] tracking-tight">
+                  {displayName}
+                </h1>
+                {displayBadges.length > 0 && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>{displayBadges[0]}</span>
+                  </span>
+                )}
+              </div>
 
               {/* Stats & Handle */}
               <div className="flex items-center flex-wrap gap-2 text-sm text-[#606060] mt-1 font-normal">
-                <span className="font-semibold text-[#0f0f0f]">@buvaki</span>
+                <span className="font-semibold text-[#0f0f0f]">{displayHandle}</span>
                 <span>•</span>
-                <span>1 subscriber</span>
+                <span>{displayKarma} karma</span>
                 <span>•</span>
-                <span>64 videos</span>
+                <span>{(userPosts?.length || 0) + 64} total uploads</span>
+                <span>•</span>
+                <span>Joined {displayJoined}</span>
               </div>
 
               {/* Bio description */}
               <div className="text-sm text-[#606060] mt-2 max-w-3xl leading-relaxed">
                 <span>
-                  Welcome to Buvaki Story! Here, we bring you just fragments of most things. The main are anime, fantasy tales, manga adaptations, and original universe lore.
+                  {isBioExpanded || displayBio.length <= 160
+                    ? displayBio
+                    : `${displayBio.slice(0, 160)}...`}
                 </span>
-                {!isBioExpanded ? (
+                {displayBio.length > 160 && (
                   <button
-                    onClick={() => setIsBioExpanded(true)}
+                    onClick={() => setIsBioExpanded(!isBioExpanded)}
                     className="font-semibold text-[#0f0f0f] hover:underline ml-1 cursor-pointer"
                   >
-                    ...more
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => setIsBioExpanded(false)}
-                    className="font-semibold text-[#0f0f0f] hover:underline ml-1 cursor-pointer"
-                  >
-                    Show less
+                    {isBioExpanded ? 'Show less' : '...more'}
                   </button>
                 )}
               </div>
 
-              {/* Action Buttons: Customize channel & Manage videos */}
+              {/* Interests Chips from Created Profile */}
+              {displayInterests.length > 0 && (
+                <div className="flex items-center flex-wrap gap-1.5 mt-3">
+                  {displayInterests.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-800 text-xs font-medium"
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Demographics Details (Gender & DOB) */}
+              {(displayGender || displayDob) && (
+                <div className="flex items-center flex-wrap gap-2 mt-2.5 text-xs text-[#606060]">
+                  {displayGender && displayGender !== 'prefer_not_to_say' && (
+                    <span className="px-2.5 py-0.5 rounded-md bg-[#f2f2f2] text-neutral-700 capitalize font-medium">
+                      {displayGender}
+                    </span>
+                  )}
+                  {displayDob && (
+                    <span className="px-2.5 py-0.5 rounded-md bg-[#f2f2f2] text-neutral-700 font-medium flex items-center gap-1">
+                      <Calendar className="w-3 h-3 text-neutral-500" />
+                      <span>Born {displayDob}</span>
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Action Buttons: Customize channel & Manage posts */}
               <div className="flex items-center flex-wrap gap-3 mt-4">
                 <button
-                  onClick={() => showToast('Customizing channel layout')}
-                  className="px-4 py-2 rounded-full bg-[#f2f2f2] hover:bg-[#e5e5e5] text-sm font-semibold text-[#0f0f0f] transition-colors"
+                  type="button"
+                  onClick={openEditModal}
+                  className="px-4 py-2 rounded-full bg-[#f2f2f2] hover:bg-[#e5e5e5] text-sm font-semibold text-[#0f0f0f] transition-colors flex items-center gap-2 cursor-pointer"
                 >
-                  Customize channel
+                  <SlidersHorizontal className="w-4 h-4" />
+                  <span>Customize channel</span>
                 </button>
 
                 <button
-                  onClick={() => showToast('Managing videos & analytics')}
-                  className="px-4 py-2 rounded-full bg-[#f2f2f2] hover:bg-[#e5e5e5] text-sm font-semibold text-[#0f0f0f] transition-colors"
+                  type="button"
+                  onClick={() => setChannelTab('posts')}
+                  className="px-4 py-2 rounded-full bg-[#f2f2f2] hover:bg-[#e5e5e5] text-sm font-semibold text-[#0f0f0f] transition-colors flex items-center gap-2 cursor-pointer"
                 >
-                  Manage videos
+                  <MessageSquare className="w-4 h-4" />
+                  <span>Manage posts</span>
                 </button>
               </div>
 
@@ -827,20 +1090,20 @@ export const YouPage: React.FC<YouPageProps> = ({
 
           </div>
 
-          {/* Channel Tabs Bar */}
+          {/* Channel Tabs Bar: videos, shorts, playlists, posts, about */}
           <div className="flex items-center justify-between border-b border-[#0000001a] mt-8">
             <div className="flex items-center gap-6 sm:gap-8 overflow-x-auto no-scrollbar">
-              {(['videos', 'shorts', 'playlists', 'posts'] as const).map((tab) => (
+              {(['videos', 'shorts', 'playlists', 'posts', 'about'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setChannelTab(tab)}
-                  className={`pb-3 text-sm font-semibold capitalize relative transition-colors whitespace-nowrap ${
+                  className={`pb-3 text-sm font-semibold capitalize relative transition-colors whitespace-nowrap cursor-pointer ${
                     channelTab === tab
                       ? 'text-[#0f0f0f]'
                       : 'text-[#606060] hover:text-[#0f0f0f]'
                   }`}
                 >
-                  {tab}
+                  {tab === 'about' ? 'About Profile' : tab}
                   {channelTab === tab && (
                     <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0f0f0f] rounded-full" />
                   )}
@@ -865,7 +1128,7 @@ export const YouPage: React.FC<YouPageProps> = ({
                       setChannelSearchOpen(false);
                       setChannelSearchQuery('');
                     }}
-                    className="p-1 text-[#606060] hover:text-[#0f0f0f]"
+                    className="p-1 text-[#606060] hover:text-[#0f0f0f] cursor-pointer"
                   >
                     ✕
                   </button>
@@ -873,7 +1136,7 @@ export const YouPage: React.FC<YouPageProps> = ({
               ) : (
                 <button
                   onClick={() => setChannelSearchOpen(true)}
-                  className="p-2 rounded-full hover:bg-[#f2f2f2] text-[#606060] hover:text-[#0f0f0f] transition-colors"
+                  className="p-2 rounded-full hover:bg-[#f2f2f2] text-[#606060] hover:text-[#0f0f0f] transition-colors cursor-pointer"
                   aria-label="Search channel"
                 >
                   <Search className="w-4 h-4" />
@@ -891,7 +1154,7 @@ export const YouPage: React.FC<YouPageProps> = ({
                   .map((video) => (
                     <div
                       key={video.id}
-                      onClick={() => handleOpenVideo(video.title, 'Buvaki story', video.thumbnail)}
+                      onClick={() => handleOpenVideo(video.title, displayName, video.thumbnail)}
                       className="group cursor-pointer flex flex-col"
                     >
                       {/* Video Thumbnail */}
@@ -944,7 +1207,7 @@ export const YouPage: React.FC<YouPageProps> = ({
                 {[1, 2, 3, 4, 5].map((idx) => (
                   <div 
                     key={idx}
-                    onClick={() => handleOpenVideo(`Buvaki Story Short #${idx}`, 'Buvaki story', buvakiAvatar)}
+                    onClick={() => handleOpenVideo(`Story Short #${idx}`, displayName, displayAvatar)}
                     className="group cursor-pointer flex flex-col"
                   >
                     <div className="relative aspect-[9/16] w-full rounded-xl overflow-hidden bg-slate-900">
@@ -955,7 +1218,7 @@ export const YouPage: React.FC<YouPageProps> = ({
                       />
                       <div className="absolute bottom-2 left-2 right-2 text-white">
                         <p className="text-xs font-semibold line-clamp-2 drop-shadow">
-                          {idx === 1 ? 'When the dragon awakened... 🐉' : `Epic anime scene #${idx}`}
+                          {idx === 1 ? 'When the dragon awakened... 🐉' : `Epic animated scene #${idx}`}
                         </p>
                         <span className="text-[10px] text-white/80 font-medium">
                           {idx * 12}K views
@@ -974,7 +1237,7 @@ export const YouPage: React.FC<YouPageProps> = ({
               {playlists.map((pl) => (
                 <div
                   key={pl.id}
-                  onClick={() => handleOpenVideo(pl.title, 'Buvaki story', pl.thumbnail)}
+                  onClick={() => handleOpenVideo(pl.title, displayName, pl.thumbnail)}
                   className="group cursor-pointer"
                 >
                   <div className="relative aspect-video rounded-xl overflow-hidden bg-black/5 ring-1 ring-black/5">
@@ -991,34 +1254,383 @@ export const YouPage: React.FC<YouPageProps> = ({
             </div>
           )}
 
-          {/* Tab Content: Posts */}
+          {/* Tab Content: Posts (Synced with Real User Authored Posts) */}
           {channelTab === 'posts' && (
-            <div className="mt-6 max-w-2xl flex flex-col gap-4">
-              <div className="p-4 rounded-2xl border border-[#0000001a] bg-white">
-                <div className="flex items-center gap-3 mb-3">
-                  <img src={buvakiAvatar} alt="Buvaki story" className="w-10 h-10 rounded-full object-cover" />
-                  <div>
-                    <span className="text-sm font-semibold text-[#0f0f0f] block">Buvaki story</span>
-                    <span className="text-xs text-[#606060]">2 days ago</span>
+            <div className="mt-6 max-w-3xl flex flex-col gap-4">
+              <div className="flex items-center justify-between pb-2 border-b border-neutral-100">
+                <div>
+                  <h3 className="text-base font-bold text-[#0f0f0f]">
+                    Community Posts ({userPosts.length})
+                  </h3>
+                  <p className="text-xs text-[#606060]">Posts and discussions created by {displayName}</p>
+                </div>
+                {onOpenCreatePost && (
+                  <button
+                    onClick={onOpenCreatePost}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#22c55e] hover:bg-[#16a34a] text-white text-xs font-semibold transition-colors shadow-xs cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                    <span>Create post</span>
+                  </button>
+                )}
+              </div>
+
+              {userPosts && userPosts.length > 0 ? (
+                userPosts.map((post) => (
+                  <div
+                    key={post.id}
+                    onClick={() => onSelectPost && onSelectPost(post)}
+                    className="p-4 sm:p-5 rounded-2xl border border-[#0000001a] bg-white hover:border-black/20 hover:shadow-xs transition-all cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <img
+                        src={post.author.avatar || displayAvatar}
+                        alt={post.author.username || displayName}
+                        className="w-10 h-10 rounded-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div>
+                        <span className="text-sm font-semibold text-[#0f0f0f] block">
+                          {post.author.username || displayName}
+                        </span>
+                        <span className="text-xs text-[#606060]">{post.timestamp}</span>
+                      </div>
+                    </div>
+                    <h4 className="text-base font-bold text-[#0f0f0f] mb-1.5 leading-snug">
+                      {post.title}
+                    </h4>
+                    <p className="text-sm text-[#0f0f0f] leading-relaxed line-clamp-3">
+                      {post.content}
+                    </p>
+                    {post.imageUrl && (
+                      <div className="mt-3 rounded-xl overflow-hidden max-h-72 border border-neutral-100">
+                        <img
+                          src={post.imageUrl}
+                          alt={post.title}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                    )}
+                    <div className="flex items-center gap-4 mt-3 text-xs text-[#606060]">
+                      <span className="flex items-center gap-1.5">
+                        <ThumbsUp className="w-3.5 h-3.5" />
+                        <span>{post.score}</span>
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>{post.commentCount} comments</span>
+                      </span>
+                      <span className="flex items-center gap-1.5 ml-auto text-emerald-600 font-medium">
+                        {post.subBuvakiName}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-8 rounded-2xl border border-dashed border-neutral-300 text-center bg-neutral-50/50">
+                  <MessageSquare className="w-10 h-10 text-neutral-400 mx-auto mb-2.5" />
+                  <h4 className="text-sm font-bold text-neutral-800">No posts shared yet</h4>
+                  <p className="text-xs text-neutral-500 max-w-sm mx-auto mt-1 mb-4 leading-relaxed">
+                    Share your thoughts, articles, media, and stories with the Buvaki community.
+                  </p>
+                  {onOpenCreatePost && (
+                    <button
+                      onClick={onOpenCreatePost}
+                      className="px-4 py-2 rounded-full bg-[#22c55e] hover:bg-[#16a34a] text-white text-xs font-semibold transition-colors cursor-pointer"
+                    >
+                      Publish your first post
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab Content: About Profile (Full Synced Profile Details) */}
+          {channelTab === 'about' && (
+            <div className="mt-6 max-w-3xl space-y-6">
+              {/* Profile Details Card */}
+              <div className="p-6 rounded-2xl border border-[#0000001a] bg-white shadow-xs space-y-5">
+                <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
+                  <div className="flex items-center gap-2.5">
+                    <Info className="w-5 h-5 text-emerald-600" />
+                    <h3 className="text-lg font-bold text-[#0f0f0f]">Profile Information</h3>
+                  </div>
+                  <button
+                    onClick={openEditModal}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-neutral-200 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors cursor-pointer"
+                  >
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                    <span>Edit details</span>
+                  </button>
+                </div>
+
+                {/* Bio section */}
+                <div className="space-y-1">
+                  <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Bio & Description</span>
+                  <p className="text-sm text-neutral-800 leading-relaxed">
+                    {displayBio}
+                  </p>
+                </div>
+
+                {/* Grid of Demographics & Metadata */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  <div className="p-3.5 rounded-xl bg-neutral-50 border border-neutral-100">
+                    <span className="text-xs text-neutral-500 block mb-1">Display Name</span>
+                    <span className="text-sm font-semibold text-neutral-900">{displayName}</span>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-neutral-50 border border-neutral-100">
+                    <span className="text-xs text-neutral-500 block mb-1">User Handle</span>
+                    <span className="text-sm font-semibold text-neutral-900">{displayHandle}</span>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-neutral-50 border border-neutral-100">
+                    <span className="text-xs text-neutral-500 block mb-1">Gender</span>
+                    <span className="text-sm font-semibold text-neutral-900 capitalize">
+                      {displayGender === 'prefer_not_to_say' ? 'Prefer not to say' : (displayGender || 'Not specified')}
+                    </span>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-neutral-50 border border-neutral-100">
+                    <span className="text-xs text-neutral-500 block mb-1">Date of Birth</span>
+                    <span className="text-sm font-semibold text-neutral-900">
+                      {displayDob || 'Not specified'}
+                    </span>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-neutral-50 border border-neutral-100">
+                    <span className="text-xs text-neutral-500 block mb-1">Joined Buvaki</span>
+                    <span className="text-sm font-semibold text-neutral-900">{displayJoined}</span>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-neutral-50 border border-neutral-100">
+                    <span className="text-xs text-neutral-500 block mb-1">Karma Points</span>
+                    <span className="text-sm font-semibold text-neutral-900">{displayKarma} points</span>
                   </div>
                 </div>
-                <p className="text-sm text-[#0f0f0f] leading-relaxed">
-                  Thank you all for the love on the dragon video! Chapter 2 is currently in production and will drop this weekend. Stay tuned! ✨
-                </p>
-                <div className="flex items-center gap-4 mt-3 text-xs text-[#606060]">
-                  <button className="flex items-center gap-1.5 hover:text-[#0f0f0f]">
-                    <ThumbsUp className="w-3.5 h-3.5" />
-                    <span>84</span>
-                  </button>
-                  <button className="flex items-center gap-1.5 hover:text-[#0f0f0f]">
-                    <Share2 className="w-3.5 h-3.5" />
-                    <span>Share</span>
-                  </button>
-                </div>
+
+                {/* Interests & Topics */}
+                {displayInterests.length > 0 && (
+                  <div className="space-y-2 pt-2 border-t border-neutral-100">
+                    <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Topics of Interest</span>
+                    <div className="flex flex-wrap gap-2">
+                      {displayInterests.map((interest) => (
+                        <span
+                          key={interest}
+                          className="px-3 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-100 text-xs font-medium"
+                        >
+                          #{interest}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
+        </div>
+      )}
+
+      {/* =========================================================================
+          CUSTOMIZE CHANNEL / EDIT PROFILE MODAL
+         ========================================================================= */}
+      {isEditModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150 overflow-y-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !isSavingProfile) setIsEditModalOpen(false);
+          }}
+        >
+          <div 
+            className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-neutral-100 p-6 sm:p-7 overflow-hidden animate-scaleIn my-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top Accent Gradient Border */}
+            <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#22c55e] via-[#10b981] to-[#06b6d4]" />
+
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-neutral-100">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal className="w-5 h-5 text-emerald-600" />
+                <h3 className="text-lg font-bold text-neutral-900">Customize Profile</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                disabled={isSavingProfile}
+                className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSaveProfile} className="space-y-4 pt-4">
+              
+              {/* Avatar upload */}
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <img
+                    src={editAvatar || displayAvatar}
+                    alt="Preview"
+                    className="w-20 h-20 rounded-full object-cover ring-2 ring-emerald-500/20 shadow-xs"
+                    referrerPolicy="no-referrer"
+                  />
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    className="hidden"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold transition-colors cursor-pointer"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Upload photo</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditAvatar(getGenericAvatarByGender(editGender))}
+                    className="text-[11px] text-neutral-500 hover:text-neutral-800 underline block cursor-pointer"
+                  >
+                    Use default avatar
+                  </button>
+                </div>
+              </div>
+
+              {/* Username */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-neutral-700">Display Name</label>
+                <input
+                  type="text"
+                  value={editUsername}
+                  onChange={(e) => setEditUsername(e.target.value)}
+                  placeholder="Your display name"
+                  className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2.5 text-sm text-neutral-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all"
+                  required
+                />
+              </div>
+
+              {/* Handle */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-neutral-700">User Handle</label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 text-sm font-semibold">@</span>
+                  <input
+                    type="text"
+                    value={editHandle}
+                    onChange={(e) => setEditHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                    placeholder="handle"
+                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-8 pr-3.5 py-2.5 text-sm text-neutral-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Bio */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-neutral-700">Bio Description</label>
+                  <span className="text-[11px] text-neutral-400">{editBio.length} / 250</span>
+                </div>
+                <textarea
+                  value={editBio}
+                  onChange={(e) => setEditBio(e.target.value.slice(0, 250))}
+                  rows={3}
+                  placeholder="Share a short bio about yourself..."
+                  className="w-full bg-neutral-50 border border-neutral-200 rounded-xl p-3 text-sm text-neutral-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all resize-none leading-relaxed"
+                />
+              </div>
+
+              {/* Gender & DOB */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-neutral-700">Gender</label>
+                  <select
+                    value={editGender}
+                    onChange={(e) => setEditGender(e.target.value as any)}
+                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2.5 text-sm text-neutral-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all"
+                  >
+                    <option value="prefer_not_to_say">Prefer not to say</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-neutral-700">Date of Birth</label>
+                  <input
+                    type="date"
+                    value={editDob}
+                    onChange={(e) => setEditDob(e.target.value)}
+                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Topics of Interest */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-neutral-700 flex items-center justify-between">
+                  <span>Topics of Interest</span>
+                  <span className="text-[11px] text-neutral-400">{editInterests.length} selected</span>
+                </label>
+                <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto no-scrollbar p-1">
+                  {PRESET_INTERESTS.map((tag) => {
+                    const isSelected = editInterests.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => toggleInterest(tag)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                        }`}
+                      >
+                        {tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Form Buttons */}
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-neutral-100">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  disabled={isSavingProfile}
+                  className="px-4 py-2 rounded-xl border border-neutral-200 text-sm font-semibold text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingProfile}
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold shadow-sm hover:shadow transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingProfile ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <span>Save Changes</span>
+                  )}
+                </button>
+              </div>
+
+            </form>
+          </div>
         </div>
       )}
 

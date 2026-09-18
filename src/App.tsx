@@ -16,7 +16,6 @@ import { NotificationsModal } from './components/NotificationsModal';
 import { LanguageSelectorModal } from './components/LanguageSelectorModal';
 import { AuthModal } from './components/AuthModal';
 import { OnboardingFlow, OnboardingStep } from './components/OnboardingFlow';
-import { FirstTimeUserProfileSetup } from './components/FirstTimeUserProfileSetup';
 
 import { 
   Post, 
@@ -71,7 +70,13 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed && parsed.id) return parsed;
+        if (parsed && parsed.id) {
+          return {
+            ...parsed,
+            isFirstTimeUser: false,
+            isProfileCompleted: true,
+          };
+        }
       } catch (err) {
         return null;
       }
@@ -178,8 +183,13 @@ export default function App() {
   };
 
   const handleCompleteAuth = (user: User) => {
-    setCurrentUser(user);
-    localStorage.setItem('buvaki_user', JSON.stringify(user));
+    const completedUser: User = {
+      ...user,
+      isFirstTimeUser: false,
+      isProfileCompleted: true,
+    };
+    setCurrentUser(completedUser);
+    localStorage.setItem('buvaki_user', JSON.stringify(completedUser));
     setIsAuthModalOpen(false);
   };
 
@@ -1186,9 +1196,17 @@ export default function App() {
           {viewMode === 'you' && (
             <YouPage
               currentUser={currentUser}
+              userPosts={posts.filter((p) => p.author.id === currentUser?.id || p.author.handle === currentUser?.handle)}
+              savedPosts={posts.filter((p) => p.isSaved)}
+              onUpdateUser={(updated) => {
+                setCurrentUser(updated);
+                localStorage.setItem('buvaki_user', JSON.stringify(updated));
+              }}
               onSelectPost={(p) => setSelectedPost(p)}
               onRequireAuth={handleRequireAuth}
               onNavigateToFeed={() => setViewMode('feed')}
+              onOpenCreatePost={handleOpenCreatePost}
+              onLogout={handleLogout}
             />
           )}
 
@@ -1323,20 +1341,6 @@ export default function App() {
         promptReason={authModalPrompt}
         selectedLanguage={selectedLanguage}
       />
-
-      {/* First-Time User Profile Setup Overlay if logged in with incomplete profile */}
-      {currentUser && (currentUser.isFirstTimeUser || !currentUser.isProfileCompleted) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm overflow-y-auto">
-          <FirstTimeUserProfileSetup
-            initialUser={currentUser}
-            onComplete={(completedUser) => {
-              setCurrentUser(completedUser);
-              localStorage.setItem('buvaki_user', JSON.stringify(completedUser));
-            }}
-            selectedLanguage={selectedLanguage}
-          />
-        </div>
-      )}
 
     </div>
   );

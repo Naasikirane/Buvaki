@@ -146,7 +146,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     try {
       const user = await dbLoginWithGoogle(selectedLanguage.name);
       if (user) {
-        if (user.isFirstTimeUser || !user.isProfileCompleted) {
+        if (user.isFirstTimeUser === true && user.isProfileCompleted === false) {
           startProfileStep(user);
         } else {
           onCompleteAuth(user);

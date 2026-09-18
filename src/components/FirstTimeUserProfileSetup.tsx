@@ -185,6 +185,35 @@ export const FirstTimeUserProfileSetup: React.FC<FirstTimeUserProfileSetupProps>
     }
   };
 
+  // Skip profile setup and enter immediately with completed status
+  const handleSkipForNow = async () => {
+    setIsLoading(true);
+    try {
+      const sanitizedHandle = handle.trim() ? `@${handle.trim().replace(/^@/, '')}` : (initialUser.handle || `@user_${Math.floor(Math.random() * 1000)}`);
+      const effectiveAvatar = avatarUrl || initialUser.avatar || getGenericAvatarByGender(gender);
+      const skippedUser: User = {
+        ...initialUser,
+        username: username.trim() || initialUser.username || 'Buvaki Member',
+        handle: sanitizedHandle,
+        avatar: effectiveAvatar,
+        isProfileCompleted: true,
+        isFirstTimeUser: false,
+        status: 'online',
+      };
+      await dbSaveUserProfile(skippedUser);
+      onComplete(skippedUser);
+    } catch (err) {
+      const fallbackUser: User = {
+        ...initialUser,
+        isProfileCompleted: true,
+        isFirstTimeUser: false,
+      };
+      onComplete(fallbackUser);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="relative w-full max-w-[460px] bg-white rounded-[26px] shadow-2xl border border-neutral-100/90 p-7 sm:p-8 overflow-hidden animate-fadeIn">
       {/* Curved left accent gradient border matching reference styling */}
@@ -618,6 +647,20 @@ export const FirstTimeUserProfileSetup: React.FC<FirstTimeUserProfileSetupProps>
             >
               <span>Explore Buvaki</span>
               <ArrowRight className="w-5 h-5" />
+            </button>
+          </div>
+        )}
+
+        {/* Subtle Skip for now button for first-time profile step */}
+        {currentSubStep !== 'success' && (
+          <div className="pt-2 text-center">
+            <button
+              type="button"
+              onClick={handleSkipForNow}
+              disabled={isLoading}
+              className="text-xs text-neutral-400 hover:text-neutral-700 underline transition-colors cursor-pointer"
+            >
+              Skip for now
             </button>
           </div>
         )}

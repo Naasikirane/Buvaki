@@ -70,7 +70,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     try {
       const user = await dbLoginWithGoogle(selectedLanguage?.name || 'English');
       if (user) {
-        if (user.isFirstTimeUser || !user.isProfileCompleted) {
+        if (user.isFirstTimeUser === true && user.isProfileCompleted === false) {
           setPendingFirstTimeUser(user);
         } else {
           onCompleteAuth(user);
