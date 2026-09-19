@@ -9,18 +9,12 @@ import {
   AlertCircle, 
   Film, 
   Save, 
-  Layers,
-  ChevronDown
+  Layers
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { SubBuvaki } from '../../types';
 import { PostFormatType } from './PostFormatCard';
-import { CommunityIcon } from '../CommunityIcon';
 
 interface PostDetailsCardProps {
-  subBuvakis: SubBuvaki[];
-  selectedSubId: string;
-  onSelectSubId: (id: string) => void;
   title: string;
   setTitle: (title: string) => void;
   content: string;
@@ -51,9 +45,6 @@ const DEFAULT_FLAIRS = [
 ];
 
 export const PostDetailsCard: React.FC<PostDetailsCardProps> = ({
-  subBuvakis,
-  selectedSubId,
-  onSelectSubId,
   title,
   setTitle,
   content,
@@ -137,28 +128,7 @@ export const PostDetailsCard: React.FC<PostDetailsCardProps> = ({
 
       {/* Main Form Fields */}
       <div className="relative z-10 pl-8 sm:pl-10 pr-6 py-5 max-h-[500px] overflow-y-auto no-scrollbar flex flex-col gap-4">
-        {/* 1. Community Selector */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-700">Choose Community</label>
-          <div className="relative">
-            <select
-              value={selectedSubId}
-              onChange={(e) => onSelectSubId(e.target.value)}
-              className="w-full pl-3 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer appearance-none"
-            >
-              {subBuvakis.map((sub) => (
-                <option key={sub.id} value={sub.id}>
-                  b/{sub.id} — {sub.displayName}
-                </option>
-              ))}
-            </select>
-            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
-              <ChevronDown className="w-4 h-4" />
-            </div>
-          </div>
-        </div>
-
-        {/* 2. Title Field */}
+        {/* 1. Title Field */}
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
             <label className="text-xs font-semibold text-slate-700">
@@ -183,7 +153,7 @@ export const PostDetailsCard: React.FC<PostDetailsCardProps> = ({
           />
         </div>
 
-        {/* 3. Body Content Field */}
+        {/* 2. Body Content Field */}
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-slate-700">Body Content (Optional)</label>
           <textarea

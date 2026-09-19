@@ -334,9 +334,6 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         {currentStep === 'post_details' && (
           <PostDetailsCard
             key="post_details"
-            subBuvakis={subBuvakis}
-            selectedSubId={subId}
-            onSelectSubId={setSubId}
             title={title}
             setTitle={setTitle}
             content={content}
