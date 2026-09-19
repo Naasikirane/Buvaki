@@ -34,6 +34,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 }) => {
   // Navigation step state
   const [currentStep, setCurrentStep] = useState<ProceduralStep>('section_select');
+  const [selectedSection, setSelectedSection] = useState<'posts' | 'shorts' | 'longs'>('posts');
   const [comingSoonNotice, setComingSoonNotice] = useState<string | null>(null);
 
   // Post Format state
@@ -76,12 +77,19 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
   // Handlers
   const handleSelectSection = (section: 'posts' | 'shorts' | 'longs') => {
+    setSelectedSection(section);
     if (section === 'posts') {
       setCurrentStep('post_format_select');
-    } else {
-      setComingSoonNotice(
-        `You selected ${section.toUpperCase()}. We are focusing on Posts first as instructed! You can continue with Posts now or wait for the Shorts/Longs flow.`
-      );
+    } else if (section === 'shorts') {
+      setPostFormat('video');
+      setFlair('Shorts');
+      setTags(['#Shorts']);
+      setCurrentStep('upload_content');
+    } else if (section === 'longs') {
+      setPostFormat('video');
+      setFlair('Long Video');
+      setTags(['#LongVideo']);
+      setCurrentStep('upload_content');
     }
   };
 
@@ -111,14 +119,20 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
     // Upload to Firebase Cloud Storage (or resilient fallback)
     setIsUploading(true);
     setUploadProgress(15);
-    setUploadStatusText('Uploading video...');
+    setUploadStatusText(
+      selectedSection === 'shorts'
+        ? 'Uploading Short to Firebase...'
+        : selectedSection === 'longs'
+        ? 'Uploading Long Video to Firebase...'
+        : 'Uploading video...'
+    );
 
     try {
       const res = await uploadMediaFile(
         file,
         currentUser?.id || 'creator',
         currentUser?.handle || currentUser?.username || 'buvaki_user',
-        'video',
+        selectedSection === 'shorts' ? 'short' : selectedSection === 'longs' ? 'long' : 'video',
         file.name,
         (progress) => {
           setUploadProgress(Math.round(progress));
@@ -129,7 +143,13 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         setUploadedVideoUrl(res.url);
         setUploadedMediaId(res.mediaId || null);
         setUploadProgress(100);
-        setUploadStatusText('Video saved');
+        setUploadStatusText(
+          selectedSection === 'shorts'
+            ? 'Short saved'
+            : selectedSection === 'longs'
+            ? 'Long Video saved'
+            : 'Video saved'
+        );
       }
     } catch (err) {
       console.warn('Upload error:', err);
@@ -167,7 +187,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   };
 
   const handleUploadProceed = () => {
-    if (postFormat === 'video') {
+    if (selectedSection === 'shorts' || postFormat === 'video') {
       setCurrentStep('thumbnail_select');
     } else {
       // Sync text/content if writing discussion
@@ -184,6 +204,8 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
     setIsSaving(true);
     try {
       const chosenSub = subBuvakis.find((s) => s.id === subId) || subBuvakis[0];
+      const isShort = selectedSection === 'shorts';
+      const isLong = selectedSection === 'longs';
 
       const postData: Partial<Post> = {
         subBuvakiId: subId,
@@ -191,18 +213,24 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         title: title.trim(),
         content: (content || textContent).trim(),
         authorId: currentUser?.id,
-        flair: flair.trim() || 'Discussion',
-        tags: tags.length > 0 ? tags : ['#Buvaki'],
-        type: postFormat,
-        isShort: false,
-        isLong: false,
+        flair: flair.trim() || (isLong ? 'Long Video' : isShort ? 'Shorts' : 'Discussion'),
+        tags: tags.length > 0 ? tags : (isLong ? ['#LongVideo'] : isShort ? ['#Shorts'] : ['#Buvaki']),
+        type: isLong ? 'long' : isShort ? 'short' : postFormat,
+        isShort: isShort,
+        isLong: isLong,
       };
 
-      if (postFormat === 'video') {
+      if (isLong || isShort || postFormat === 'video') {
         postData.videoUrl =
           uploadedVideoUrl || videoUrlInput || videoPreviewUrl || undefined;
         postData.mediaId = uploadedMediaId || undefined;
         postData.imageUrl = selectedThumbnail || autoThumbnail || undefined;
+        if (isShort && !postData.tags?.includes('#Shorts')) {
+          postData.tags = ['#Shorts', ...(postData.tags || [])];
+        }
+        if (isLong && !postData.tags?.includes('#LongVideo')) {
+          postData.tags = ['#LongVideo', ...(postData.tags || [])];
+        }
       } else if (postFormat === 'image') {
         postData.imageUrl = imagePreviews[0] || imageUrlInput || undefined;
         postData.images = imagePreviews.length > 0 ? imagePreviews : undefined;
@@ -287,8 +315,16 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         {currentStep === 'upload_content' && (
           <UploadContentCard
             key="upload_content"
-            format={postFormat}
-            onBack={() => setCurrentStep('post_format_select')}
+            format={selectedSection === 'shorts' || selectedSection === 'longs' ? 'video' : postFormat}
+            isShort={selectedSection === 'shorts'}
+            isLong={selectedSection === 'longs'}
+            onBack={() =>
+              setCurrentStep(
+                selectedSection === 'shorts' || selectedSection === 'longs'
+                  ? 'section_select'
+                  : 'post_format_select'
+              )
+            }
             onClose={onClose}
             onProceed={handleUploadProceed}
             videoFile={videoFile}
@@ -320,6 +356,8 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         {currentStep === 'thumbnail_select' && (
           <ThumbnailCard
             key="thumbnail_select"
+            isShort={selectedSection === 'shorts'}
+            isLong={selectedSection === 'longs'}
             autoThumbnailUrl={autoThumbnail}
             customThumbnailUrl={customThumbnail}
             selectedThumbnailUrl={selectedThumbnail}
@@ -334,6 +372,8 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         {currentStep === 'post_details' && (
           <PostDetailsCard
             key="post_details"
+            isShort={selectedSection === 'shorts'}
+            isLong={selectedSection === 'longs'}
             title={title}
             setTitle={setTitle}
             content={content}
@@ -342,13 +382,17 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             setFlair={setFlair}
             tags={tags}
             setTags={setTags}
-            postFormat={postFormat}
+            postFormat={selectedSection === 'shorts' || selectedSection === 'longs' ? 'video' : postFormat}
             thumbnailPreview={selectedThumbnail || autoThumbnail}
             isSaving={isSaving}
             uploadProgress={uploadProgress}
             uploadStatusText={uploadStatusText}
             onBack={() =>
-              setCurrentStep(postFormat === 'video' ? 'thumbnail_select' : 'upload_content')
+              setCurrentStep(
+                selectedSection === 'shorts' || selectedSection === 'longs' || postFormat === 'video'
+                  ? 'thumbnail_select'
+                  : 'upload_content'
+              )
             }
             onClose={onClose}
             onSave={handleSavePost}

@@ -15,6 +15,8 @@ import { motion } from 'motion/react';
 import { PostFormatType } from './PostFormatCard';
 
 interface PostDetailsCardProps {
+  isShort?: boolean;
+  isLong?: boolean;
   title: string;
   setTitle: (title: string) => void;
   content: string;
@@ -44,7 +46,33 @@ const DEFAULT_FLAIRS = [
   'General',
 ];
 
+const SHORTS_FLAIRS = [
+  'Shorts',
+  'Trending',
+  'Comedy',
+  'Music',
+  'Gaming',
+  'Anime',
+  'Dance',
+  'Tutorial',
+];
+
+const LONGS_FLAIRS = [
+  'Long Video',
+  'Series',
+  'Documentary',
+  'Tutorial',
+  'Gaming',
+  'Podcast',
+  'Anime',
+  'Review',
+  'Deep Dive',
+  'Discussion',
+];
+
 export const PostDetailsCard: React.FC<PostDetailsCardProps> = ({
+  isShort,
+  isLong,
   title,
   setTitle,
   content,
@@ -110,8 +138,16 @@ export const PostDetailsCard: React.FC<PostDetailsCardProps> = ({
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <h3 className="text-xl font-bold text-slate-900 leading-tight">Post Details</h3>
-            <p className="text-xs text-slate-500">Provide title, content, flair, and tags</p>
+            <h3 className="text-xl font-bold text-slate-900 leading-tight">
+              {isShort ? 'Short Details' : isLong ? 'Long Video Details' : 'Post Details'}
+            </h3>
+            <p className="text-xs text-slate-500">
+              {isShort
+                ? "Provide title, body content, flair and tags for your Short"
+                : isLong
+                ? "Provide title, description, chapters, flair and tags for your Long Video"
+                : 'Provide title, content, flair, and tags'}
+            </p>
           </div>
         </div>
 
@@ -132,7 +168,13 @@ export const PostDetailsCard: React.FC<PostDetailsCardProps> = ({
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
             <label className="text-xs font-semibold text-slate-700">
-              {postFormat === 'video' ? 'Title of the Video *' : 'Title of the Post *'}
+              {isShort
+                ? 'Title of the Short *'
+                : isLong
+                ? 'Title of the Long Video *'
+                : postFormat === 'video'
+                ? 'Title of the Video *'
+                : 'Title of the Post *'}
             </label>
             <span className={`text-[11px] ${title.length > 140 ? 'text-amber-600 font-bold' : 'text-slate-400'}`}>
               {title.length}/150
@@ -145,7 +187,11 @@ export const PostDetailsCard: React.FC<PostDetailsCardProps> = ({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder={
-              postFormat === 'video'
+              isShort
+                ? 'Give your Short a catchy title...'
+                : isLong
+                ? 'Give your long video an engaging title...'
+                : postFormat === 'video'
                 ? 'Give your video an engaging title...'
                 : 'What is your post about?...'
             }
@@ -155,13 +201,25 @@ export const PostDetailsCard: React.FC<PostDetailsCardProps> = ({
 
         {/* 2. Body Content Field */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-700">Body Content (Optional)</label>
+          <label className="text-xs font-semibold text-slate-700">
+            {isShort
+              ? 'Body Content (Optional)'
+              : isLong
+              ? 'Description & Chapters (Optional)'
+              : 'Body Content (Optional)'}
+          </label>
           <textarea
             rows={4}
             id="input-post-content"
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Add description, notes, context, or links (markdown supported)..."
+            placeholder={
+              isShort
+                ? 'Add short caption, description, sound info, or credits...'
+                : isLong
+                ? 'Add description, chapter timestamps (00:00 Intro), notes, or links...'
+                : 'Add description, notes, context, or links (markdown supported)...'
+            }
             className="w-full p-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm resize-none"
           />
         </div>
@@ -189,7 +247,7 @@ export const PostDetailsCard: React.FC<PostDetailsCardProps> = ({
             />
           ) : (
             <div className="flex flex-wrap gap-1.5 pt-0.5">
-              {DEFAULT_FLAIRS.map((f) => {
+              {(isShort ? SHORTS_FLAIRS : isLong ? LONGS_FLAIRS : DEFAULT_FLAIRS).map((f) => {
                 const isSelected = flair === f;
                 return (
                   <button
@@ -288,7 +346,7 @@ export const PostDetailsCard: React.FC<PostDetailsCardProps> = ({
 
         <button
           type="button"
-          id="btn-save-video"
+          id={isShort ? "btn-save-short" : isLong ? "btn-save-long" : "btn-save-video"}
           disabled={!isFormValid || isSaving}
           onClick={onSave}
           className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer ${
@@ -301,6 +359,10 @@ export const PostDetailsCard: React.FC<PostDetailsCardProps> = ({
           <span>
             {isSaving
               ? 'Saving...'
+              : isShort
+              ? 'Save Short'
+              : isLong
+              ? 'Save Long Video'
               : postFormat === 'video'
               ? 'Save Video'
               : 'Publish Post'}

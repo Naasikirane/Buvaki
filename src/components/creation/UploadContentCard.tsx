@@ -21,6 +21,8 @@ import { formatFileSize, isYouTubeUrl } from '../../lib/mediaUtils';
 
 interface UploadContentCardProps {
   format: PostFormatType;
+  isShort?: boolean;
+  isLong?: boolean;
   onBack: () => void;
   onClose: () => void;
   onProceed: () => void;
@@ -61,6 +63,8 @@ interface UploadContentCardProps {
 
 export const UploadContentCard: React.FC<UploadContentCardProps> = ({
   format,
+  isShort,
+  isLong,
   onBack,
   onClose,
   onProceed,
@@ -114,6 +118,8 @@ export const UploadContentCard: React.FC<UploadContentCardProps> = ({
   };
 
   const getTitle = () => {
+    if (isShort) return 'Upload Short';
+    if (isLong) return 'Upload Long Video';
     switch (format) {
       case 'video':
         return 'Upload Video';
@@ -176,7 +182,13 @@ export const UploadContentCard: React.FC<UploadContentCardProps> = ({
           <div>
             <h3 className="text-xl font-bold text-slate-900 leading-tight">{getTitle()}</h3>
             <p className="text-xs text-slate-500">
-              {format === 'video' ? 'Select or drop your video to generate thumbnail' : 'Add media or content to your post'}
+              {isShort
+                ? 'Select or drop your vertical video (9:16) for Shorts'
+                : isLong
+                ? 'Select or drop your long-form video (16:9 widescreen)'
+                : format === 'video'
+                ? 'Select or drop your video to generate thumbnail'
+                : 'Add media or content to your post'}
             </p>
           </div>
         </div>
@@ -206,7 +218,7 @@ export const UploadContentCard: React.FC<UploadContentCardProps> = ({
                   videoMode === 'device' ? 'bg-white text-emerald-700 shadow-sm' : 'hover:text-slate-900'
                 }`}
               >
-                Upload from Device
+                {isShort ? 'Upload Short from Device' : isLong ? 'Upload Long Video from Device' : 'Upload from Device'}
               </button>
               <button
                 type="button"
@@ -215,7 +227,7 @@ export const UploadContentCard: React.FC<UploadContentCardProps> = ({
                   videoMode === 'url' ? 'bg-white text-emerald-700 shadow-sm' : 'hover:text-slate-900'
                 }`}
               >
-                Web / YouTube URL
+                {isShort ? 'YouTube Shorts URL' : isLong ? 'YouTube Video URL' : 'Web / YouTube URL'}
               </button>
             </div>
 
@@ -249,13 +261,21 @@ export const UploadContentCard: React.FC<UploadContentCardProps> = ({
                       <Upload className="w-7 h-7" />
                     </div>
                     <div className="text-base font-semibold text-slate-800 mb-1">
-                      Choose video file or drag & drop here
+                      {isShort
+                        ? 'Choose vertical video or drag & drop here'
+                        : isLong
+                        ? 'Choose long-form video or drag & drop here'
+                        : 'Choose video file or drag & drop here'}
                     </div>
                     <p className="text-xs text-slate-500 mb-3 max-w-xs">
-                      Supports MP4, WebM, MOV, MKV up to 500MB
+                      {isShort
+                        ? 'Supports 9:16 vertical MP4, WebM, MOV up to 60s'
+                        : isLong
+                        ? 'Supports 16:9 widescreen MP4, WebM, MOV, MKV up to 1GB'
+                        : 'Supports MP4, WebM, MOV, MKV up to 500MB'}
                     </p>
                     <span className="inline-flex items-center px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 transition-colors">
-                      Browse Device
+                      {isShort ? 'Browse Short' : isLong ? 'Browse Long Video' : 'Browse Device'}
                     </span>
                   </div>
                 ) : (
@@ -302,7 +322,13 @@ export const UploadContentCard: React.FC<UploadContentCardProps> = ({
 
                     <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-medium">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      <span>Video loaded. Frame auto-captured for thumbnail!</span>
+                      <span>
+                        {isShort
+                          ? 'Short loaded. Vertical frame auto-captured!'
+                          : isLong
+                          ? 'Long video loaded. 16:9 frame auto-captured for thumbnail!'
+                          : 'Video loaded. Frame auto-captured for thumbnail!'}
+                      </span>
                     </div>
                   </div>
                 )}
@@ -310,7 +336,13 @@ export const UploadContentCard: React.FC<UploadContentCardProps> = ({
             ) : (
               /* URL Mode */
               <div className="flex flex-col gap-2">
-                <label className="text-xs font-semibold text-slate-700">Video or YouTube URL</label>
+                <label className="text-xs font-semibold text-slate-700">
+                  {isShort
+                    ? 'YouTube Shorts or Video URL'
+                    : isLong
+                    ? 'YouTube Video or Long Stream URL'
+                    : 'Video or YouTube URL'}
+                </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                     <Youtube className="w-4 h-4" />

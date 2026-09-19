@@ -13,6 +13,8 @@ import {
 import { motion } from 'motion/react';
 
 interface ThumbnailCardProps {
+  isShort?: boolean;
+  isLong?: boolean;
   autoThumbnailUrl: string | null;
   customThumbnailUrl: string | null;
   selectedThumbnailUrl: string | null;
@@ -24,6 +26,8 @@ interface ThumbnailCardProps {
 }
 
 export const ThumbnailCard: React.FC<ThumbnailCardProps> = ({
+  isShort,
+  isLong,
   autoThumbnailUrl,
   customThumbnailUrl,
   selectedThumbnailUrl,
@@ -68,8 +72,16 @@ export const ThumbnailCard: React.FC<ThumbnailCardProps> = ({
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <h3 className="text-xl font-bold text-slate-900 leading-tight">Choose Thumbnail</h3>
-            <p className="text-xs text-slate-500">Select the auto-captured frame or upload a custom image</p>
+            <h3 className="text-xl font-bold text-slate-900 leading-tight">
+              {isShort ? 'Short Thumbnail' : isLong ? 'Long Video Thumbnail' : 'Choose Thumbnail'}
+            </h3>
+            <p className="text-xs text-slate-500">
+              {isShort
+                ? 'Select the auto-captured vertical frame or upload custom image'
+                : isLong
+                ? 'Select the auto-captured 16:9 frame or upload a custom thumbnail'
+                : 'Select the auto-captured frame or upload a custom image'}
+            </p>
           </div>
         </div>
 
@@ -108,7 +120,7 @@ export const ThumbnailCard: React.FC<ThumbnailCardProps> = ({
                 : 'border-slate-200 hover:border-slate-300 bg-slate-50/40'
             }`}
           >
-            <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-slate-900 flex items-center justify-center border border-slate-200/60">
+            <div className={`relative ${isShort ? 'aspect-[9/16] max-h-52 mx-auto' : 'aspect-video'} w-full rounded-xl overflow-hidden bg-slate-900 flex items-center justify-center border border-slate-200/60`}>
               {autoThumbnailUrl ? (
                 <img
                   src={autoThumbnailUrl}
@@ -157,7 +169,7 @@ export const ThumbnailCard: React.FC<ThumbnailCardProps> = ({
                 : 'border-slate-200 hover:border-slate-300 bg-slate-50/40'
             }`}
           >
-            <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-slate-100 flex flex-col items-center justify-center border border-slate-200/60">
+            <div className={`relative ${isShort ? 'aspect-[9/16] max-h-52 mx-auto' : 'aspect-video'} w-full rounded-xl overflow-hidden bg-slate-100 flex flex-col items-center justify-center border border-slate-200/60`}>
               {customThumbnailUrl ? (
                 <>
                   <img
@@ -177,7 +189,7 @@ export const ThumbnailCard: React.FC<ThumbnailCardProps> = ({
                     <Upload className="w-4 h-4" />
                   </div>
                   <span className="text-[11px] font-semibold text-slate-700">Upload Custom</span>
-                  <span className="text-[10px] text-slate-400">16:9 Image</span>
+                  <span className="text-[10px] text-slate-400">{isShort ? '9:16 Image' : '16:9 Image'}</span>
                 </div>
               )}
             </div>
@@ -209,18 +221,24 @@ export const ThumbnailCard: React.FC<ThumbnailCardProps> = ({
         <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70 flex flex-col gap-2">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
             <Eye className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Feed Card Thumbnail Preview</span>
+            <span>
+              {isShort
+                ? 'Shorts Feed Preview'
+                : isLong
+                ? 'Long Video Feed Preview'
+                : 'Feed Card Thumbnail Preview'}
+            </span>
           </div>
 
-          <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-slate-900 border border-slate-300">
+          <div className={`relative ${isShort ? 'aspect-[9/16] max-w-[130px] mx-auto rounded-2xl shadow-md' : 'aspect-video w-full rounded-xl'} overflow-hidden bg-slate-900 border border-slate-300`}>
             <img
               src={activeThumbnail}
               alt="Feed Preview"
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-            <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/80 backdrop-blur-sm rounded text-[11px] font-semibold text-white">
-              HD Video
+            <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/80 backdrop-blur-sm rounded text-[10px] font-bold text-white">
+              {isShort ? 'SHORTS' : isLong ? 'LONG VIDEO' : 'HD Video'}
             </div>
           </div>
         </div>
@@ -233,7 +251,7 @@ export const ThumbnailCard: React.FC<ThumbnailCardProps> = ({
           onClick={onBack}
           className="text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
         >
-          Back to Video
+          {isShort ? 'Back to Media' : isLong ? 'Back to Long Video' : 'Back to Video'}
         </button>
 
         <button
@@ -242,7 +260,13 @@ export const ThumbnailCard: React.FC<ThumbnailCardProps> = ({
           onClick={onProceed}
           className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-sm cursor-pointer"
         >
-          <span>Next: Post Details</span>
+          <span>
+            {isShort
+              ? 'Next: Short Details'
+              : isLong
+              ? 'Next: Long Details'
+              : 'Next: Post Details'}
+          </span>
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>
