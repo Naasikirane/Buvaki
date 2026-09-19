@@ -96,7 +96,7 @@ const SAMPLE_LONGS: LongVideoItem[] = [
       isSubscribed: false,
       isVerified: true
     },
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    videoUrl: '/sample-videos/landscape.mp4',
     thumbnailUrl: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=1000&auto=format&fit=crop&q=80',
     duration: '51:24',
     viewsCount: 1420000,
@@ -118,7 +118,7 @@ const SAMPLE_LONGS: LongVideoItem[] = [
       isSubscribed: false,
       isVerified: true
     },
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+    videoUrl: '/sample-videos/landscape.mp4',
     thumbnailUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1000&auto=format&fit=crop&q=80',
     duration: '1:52:17',
     viewsCount: 140000,
@@ -140,7 +140,7 @@ const SAMPLE_LONGS: LongVideoItem[] = [
       isSubscribed: false,
       isVerified: true
     },
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    videoUrl: '/sample-videos/landscape.mp4',
     thumbnailUrl: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=1000&auto=format&fit=crop&q=80',
     duration: '2:06:55',
     viewsCount: 16000,
@@ -162,7 +162,7 @@ const SAMPLE_LONGS: LongVideoItem[] = [
       isSubscribed: false,
       isVerified: true
     },
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
+    videoUrl: '/sample-videos/landscape.mp4',
     thumbnailUrl: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=1000&auto=format&fit=crop&q=80',
     duration: '2:24:18',
     viewsCount: 48000,
@@ -183,7 +183,7 @@ const SAMPLE_LONGS: LongVideoItem[] = [
       subscribers: '65K',
       isVerified: true
     },
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    videoUrl: '/sample-videos/landscape.mp4',
     thumbnailUrl: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1000&auto=format&fit=crop&q=80',
     duration: '0:45',
     viewsCount: 95000,
@@ -207,7 +207,7 @@ const SAMPLE_LONGS: LongVideoItem[] = [
       isSubscribed: false,
       isVerified: true
     },
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    videoUrl: '/sample-videos/landscape.mp4',
     thumbnailUrl: 'https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=1000&auto=format&fit=crop&q=80',
     duration: '13:30',
     viewsCount: 636000,
@@ -229,7 +229,7 @@ const SAMPLE_LONGS: LongVideoItem[] = [
       isSubscribed: true,
       isVerified: false
     },
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+    videoUrl: '/sample-videos/landscape.mp4',
     thumbnailUrl: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=1000&auto=format&fit=crop&q=80',
     duration: '23:03',
     viewsCount: 10200,
@@ -252,7 +252,7 @@ const SAMPLE_LONGS: LongVideoItem[] = [
       isVerified: true,
       isMusicBadge: true
     },
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
+    videoUrl: '/sample-videos/landscape.mp4',
     thumbnailUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1000&auto=format&fit=crop&q=80',
     duration: '3:40',
     viewsCount: 1520000000,
@@ -274,7 +274,7 @@ const SAMPLE_LONGS: LongVideoItem[] = [
       isSubscribed: false,
       isVerified: true
     },
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4',
+    videoUrl: '/sample-videos/landscape.mp4',
     thumbnailUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1000&auto=format&fit=crop&q=80',
     duration: '1:59:50',
     viewsCount: 8700,
@@ -296,7 +296,7 @@ const SAMPLE_LONGS: LongVideoItem[] = [
       isSubscribed: true,
       isVerified: true
     },
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    videoUrl: '/sample-videos/landscape.mp4',
     thumbnailUrl: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1000&auto=format&fit=crop&q=80',
     duration: '24:18',
     viewsCount: 452000,
@@ -318,7 +318,7 @@ const SAMPLE_LONGS: LongVideoItem[] = [
       isSubscribed: false,
       isVerified: true
     },
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+    videoUrl: '/sample-videos/landscape.mp4',
     thumbnailUrl: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=1000&auto=format&fit=crop&q=80',
     duration: '18:42',
     viewsCount: 189000,
@@ -340,7 +340,7 @@ const SAMPLE_LONGS: LongVideoItem[] = [
       isSubscribed: true,
       isVerified: false
     },
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    videoUrl: '/sample-videos/landscape.mp4',
     thumbnailUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=1000&auto=format&fit=crop&q=80',
     duration: '15:20',
     viewsCount: 312000,
@@ -359,7 +359,7 @@ const SAMPLE_SHORTS_SHELF: ShortsShelfItem[] = [
     title: "I Just Remembered We're Communists 😂",
     views: '1.4M views',
     thumbnailUrl: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=600&auto=format&fit=crop&q=80',
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    videoUrl: '/sample-videos/landscape.mp4',
     badge: 'New'
   },
   {
@@ -367,14 +367,14 @@ const SAMPLE_SHORTS_SHELF: ShortsShelfItem[] = [
     title: 'When the AI model writes better code than you',
     views: '850K views',
     thumbnailUrl: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&auto=format&fit=crop&q=80',
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
+    videoUrl: '/sample-videos/landscape.mp4'
   },
   {
     id: 'short_3',
     title: 'Insane Manhwa Transformation Scene 🔥',
     views: '2.1M views',
     thumbnailUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&auto=format&fit=crop&q=80',
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+    videoUrl: '/sample-videos/landscape.mp4',
     badge: 'New'
   },
   {
@@ -382,7 +382,7 @@ const SAMPLE_SHORTS_SHELF: ShortsShelfItem[] = [
     title: 'UAE Architecture from 10,000 Feet',
     views: '560K views',
     thumbnailUrl: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&auto=format&fit=crop&q=80',
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
+    videoUrl: '/sample-videos/landscape.mp4',
     badge: 'New'
   },
   {
@@ -390,7 +390,7 @@ const SAMPLE_SHORTS_SHELF: ShortsShelfItem[] = [
     title: 'POV: You deployed on Friday at 5:01 PM',
     views: '3.2M views',
     thumbnailUrl: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=600&auto=format&fit=crop&q=80',
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4'
+    videoUrl: '/sample-videos/landscape.mp4'
   }
 ];
 
@@ -514,7 +514,10 @@ export const LongsFeed: React.FC<LongsFeedProps> = ({
         };
       });
 
-    return [...SAMPLE_LONGS, ...userLongs];
+    if (userLongs.length > 0) {
+      return userLongs;
+    }
+    return SAMPLE_LONGS;
   }, [posts]);
 
   // Filter longs strictly by category

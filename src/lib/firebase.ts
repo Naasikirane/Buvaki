@@ -39,6 +39,12 @@ import {
   ConfirmationResult,
   getAdditionalUserInfo
 } from 'firebase/auth';
+import {
+  getStorage,
+  ref as storageRef,
+  uploadBytesResumable,
+  getDownloadURL
+} from 'firebase/storage';
 
 import firebaseConfig from '../../firebase-applet-config.json';
 import { Post, SubBuvaki, Comment, ChatMessage, User, ChatChannel } from '../types';
@@ -88,6 +94,49 @@ export const db = firebaseConfig.firestoreDatabaseId
     });
 
 export const auth = getAuth(app);
+export const storage = getStorage(app);
+
+/**
+ * Uploads media directly to Firebase Cloud Storage (pistabish.firebasestorage.app)
+ */
+export async function uploadToFirebaseStorage(
+  file: File | Blob,
+  ownerId: string = 'creator',
+  type: 'video' | 'short' | 'long' | 'image' = 'video',
+  onProgress?: (percentage: number) => void
+): Promise<{ url: string; path: string }> {
+  const ext = file instanceof File 
+    ? (file.name.split('.').pop() || 'mp4').toLowerCase()
+    : 'mp4';
+  const cleanOwner = ownerId || 'users';
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 8);
+  const fileName = `${type}_${timestamp}_${random}.${ext}`;
+  const filePath = `uploads/${cleanOwner}/${fileName}`;
+  
+  const fileRef = storageRef(storage, filePath);
+  const uploadTask = uploadBytesResumable(fileRef, file);
+
+  return new Promise((resolve, reject) => {
+    uploadTask.on(
+      'state_changed',
+      (snapshot) => {
+        if (onProgress && snapshot.totalBytes > 0) {
+          const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+          onProgress(pct);
+        }
+      },
+      (error) => {
+        console.warn('Firebase Cloud Storage error:', error);
+        reject(error);
+      },
+      async () => {
+        const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+        resolve({ url: downloadUrl, path: filePath });
+      }
+    );
+  });
+}
 
 export enum OperationType {
   CREATE = 'create',
@@ -209,6 +258,27 @@ const MOCK_POST_IDS = new Set([
   'long_music_1', 'long_music_2', 'long_tech_1', 'long_tech_2', 'long_photography_1', 'long_gaming_1', 'long_design_1', 'long_general_1'
 ]);
 
+export const isMockOrTestPostId = (id: string): boolean => {
+  if (!id) return true;
+  if (MOCK_POST_IDS.has(id)) return true;
+  if (
+    id.startsWith('post_animefans') ||
+    id.startsWith('post_visualstories') ||
+    id.startsWith('post_novacine') ||
+    id.startsWith('post_ojisan') ||
+    id.startsWith('post_mohamed') ||
+    id.startsWith('post_nothing') ||
+    id.startsWith('post_yuji') ||
+    id.startsWith('post_eachgen') ||
+    id.startsWith('post_manhwa') ||
+    id.startsWith('post_mock_') ||
+    id.startsWith('dummy_')
+  ) {
+    return true;
+  }
+  return false;
+};
+
 export const subscribeToPosts = (onData: (posts: Post[]) => void) => {
   const q = collection(db, 'posts');
   return onSnapshot(q, (snapshot) => {
@@ -220,7 +290,7 @@ export const subscribeToPosts = (onData: (posts: Post[]) => void) => {
           ...data,
         } as Post;
       })
-      .filter((p) => !MOCK_POST_IDS.has(p.id));
+      .filter((p) => !isMockOrTestPostId(p.id));
     
     // Auto-index all posts, shorts, and longs immediately
     list.forEach((post) => autoIndexer.indexPost(post));
@@ -311,9 +381,12 @@ export const dbCreatePost = async (postData: Omit<Post, 'id' | 'score' | 'commen
   const id = 'post_' + now.getTime();
   const nowIso = now.toISOString();
   const postRef = doc(db, 'posts', id);
+  const authorId = postData.authorId || postData.author?.id || 'anonymous_user';
   const newPost: Post = {
     ...postData,
     id,
+    authorId,
+    mediaId: postData.mediaId,
     score: 1,
     commentCount: 0,
     timestamp: nowIso,
@@ -325,6 +398,23 @@ export const dbCreatePost = async (postData: Omit<Post, 'id' | 'score' | 'commen
     ...newPost,
     createdAt: nowIso
   }));
+
+  // Link media asset in Firestore for backend referential integrity
+  if (newPost.mediaId) {
+    try {
+      const mediaRef = doc(db, 'mediaAssets', newPost.mediaId);
+      await setDoc(mediaRef, sanitizeForFirestore({
+        id: newPost.mediaId,
+        ownerId: authorId,
+        postId: id,
+        url: newPost.videoUrl || '',
+        createdAt: nowIso,
+        status: 'active'
+      }));
+    } catch (e) {
+      console.warn('Could not register media asset document:', e);
+    }
+  }
 
   // Also record author's initial upvote
   const voteRef = doc(db, 'votes', `${postData.author.id}_${id}`);

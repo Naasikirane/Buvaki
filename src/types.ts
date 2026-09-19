@@ -105,6 +105,8 @@ export interface Post {
   subBuvakiId: string;
   subBuvakiName: string; // e.g., 'b/privacy'
   author: User;
+  authorId?: string;
+  mediaId?: string;
   title: string;
   content: string;
   type: 'text' | 'image' | 'link' | 'poll' | 'short' | 'video' | 'long';

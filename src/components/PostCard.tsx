@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { formatRealTimestamp } from '../lib/timeUtils';
 import { DeletePostConfirmModal } from './DeletePostConfirmModal';
+import { BuvakiVideoPlayer } from './BuvakiVideoPlayer';
 
 interface PostCardProps {
   post: Post;
@@ -178,62 +179,8 @@ export const PostCard: React.FC<PostCardProps> = ({
     return num > 0 ? num.toString() : '0';
   };
 
-  // Fallback top comment preview text if not provided in props
-  const resolvedTopComment = topComment || commentsList[0] || (post.id === 'post_ojisan_brothers' ? {
-    id: 'c_council',
-    postId: post.id,
-    author: {
-      id: 'u_gojo_fan',
-      username: 'ShadowNinja',
-      handle: '@ShadowNinja',
-      avatar: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=100&auto=format&fit=crop&q=80',
-      bio: '',
-      karma: 0,
-      badges: [],
-      joinedDate: '',
-      status: 'online' as const
-    },
-    content: 'NARUTO WILL TALK NO JUTSU YOU A COUNCIL MEMBER',
-    timestamp: '7 hours ago',
-    score: 15,
-    replies: []
-  } : post.id === 'post_nothing_wrestler' ? {
-    id: 'c_ryan',
-    postId: post.id,
-    author: {
-      id: 'u_ryan',
-      username: 'Ryan_G',
-      handle: '@Ryan_G',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
-      bio: '',
-      karma: 0,
-      badges: [],
-      joinedDate: '',
-      status: 'online' as const
-    },
-    content: 'Holy comeback',
-    timestamp: '3 hours ago',
-    score: 48,
-    replies: []
-  } : post.id === 'post_yuji_fight' ? {
-    id: 'c_mojang',
-    postId: post.id,
-    author: {
-      id: 'u_mojang',
-      username: 'BedrockGamer',
-      handle: '@BedrockGamer',
-      avatar: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=100&auto=format&fit=crop&q=80',
-      bio: '',
-      karma: 0,
-      badges: [],
-      joinedDate: '',
-      status: 'online' as const
-    },
-    content: 'FIX MOJANG BEDROCK',
-    timestamp: '16 hours ago',
-    score: 19,
-    replies: []
-  } : null);
+  // Top comment preview if provided
+  const resolvedTopComment = topComment || commentsList[0] || null;
 
   const isDark = theme === 'dark' || theme === 'stealth';
   const displayContent = post.content || post.title;
@@ -249,10 +196,6 @@ export const PostCard: React.FC<PostCardProps> = ({
         isDark 
           ? 'bg-[#0f0f0f] border-white/10 hover:border-white/20 text-white' 
           : 'bg-white border-[#0000001a] hover:border-[#00000033] text-[#0f0f0f]'
-      } ${
-        isActiveCenter 
-          ? (isDark ? 'border-[#3ea6ff] shadow-xs' : 'border-[#065fd4] shadow-xs') 
-          : ''
       }`}
     >
       {/* Pinned Badge if any */}
@@ -545,6 +488,23 @@ export const PostCard: React.FC<PostCardProps> = ({
               </div>
             );
           })()}
+
+          {/* Video Player Support in Feed Post Card */}
+          {post.videoUrl && (
+            <div 
+              className="mt-3 rounded-xl overflow-hidden aspect-video bg-black shadow-sm"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <BuvakiVideoPlayer
+                src={post.videoUrl}
+                poster={post.imageUrl || undefined}
+                autoPlay={false}
+                controls={true}
+                className="w-full h-full object-contain bg-black"
+                title={post.title}
+              />
+            </div>
+          )}
 
           {/* Poll Type Post Support */}
           {post.type === 'poll' && post.poll && (

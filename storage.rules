@@ -1,0 +1,18 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Media uploads folder
+    match /uploads/{userId}/{fileName} {
+      // Allow read access to all users
+      allow read: if true;
+      // Allow authenticated user to upload to their own folder, or anyone for creation
+      allow write: if request.auth != null || request.resource.size < 500 * 1024 * 1024;
+    }
+
+    // Default rule for all other files
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null || request.resource.size < 500 * 1024 * 1024;
+    }
+  }
+}

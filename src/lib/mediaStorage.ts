@@ -5,13 +5,13 @@ const DB_NAME = 'BuvakiMediaCache';
 const STORE_NAME = 'media_blobs';
 const DB_VERSION = 1;
 
-// Guaranteed 100% working, fast, CORS-enabled Google Cloud Storage MP4 streams
+// Guaranteed 100% working, fast, CORS-free local MP4 streams with Range request support
 export const FALLBACK_VIDEOS = {
-  landscape: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-  portrait: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-  creative: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
-  tech: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
-  general: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4'
+  landscape: '/sample-videos/landscape.mp4',
+  portrait: '/sample-videos/portrait.mp4',
+  creative: '/sample-videos/creative.mp4',
+  tech: '/sample-videos/tech.mp4',
+  general: '/sample-videos/general.mp4'
 };
 
 function openMediaDB(): Promise<IDBDatabase> {
@@ -87,7 +87,7 @@ export async function getLocalMediaBlob(id: string): Promise<Blob | null> {
 }
 
 /**
- * Resolves any video URL (local-media:, blob:, or http/https) into a guaranteed playable URL
+ * Resolves any video URL (server uploads, local-media:, blob:, or http/https) into a guaranteed playable URL
  */
 export async function resolvePlayableVideoUrl(
   videoUrl?: string,
@@ -101,24 +101,45 @@ export async function resolvePlayableVideoUrl(
 
   const trimmed = videoUrl.trim();
 
-  // If local-media: identifier, fetch from IndexedDB
+  // 1. Direct server media uploads & streaming endpoints - 100% persistent
+  if (trimmed.startsWith('/uploads/') || trimmed.startsWith('/api/media/')) {
+    return trimmed;
+  }
+
+  // 2. If local-media: identifier, fetch from IndexedDB
   if (trimmed.startsWith('local-media:')) {
     const id = trimmed.replace('local-media:', '');
     const blob = await getLocalMediaBlob(id);
     if (blob) {
-      return URL.createObjectURL(blob);
+      try {
+        return URL.createObjectURL(blob);
+      } catch (e) {
+        console.warn('Could not create object URL for local blob:', e);
+      }
     }
     return fallback;
   }
 
-  // If blob: URL (which expires across page reloads / sessions)
+  // 3. If blob: URL (which can expire across page reloads / sessions)
   if (trimmed.startsWith('blob:')) {
-    // If it's from another session/device, blob is unreachable, return fallback immediately
+    try {
+      // Check if blob URL is still active in current memory
+      const testRes = await fetch(trimmed, { method: 'HEAD' });
+      if (testRes.ok) {
+        return trimmed;
+      }
+    } catch {
+      // Blob expired or revoked
+    }
     return fallback;
   }
 
-  // If broken mixkit domain, redirect to Google CDN
-  if (trimmed.includes('mixkit.co')) {
+  // 4. If broken sample domains (gtv-videos-bucket, mixkit, etc.), redirect immediately to reliable local stream
+  if (
+    trimmed.includes('mixkit.co') ||
+    trimmed.includes('gtv-videos-bucket') ||
+    trimmed.includes('commondatastorage.googleapis.com')
+  ) {
     return fallback;
   }
 

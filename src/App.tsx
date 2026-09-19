@@ -31,6 +31,7 @@ import {
   SupportedLanguage
 } from './types';
 import { getTranslation } from './lib/translations';
+import { claimMediaOwnership } from './lib/videoUploadService';
 
 import { 
   CURRENT_USER,
@@ -56,7 +57,8 @@ import {
   dbAddComment, 
   dbVote, 
   dbVotePoll, 
-  dbSaveUserProfile
+  dbSaveUserProfile,
+  isMockOrTestPostId
 } from './lib/firebase';
 import { getTimestampEpoch } from './lib/timeUtils';
 import { autoIndexer } from './lib/indexer';
@@ -96,20 +98,16 @@ export default function App() {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const map = new Map<string, Post>();
-          SEED_POSTS.forEach(p => map.set(p.id, p));
-          parsed.forEach(p => {
-            if (!MOCK_POST_IDS.has(p.id)) {
-              map.set(p.id, p);
-            }
-          });
-          return Array.from(map.values());
+          const valid = parsed.filter(p => !isMockOrTestPostId(p.id));
+          if (valid.length > 0) {
+            return valid;
+          }
         }
       } catch (err) {
-        return SEED_POSTS;
+        // fall through
       }
     }
-    return SEED_POSTS;
+    return [];
   });
 
   const [commentsMap, setCommentsMap] = useState<Record<string, Comment[]>>(() => {
@@ -146,14 +144,9 @@ export default function App() {
   const [activeFilter, setActiveFilter] = useState<FilterSort>('hot');
   const [showSavedOnly, setShowSavedOnly] = useState(false);
 
-  // Active centered post for the right-side comment bar
+  // Active post for the right-side comments sidebar on Home feed
   const [activeCenterPostId, setActiveCenterPostId] = useState<string | null>(null);
   const postElementsRef = useRef<Map<string, HTMLElement>>(new Map());
-  const isAutoScrollingRef = useRef(false);
-  const isNavigatingRef = useRef(false);
-  const lastNavigationTimeRef = useRef(0);
-  const touchStartXRef = useRef<number | null>(null);
-  const touchStartYRef = useRef<number | null>(null);
 
   // Subscribed creators tracking
   const [subscribedCreators, setSubscribedCreators] = useState<Set<string>>(() => {
@@ -267,18 +260,19 @@ export default function App() {
   // Subscribe to real-time posts from Firestore
   useEffect(() => {
     const unsub = subscribeToPosts((remotePosts) => {
-      if (remotePosts && remotePosts.length > 0) {
-        setPosts((prev) => {
-          const map = new Map<string, Post>();
-          SEED_POSTS.forEach((p) => map.set(p.id, p));
-          prev.forEach((p) => map.set(p.id, p));
-          remotePosts.forEach((p) => {
-            if (!MOCK_POST_IDS.has(p.id)) {
-              map.set(p.id, p);
-            }
-          });
-          return Array.from(map.values());
+      if (remotePosts) {
+        const validPosts = remotePosts.filter((p) => !isMockOrTestPostId(p.id));
+        validPosts.sort((a, b) => {
+          const aTime = a.createdAtEpoch || (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+          const bTime = b.createdAtEpoch || (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+          return bTime - aTime;
         });
+        setPosts(validPosts);
+        try {
+          localStorage.setItem('buvaki_posts', JSON.stringify(validPosts));
+        } catch {
+          // ignore storage quota limit
+        }
       }
     });
     return () => unsub();
@@ -539,9 +533,11 @@ export default function App() {
 
     const newPost: Post = {
       id: `post_${Date.now()}`,
-      subBuvakiId: 'general',
-      subBuvakiName: 'Buvaki Community',
+      subBuvakiId: postData.subBuvakiId || 'general',
+      subBuvakiName: postData.subBuvakiName || 'Buvaki Community',
       author: authorUser,
+      authorId: authorUser.id,
+      mediaId: postData.mediaId,
       title: postData.title || '',
       content: postData.content || '',
       type: postData.type || 'text',
@@ -567,6 +563,11 @@ export default function App() {
 
     const createdPost = await dbCreatePost(newPost);
     if (createdPost?.id) newPost.id = createdPost.id;
+
+    // Secure referential integrity: link media asset directly to post and owner
+    if (newPost.mediaId) {
+      claimMediaOwnership(newPost.mediaId, newPost.id, authorUser.id).catch(console.warn);
+    }
 
     setPosts((prev) => [newPost, ...prev]);
 
@@ -647,48 +648,11 @@ export default function App() {
 
   const activeCenterComments = activeCenterPost ? commentsMap[activeCenterPost.id] || [] : [];
 
-  // Exact auto-centering calculation for any post (even if short or tall)
-  const scrollToPost = useCallback((postId: string) => {
-    const el = postElementsRef.current.get(postId);
-    if (!el) return;
-
-    setActiveCenterPostId(postId);
-    isAutoScrollingRef.current = true;
-
-    const rect = el.getBoundingClientRect();
-    const currentScrollY = window.scrollY || window.pageYOffset;
-    const elTopDoc = rect.top + currentScrollY;
-    const elHeight = rect.height;
-    const elCenterDoc = elTopDoc + elHeight / 2;
-
-    const navBarOffset = 56; // 56px fixed top navbar (h-14)
-    const visibleHeight = window.innerHeight - navBarOffset;
-    const visibleCenter = navBarOffset + visibleHeight / 2;
-
-    let targetScrollY: number;
-    // If post is taller than the visible viewport, comfortably align top below navbar
-    if (elHeight > visibleHeight - 24) {
-      targetScrollY = Math.max(0, elTopDoc - navBarOffset - 12);
-    } else {
-      // Auto-center vertically in the visible viewport
-      targetScrollY = Math.max(0, elCenterDoc - visibleCenter);
-    }
-
-    window.scrollTo({
-      top: targetScrollY,
-      behavior: 'smooth',
-    });
-
-    setTimeout(() => {
-      isAutoScrollingRef.current = false;
-    }, 550);
-  }, []);
-
   const handleFocusPost = (postId: string) => {
-    scrollToPost(postId);
+    setActiveCenterPostId(postId);
   };
 
-  // Single-scroll post navigation & automatic vertical centering for Home feed
+  // Free-flowing feed: passively track which post is in view for the right-side comments sidebar
   useEffect(() => {
     if (viewMode !== 'feed' || sortedPosts.length === 0) return;
 
@@ -696,22 +660,20 @@ export default function App() {
       setActiveCenterPostId(sortedPosts[0].id);
     }
 
-    // Keep activeCenterPostId in sync with viewport center during passive scrolling or dragging
     const onScroll = () => {
-      if (isAutoScrollingRef.current) return;
-
-      const viewportCenter = window.innerHeight / 2;
+      const targetY = 180; // Reading line below navbar
       let closestId: string | null = null;
       let minDistance = Infinity;
 
       postElementsRef.current.forEach((el, id) => {
         if (!el) return;
         const rect = el.getBoundingClientRect();
-        const elCenter = rect.top + rect.height / 2;
-        const dist = Math.abs(viewportCenter - elCenter);
-        if (dist < minDistance) {
-          minDistance = dist;
-          closestId = id;
+        if (rect.bottom > 80 && rect.top < window.innerHeight - 80) {
+          const dist = Math.abs(rect.top - targetY);
+          if (dist < minDistance) {
+            minDistance = dist;
+            closestId = id;
+          }
         }
       });
 
@@ -720,238 +682,11 @@ export default function App() {
       }
     };
 
-    // Single-scroll wheel navigation: scrolling once advances & auto-centers next/prev post
-    const onWheel = (e: WheelEvent) => {
-      if (viewMode !== 'feed' || sortedPosts.length <= 1) return;
-
-      // Do not intercept if a modal, drawer, or dialog is active
-      if (
-        isAuthModalOpen ||
-        selectedPost ||
-        isCreatePostOpen ||
-        isProfileOpen ||
-        isNotificationsOpen ||
-        isLanguageModalOpen ||
-        drawerCommentsPost ||
-        drawerSharePost
-      ) {
-        return;
-      }
-
-      // Do not intercept if the user is scrolling over the comments sidebar or an interactive field
-      const target = e.target as HTMLElement | null;
-      if (target) {
-        if (
-          target.closest('aside') ||
-          target.closest('[role="dialog"]') ||
-          target.closest('.modal') ||
-          target.closest('input, textarea, select, [contenteditable="true"]')
-        ) {
-          return;
-        }
-      }
-
-      // Ignore micro-jitters
-      if (Math.abs(e.deltaY) < 16) return;
-
-      const now = Date.now();
-      // If currently navigating or within cooldown, prevent chaotic free-scrolling
-      if (isAutoScrollingRef.current || isNavigatingRef.current || now - lastNavigationTimeRef.current < 550) {
-        e.preventDefault();
-        return;
-      }
-
-      // Determine current post index in sortedPosts
-      let currentIndex = sortedPosts.findIndex((p) => p.id === activeCenterPostId);
-      if (currentIndex === -1) {
-        const viewportCenter = window.innerHeight / 2;
-        let closestId: string | null = null;
-        let minDistance = Infinity;
-        postElementsRef.current.forEach((el, id) => {
-          if (!el) return;
-          const rect = el.getBoundingClientRect();
-          const elCenter = rect.top + rect.height / 2;
-          const dist = Math.abs(viewportCenter - elCenter);
-          if (dist < minDistance) {
-            minDistance = dist;
-            closestId = id;
-          }
-        });
-        currentIndex = closestId ? sortedPosts.findIndex((p) => p.id === closestId) : 0;
-        if (currentIndex === -1) currentIndex = 0;
-      }
-
-      if (e.deltaY > 0) {
-        // Scroll down once -> advance to next post and auto-center
-        if (currentIndex < sortedPosts.length - 1) {
-          e.preventDefault();
-          const nextPost = sortedPosts[currentIndex + 1];
-          isNavigatingRef.current = true;
-          lastNavigationTimeRef.current = now;
-          scrollToPost(nextPost.id);
-          setTimeout(() => {
-            isNavigatingRef.current = false;
-          }, 550);
-        }
-      } else if (e.deltaY < 0) {
-        // Scroll up once -> advance to previous post and auto-center
-        if (currentIndex > 0) {
-          e.preventDefault();
-          const prevPost = sortedPosts[currentIndex - 1];
-          isNavigatingRef.current = true;
-          lastNavigationTimeRef.current = now;
-          scrollToPost(prevPost.id);
-          setTimeout(() => {
-            isNavigatingRef.current = false;
-          }, 550);
-        } else if (currentIndex === 0 && window.scrollY > 0) {
-          // At first post, scroll back to the very top
-          e.preventDefault();
-          isNavigatingRef.current = true;
-          lastNavigationTimeRef.current = now;
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-          setTimeout(() => {
-            isNavigatingRef.current = false;
-          }, 550);
-        }
-      }
-    };
-
-    // Touch swipe navigation for mobile / touchpads
-    const onTouchStart = (e: TouchEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (
-        isAuthModalOpen ||
-        selectedPost ||
-        isCreatePostOpen ||
-        isProfileOpen ||
-        drawerCommentsPost ||
-        drawerSharePost ||
-        target?.closest('aside') ||
-        target?.closest('[role="dialog"]') ||
-        target?.closest('input, textarea, select, [contenteditable="true"]')
-      ) {
-        touchStartXRef.current = null;
-        touchStartYRef.current = null;
-        return;
-      }
-      touchStartXRef.current = e.touches[0].clientX;
-      touchStartYRef.current = e.touches[0].clientY;
-    };
-
-    const onTouchEnd = (e: TouchEvent) => {
-      if (touchStartYRef.current === null || sortedPosts.length <= 1) return;
-      const touchEndX = e.changedTouches[0].clientX;
-      const touchEndY = e.changedTouches[0].clientY;
-      const deltaX = (touchStartXRef.current ?? touchEndX) - touchEndX;
-      const deltaY = touchStartYRef.current - touchEndY;
-      touchStartXRef.current = null;
-      touchStartYRef.current = null;
-
-      // Ignore horizontal swipes (e.g. image carousel navigation)
-      if (Math.abs(deltaX) > Math.abs(deltaY)) return;
-      if (Math.abs(deltaY) < 40) return;
-
-      const now = Date.now();
-      if (isAutoScrollingRef.current || isNavigatingRef.current || now - lastNavigationTimeRef.current < 550) {
-        return;
-      }
-
-      let currentIndex = sortedPosts.findIndex((p) => p.id === activeCenterPostId);
-      if (currentIndex === -1) currentIndex = 0;
-
-      if (deltaY > 0) {
-        // Swipe up gesture -> next post
-        if (currentIndex < sortedPosts.length - 1) {
-          const nextPost = sortedPosts[currentIndex + 1];
-          isNavigatingRef.current = true;
-          lastNavigationTimeRef.current = now;
-          scrollToPost(nextPost.id);
-          setTimeout(() => {
-            isNavigatingRef.current = false;
-          }, 550);
-        }
-      } else if (deltaY < 0) {
-        // Swipe down gesture -> previous post
-        if (currentIndex > 0) {
-          const prevPost = sortedPosts[currentIndex - 1];
-          isNavigatingRef.current = true;
-          lastNavigationTimeRef.current = now;
-          scrollToPost(prevPost.id);
-          setTimeout(() => {
-            isNavigatingRef.current = false;
-          }, 550);
-        } else if (currentIndex === 0 && window.scrollY > 0) {
-          isNavigatingRef.current = true;
-          lastNavigationTimeRef.current = now;
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-          setTimeout(() => {
-            isNavigatingRef.current = false;
-          }, 550);
-        }
-      }
-    };
-
-    // Keyboard arrow keys / Page keys navigation
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (viewMode !== 'feed' || sortedPosts.length <= 1) return;
-      const target = e.target as HTMLElement | null;
-      if (
-        isAuthModalOpen ||
-        selectedPost ||
-        isCreatePostOpen ||
-        target?.closest('input, textarea, select, [contenteditable="true"]') ||
-        target?.closest('[role="dialog"]')
-      ) {
-        return;
-      }
-
-      if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === 'j') {
-        e.preventDefault();
-        const currentIndex = sortedPosts.findIndex((p) => p.id === activeCenterPostId);
-        const currIdx = currentIndex === -1 ? 0 : currentIndex;
-        if (currIdx < sortedPosts.length - 1) {
-          scrollToPost(sortedPosts[currIdx + 1].id);
-        }
-      } else if (e.key === 'ArrowUp' || e.key === 'PageUp' || e.key === 'k') {
-        e.preventDefault();
-        const currentIndex = sortedPosts.findIndex((p) => p.id === activeCenterPostId);
-        const currIdx = currentIndex === -1 ? 0 : currentIndex;
-        if (currIdx > 0) {
-          scrollToPost(sortedPosts[currIdx - 1].id);
-        } else if (currIdx === 0 && window.scrollY > 0) {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-      }
-    };
-
     window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('wheel', onWheel, { passive: false });
-    window.addEventListener('touchstart', onTouchStart, { passive: true });
-    window.addEventListener('touchend', onTouchEnd, { passive: true });
-    window.addEventListener('keydown', onKeyDown);
-
     return () => {
       window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('wheel', onWheel);
-      window.removeEventListener('touchstart', onTouchStart);
-      window.removeEventListener('touchend', onTouchEnd);
-      window.removeEventListener('keydown', onKeyDown);
     };
-  }, [
-    viewMode,
-    sortedPosts,
-    activeCenterPostId,
-    scrollToPost,
-    isAuthModalOpen,
-    selectedPost,
-    isCreatePostOpen,
-    isProfileOpen,
-    isNotificationsOpen,
-    isLanguageModalOpen,
-    drawerCommentsPost,
-    drawerSharePost,
-  ]);
+  }, [viewMode, sortedPosts, activeCenterPostId]);
 
   const t = getTranslation(selectedLanguage.code);
 
@@ -1028,10 +763,10 @@ export default function App() {
           
           {/* VIEW MODE: FEED */}
           {viewMode === 'feed' && (
-            <div className="flex items-start gap-5 w-full justify-center">
+            <div className="flex items-start gap-6 w-full max-w-[1700px]">
               
-              {/* Center Feed Column */}
-              <div className="flex-1 min-w-0 flex flex-col gap-4 max-w-3xl xl:max-w-4xl">
+              {/* Home Posts Feed Column - Free-flowing */}
+              <div className="flex-1 min-w-0 flex flex-col gap-4 max-w-4xl">
                 
                 {/* TOP FILTER PILLS BAR (YouTube Chips Style) */}
                 <div className="w-full flex items-center justify-between gap-2 overflow-x-auto no-scrollbar py-1">
@@ -1071,7 +806,7 @@ export default function App() {
                   </div>
                 )}
 
-                {/* Community Posts Feed with Auto-Centering on Scroll */}
+                {/* Community Posts Feed - Free-flowing native scroll */}
                 <div className="flex flex-col gap-4">
                   {sortedPosts.length === 0 ? (
                     <div className="p-12 text-center rounded-2xl bg-slate-50 border border-slate-200 flex flex-col items-center gap-3">
@@ -1099,7 +834,7 @@ export default function App() {
                             if (el) postElementsRef.current.set(post.id, el);
                             else postElementsRef.current.delete(post.id);
                           }}
-                          className="scroll-mt-24 transition-transform duration-200"
+                          className="w-full"
                         >
                           <PostCard
                             post={post}
@@ -1282,6 +1017,7 @@ export default function App() {
           subBuvakis={SEED_SUB_BUVAKIS}
           onClose={() => setIsCreatePostOpen(false)}
           onSubmitPost={handlePublishPost}
+          currentUser={currentUser}
         />
       )}
 

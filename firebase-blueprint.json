@@ -46,10 +46,15 @@
         "subBuvakiId": { "type": "string" },
         "subBuvakiName": { "type": "string" },
         "authorId": { "type": "string" },
+        "mediaId": { "type": "string" },
         "title": { "type": "string" },
         "content": { "type": "string" },
         "type": { "type": "string" },
         "imageUrl": { "type": "string" },
+        "videoUrl": { "type": "string" },
+        "duration": { "type": "string" },
+        "isShort": { "type": "boolean" },
+        "isLong": { "type": "boolean" },
         "linkUrl": { "type": "string" },
         "flair": { "type": "string" },
         "score": { "type": "number" },
@@ -60,6 +65,21 @@
         "tags": { "type": "array", "items": { "type": "string" } }
       },
       "required": ["subBuvakiId", "authorId", "title", "content"]
+    },
+    "mediaAssets": {
+      "title": "User Media Asset",
+      "description": "Video and media assets owned by users",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "postId": { "type": "string" },
+        "url": { "type": "string" },
+        "type": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "ownerId", "url"]
     },
     "comments": {
       "title": "Post Comment",

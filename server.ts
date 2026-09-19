@@ -2,11 +2,16 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
+import { setupMediaRoutes } from "./server/mediaManager";
 
 async function startServer() {
   const app = express();
-  app.use(express.json());
+  app.use(express.json({ limit: "50mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "50mb" }));
   const PORT = 3000;
+
+  // Mount media storage, video streaming and referential asset management
+  setupMediaRoutes(app);
 
   // Google Translate & Gemini AI Translation endpoint
   app.post("/api/translate", async (req, res) => {

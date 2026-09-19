@@ -176,8 +176,8 @@ export const ShortsFeed: React.FC<ShortsFeedProps> = ({
         musicTitle: 'Original audio - ' + p.author.username,
       }));
 
-    // Deduplicate against defaults
-    const combined = [...userShorts, ...DEFAULT_SHORTS];
+    // Use real user shorts if any exist, otherwise fallback to defaults
+    const combined = userShorts.length > 0 ? userShorts : DEFAULT_SHORTS;
     const seen = new Set<string>();
     return combined.filter((s) => {
       if (seen.has(s.id)) return false;
